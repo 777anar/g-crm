@@ -19,7 +19,7 @@ export class ApiRequestError extends Error {
 }
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
   formData?: FormData;
   searchParams?: Record<string, string | number | boolean | undefined>;

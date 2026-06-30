@@ -26,3 +26,23 @@ export function useCustomerStatusLabel() {
   const t = useTranslations("customerStatus");
   return (status: string) => t(status);
 }
+
+export function useEntityStatusLabel() {
+  const t = useTranslations("catalog.entityStatus");
+  return (status: string) => t(status);
+}
+
+export function useSlabStatusLabel() {
+  const t = useTranslations("catalog.slabStatus");
+  return (status: string) => t(status);
+}
+
+export function useImageTypeLabel() {
+  const t = useTranslations("catalog.imageType");
+  return (type: string) => t(type);
+}
+
+export function useDocumentTypeLabel() {
+  const t = useTranslations("catalog.documentType");
+  return (type: string) => t(type);
+}

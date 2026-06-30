@@ -163,6 +163,36 @@ Create request omits `id`, `created_by`, `created_at`, `updated_at` (server-assi
 | POST | `/crm/tasks` | `crm:tasks:write` | Create |
 | PATCH | `/crm/tasks/{id}` | `crm:tasks:write` | Update status/due date |
 
+## 7.5 Stone Catalog Module Endpoints (`/api/v1/catalog/...`, Version 2.0, as actually implemented)
+
+Built ahead of Sales per [ROADMAP.md](ROADMAP.md). All endpoints are company-scoped via the authenticated user's active company, same as CRM. Permission suffix convention matches `core/rbac/permissions.py` (`:read` viewer tier, `:write` rep tier).
+
+| Method | Path | Permission | Description |
+|---|---|---|---|
+| GET | `/catalog/brands?include_hidden=&search=` | `catalog:brands:read` | List brands |
+| POST | `/catalog/brands` | `catalog:brands:write` | Create brand |
+| GET | `/catalog/brands/{id}` | `catalog:brands:read` | Get brand |
+| PATCH | `/catalog/brands/{id}` | `catalog:brands:write` | Update brand (incl. active/hidden) |
+| GET | `/catalog/collections?brand_id=&include_hidden=&search=` | `catalog:collections:read` | List collections |
+| POST | `/catalog/collections` | `catalog:collections:write` | Create collection |
+| GET\|PATCH | `/catalog/collections/{id}` | `catalog:collections:read\|write` | Get / update |
+| GET | `/catalog/materials?brand_id=&collection_id=&status=&search=&sort=&limit=&cursor=` | `catalog:materials:read` | List materials (cursor-paginated, search across name/color/material_type/country) |
+| POST | `/catalog/materials` | `catalog:materials:write` | Create material (validates brand/collection consistency) |
+| GET\|PATCH | `/catalog/materials/{id}` | `catalog:materials:read\|write` | Get / update |
+| GET\|POST | `/catalog/materials/{id}/images` | `catalog:materials:read\|write` | List/link images (`document_id` must already exist via core document upload) |
+| GET\|POST | `/catalog/materials/{id}/documents` | `catalog:materials:read\|write` | List/link technical PDF / installation guide / cleaning guide |
+| GET | `/catalog/materials/{id}/prices` | `catalog:price_lists:read` | All price-list entries pricing this material, across every price list |
+| GET | `/catalog/warehouses?include_hidden=` | `catalog:warehouses:read` | List warehouses |
+| POST | `/catalog/warehouses` | `catalog:warehouses:write` | Create warehouse |
+| GET\|PATCH | `/catalog/warehouses/{id}` | `catalog:warehouses:read\|write` | Get / update |
+| GET | `/catalog/slabs?material_id=&warehouse_id=&status=&search=&sort=&limit=&cursor=` | `catalog:slabs:read` | List slabs (cursor-paginated, search across slab number/lot/barcode) |
+| POST | `/catalog/slabs` | `catalog:slabs:write` | Create slab (computes `area_m2`, rejects duplicate `slab_number` within company → `409 CONFLICT`) |
+| GET | `/catalog/slabs/{id}` | `catalog:slabs:read` | Get slab |
+| PATCH | `/catalog/slabs/{id}/status` | `catalog:slabs:write` | Change status; illegal transitions (e.g. `sold` → `available`) → `409 CONFLICT` |
+| GET | `/catalog/price-lists?include_hidden=` | `catalog:price_lists:read` | List price lists |
+| POST | `/catalog/price-lists` | `catalog:price_lists:write` | Create price list |
+| GET\|PUT | `/catalog/price-lists/{id}/entries` | `catalog:price_lists:read\|write` | List entries / upsert one material's cost+sale price |
+
 ## 8. Sales Module Endpoints (`/api/v1/sales/...`)
 
 ### Quotes

@@ -67,3 +67,21 @@ export function CustomerStatusBadge({ status }: { status: string }) {
   const t = useTranslations("customerStatus");
   return <Badge tone={CUSTOMER_STATUS_TONE[status] ?? "neutral"}>{t(status)}</Badge>;
 }
+
+export function EntityStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("catalog.entityStatus");
+  return <Badge tone={status === "active" ? "success" : "neutral"}>{t(status)}</Badge>;
+}
+
+const SLAB_STATUS_TONE: Record<string, Tone> = {
+  available: "success",
+  reserved: "warning",
+  sold: "info",
+  in_production: "info",
+  scrap: "danger",
+};
+
+export function SlabStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("catalog.slabStatus");
+  return <Badge tone={SLAB_STATUS_TONE[status] ?? "neutral"}>{t(status)}</Badge>;
+}

@@ -113,3 +113,128 @@ export type Lead = {
 };
 
 export type Paginated<T> = { items: T[]; next_cursor: string | null };
+
+// --- Stone Catalog (Version 2.0) -------------------------------------------
+
+export const ENTITY_STATUSES = ["active", "hidden"] as const;
+export type EntityStatus = (typeof ENTITY_STATUSES)[number];
+
+export const MATERIAL_STATUSES = ["active", "hidden"] as const;
+export type MaterialStatus = (typeof MATERIAL_STATUSES)[number];
+
+export const SLAB_STATUSES = ["available", "reserved", "sold", "in_production", "scrap"] as const;
+export type SlabStatus = (typeof SLAB_STATUSES)[number];
+
+export const IMAGE_TYPES = ["gallery", "thumbnail", "bookmatch_left", "bookmatch_right"] as const;
+export type ImageType = (typeof IMAGE_TYPES)[number];
+
+export const DOCUMENT_TYPES = ["technical_pdf", "installation_guide", "cleaning_guide"] as const;
+export type CatalogDocumentType = (typeof DOCUMENT_TYPES)[number];
+
+export const SUGGESTED_MATERIAL_TYPES = [
+  "Sintered Stone",
+  "Porcelain",
+  "Quartz",
+  "Natural Marble",
+  "Natural Granite",
+  "Dekton",
+  "Ceramic",
+] as const;
+
+export type Brand = {
+  id: string;
+  name: string;
+  description: string | null;
+  logo_document_id: string | null;
+  status: EntityStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Collection = {
+  id: string;
+  brand_id: string;
+  name: string;
+  description: string | null;
+  status: EntityStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Material = {
+  id: string;
+  brand_id: string;
+  collection_id: string | null;
+  name: string;
+  material_type: string | null;
+  color: string | null;
+  finish: string | null;
+  thickness_mm: string | null;
+  dimensions: string | null;
+  country_of_origin: string | null;
+  description: string | null;
+  status: MaterialStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Warehouse = {
+  id: string;
+  name: string;
+  address: string | null;
+  status: EntityStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Slab = {
+  id: string;
+  material_id: string;
+  warehouse_id: string;
+  slab_number: string;
+  lot_number: string | null;
+  barcode: string | null;
+  rack_location: string | null;
+  length_mm: string | null;
+  width_mm: string | null;
+  area_m2: string | null;
+  weight_kg: string | null;
+  status: SlabStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PriceList = {
+  id: string;
+  name: string;
+  currency: string;
+  is_default: boolean;
+  status: EntityStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PriceListEntry = {
+  id: string;
+  price_list_id: string;
+  material_id: string;
+  cost_price: string;
+  sale_price: string;
+};
+
+export type MaterialImage = {
+  id: string;
+  material_id: string;
+  document_id: string;
+  image_type: ImageType;
+  sort_order: number;
+  created_at: string;
+};
+
+export type MaterialDocumentAsset = {
+  id: string;
+  material_id: string;
+  document_id: string;
+  document_type: CatalogDocumentType;
+  created_at: string;
+};

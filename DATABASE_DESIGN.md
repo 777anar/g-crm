@@ -338,6 +338,74 @@ Approval (status → `approved`) is what publishes the `OrderApproved` domain ev
 
 **Indexes**: (`sales_order_id`).
 
+## 5.5 Stone Catalog Module Tables (Version 2.0 — as actually implemented)
+
+_Note: built ahead of the Sales module per [ROADMAP.md](ROADMAP.md)'s revised dependency chain (quotations need real stone data to quote from). Table names are prefixed `catalog_` rather than left bare, matching the convention actually used by the implemented CRM module (`crm_*`) rather than the unprefixed names sketched in section 4 above._
+
+### 5.5.1 `catalog_brands`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, REFERENCES companies(id), indexed |
+| name | TEXT | NOT NULL |
+| description | TEXT | nullable |
+| logo_document_id | UUID | nullable, REFERENCES documents(id) |
+| status | TEXT | NOT NULL, default `active` (`active`\|`hidden`), indexed |
+| created_by | UUID | REFERENCES users(id) |
+
+### 5.5.2 `catalog_collections`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| brand_id | UUID | NOT NULL, REFERENCES catalog_brands(id), indexed |
+| name | TEXT | NOT NULL |
+| description | TEXT | nullable |
+| status | TEXT | NOT NULL, default `active`, indexed |
+
+### 5.5.3 `catalog_materials` (the sellable design/SKU)
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| brand_id | UUID | NOT NULL, REFERENCES catalog_brands(id), indexed |
+| collection_id | UUID | nullable, REFERENCES catalog_collections(id), indexed |
+| name | TEXT | NOT NULL |
+| material_type | TEXT | nullable (e.g. Sintered Stone, Porcelain, Quartz, Natural Marble, Natural Granite, Dekton, Ceramic) |
+| color, finish, thickness_mm, dimensions, country_of_origin | TEXT | nullable |
+| description | TEXT | nullable |
+| status | TEXT | NOT NULL, default `active` (`active`\|`hidden`), indexed |
+
+### 5.5.4 `catalog_warehouses`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| name | TEXT | NOT NULL |
+| address | TEXT | nullable |
+| status | TEXT | NOT NULL, default `active`, indexed |
+
+### 5.5.5 `catalog_slabs` (individually tracked physical inventory)
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| material_id | UUID | NOT NULL, REFERENCES catalog_materials(id), indexed |
+| warehouse_id | UUID | NOT NULL, REFERENCES catalog_warehouses(id), indexed |
+| slab_number | TEXT | NOT NULL, indexed, UNIQUE per `(company_id, slab_number)` |
+| lot_number, barcode | TEXT | nullable, indexed |
+| rack_location | TEXT | nullable |
+| length_mm, width_mm | NUMERIC(10,2) | nullable |
+| area_m2 | NUMERIC(10,3) | nullable — computed in the application layer as `length_mm * width_mm / 1_000_000` at create time, not a DB-generated column (keeps SQLite/Postgres portability) |
+| weight_kg | NUMERIC(10,2) | nullable |
+| status | TEXT | NOT NULL, default `available`, indexed. One of `available`\|`reserved`\|`sold`\|`in_production`\|`scrap`, enforced by a domain-layer transition graph (`sold` and `scrap` are terminal; `scrap` reachable from any non-terminal state) — not a free-form enum |
+
+### 5.5.6 `catalog_price_lists` / `catalog_price_list_entries`
+Company-specific pricing is modeled as a named header (`catalog_price_lists`: `name`, `currency` default `AZN`, `is_default`, `status`) with per-material line items (`catalog_price_list_entries`: `price_list_id`, `material_id`, `cost_price` NUMERIC(14,2), `sale_price` NUMERIC(14,2), `UNIQUE(price_list_id, material_id)`) — allowing multiple price lists per company (e.g. retail vs. wholesale) rather than a single price column bolted onto `catalog_materials`.
+
+### 5.5.7 `catalog_material_images` / `catalog_material_documents`
+Thin join tables linking a `catalog_materials` row to a core `documents` row (the same shared upload/storage pipeline CRM attachments use — no separate file-handling code). `catalog_material_images.image_type` is one of `gallery`\|`thumbnail`\|`bookmatch_left`\|`bookmatch_right`; `catalog_material_documents.document_type` is one of `technical_pdf`\|`installation_guide`\|`cleaning_guide`.
+
 ## 6. Future-Phase Module Schemas (conceptual — not migrated in Phase 1)
 
 Kept here only so foreign-key shapes are pre-considered and won't surprise later modules.

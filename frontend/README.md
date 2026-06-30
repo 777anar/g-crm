@@ -1,4 +1,4 @@
-# G-STONE ERP Frontend — CRM Module Screens (Phase 2)
+# G-STONE ERP Frontend — CRM + Stone Catalog Screens
 
 Next.js 15 + TypeScript. Implements the CRM screens against the backend's `/api/v1/crm/*` and `/api/v1/auth/*` APIs:
 
@@ -7,6 +7,17 @@ Next.js 15 + TypeScript. Implements the CRM screens against the backend's `/api/
 - `/crm/customers/new` — create customer (+ optional primary contact)
 - `/crm/customers/[id]` — full customer profile: contact info, company, assigned manager, lead source, advertising campaign, projects/quotes/orders/payments (empty until those modules are installed), notes, attachments, activity timeline
 - `/crm/leads` — lead capture form (Instagram/Facebook/Messenger/WhatsApp/Manual), channel filter, convert-to-customer action
+
+And the Stone Catalog screens (Version 2.0) against `/api/v1/catalog/*`:
+
+- `/catalog/brands` — brand list + create
+- `/catalog/materials` — material list with brand/collection/status filters, search, sort, cursor-paginated "load more"
+- `/catalog/materials/new` — create material (brand → collection cascading select, full spec fields)
+- `/catalog/materials/[id]` — material detail: specifications, image upload (gallery/thumbnail/bookmatch), document upload (technical PDF/installation guide/cleaning guide), pricing across every price list, and slabs for this material
+- `/catalog/slabs` — slab list with material/warehouse/status filters, search, sort, inline status-change select, create form (computes area client-side on submit via the backend)
+- `/catalog/warehouses` — warehouse list + create
+- `/catalog/price-lists` — price list list + create
+- `/catalog/price-lists/[id]` — manage a price list's per-material cost/sale price entries (upsert)
 
 ## Setup
 
