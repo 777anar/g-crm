@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { addCustomerNote, archiveCustomer, getCustomerProfile, uploadCustomerAttachment } from "@/lib/api/crm";
 import type { CustomerProfile } from "@/lib/types";
@@ -10,10 +11,8 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, CustomerArchivedBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TextAreaField } from "@/components/ui/field";
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("en-US");
-}
+import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
+import { formatDateTime } from "@/lib/format";
 
 export default function CustomerProfilePage() {
   const params = useParams<{ id: string }>();
@@ -89,13 +88,34 @@ export default function CustomerProfilePage() {
   }
 
   if (!profile) {
-    return <p className="text-text-secondary">Loading customer profile...</p>;
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-7 w-64" />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="flex flex-col gap-4 lg:col-span-1">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+          <div className="lg:col-span-2">
+            <TableSkeleton rows={4} columns={3} />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const { customer, contacts, attachments, timeline, projects, quotes, orders, payments } = profile;
 
   return (
     <div className="flex flex-col gap-4">
+      <nav className="flex items-center gap-1 text-sm text-text-secondary" aria-label="Breadcrumb">
+        <Link href="/crm/customers" className="hover:text-primary hover:underline">
+          Customers
+        </Link>
+        <span>/</span>
+        <span className="text-text-primary">{customer.name}</span>
+      </nav>
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold text-text-primary">{customer.name}</h1>
@@ -181,34 +201,24 @@ export default function CustomerProfilePage() {
 
         <div className="flex flex-col gap-4 lg:col-span-2">
           <Card>
-            <CardHeader title="Projects" />
-            {projects.length === 0 ? (
-              <EmptyState
-                title="No projects yet"
-                description="Projects will appear here once the Production module is installed."
-              />
-            ) : null}
-          </Card>
-          <Card>
-            <CardHeader title="Quotes" />
-            {quotes.length === 0 ? (
-              <EmptyState title="No quotes yet" description="Quotes will appear here once the Sales module is installed." />
-            ) : null}
-          </Card>
-          <Card>
-            <CardHeader title="Orders" />
-            {orders.length === 0 ? (
-              <EmptyState title="No orders yet" description="Orders will appear here once the Sales module is installed." />
-            ) : null}
-          </Card>
-          <Card>
-            <CardHeader title="Payments" />
-            {payments.length === 0 ? (
-              <EmptyState
-                title="No payments yet"
-                description="Payments will appear here once the Finance module is installed."
-              />
-            ) : null}
+            <CardHeader title="Projects, Quotes, Orders & Payments" />
+            <p className="mb-3 text-xs text-text-secondary">
+              These sections populate automatically once the corresponding module is installed.
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: "Projects", count: projects.length, module: "Production" },
+                { label: "Quotes", count: quotes.length, module: "Sales" },
+                { label: "Orders", count: orders.length, module: "Sales" },
+                { label: "Payments", count: payments.length, module: "Finance" },
+              ].map((section) => (
+                <div key={section.label} className="rounded-md border border-dashed border-border p-3 text-center">
+                  <p className="text-lg font-semibold text-text-secondary">{section.count}</p>
+                  <p className="text-xs font-medium text-text-primary">{section.label}</p>
+                  <p className="mt-0.5 text-[11px] text-text-secondary">via {section.module}</p>
+                </div>
+              ))}
+            </div>
           </Card>
 
           <Card>
@@ -238,7 +248,7 @@ export default function CustomerProfilePage() {
                   <li key={entry.id} className="border-l-2 border-border pl-3">
                     <div className="flex items-center gap-2">
                       <Badge tone={entry.type === "system" ? "neutral" : "info"}>{entry.type}</Badge>
-                      <span className="text-xs text-text-secondary">{formatDate(entry.created_at)}</span>
+                      <span className="text-xs text-text-secondary">{formatDateTime(entry.created_at)}</span>
                     </div>
                     <p className="mt-1 text-sm text-text-primary">{entry.body}</p>
                   </li>

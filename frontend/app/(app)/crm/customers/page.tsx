@@ -7,7 +7,9 @@ import type { Customer } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge, CustomerArchivedBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiRequestError } from "@/lib/api-client";
+import { formatDate } from "@/lib/format";
 
 export default function CustomersListPage() {
   const [customers, setCustomers] = useState<Customer[] | null>(null);
@@ -24,7 +26,10 @@ export default function CustomersListPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-text-primary">Customers</h1>
+        <div>
+          <h1 className="text-xl font-semibold text-text-primary">Customers</h1>
+          <p className="text-sm text-text-secondary">Manage customer profiles, contacts, and activity.</p>
+        </div>
         <Link href="/crm/customers/new">
           <Button>Create Customer</Button>
         </Link>
@@ -41,7 +46,7 @@ export default function CustomersListPage() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      {customers === null && !error && <p className="text-text-secondary">Loading customers...</p>}
+      {customers === null && !error && <TableSkeleton rows={5} columns={5} />}
 
       {customers && customers.length === 0 && (
         <EmptyState
@@ -64,6 +69,7 @@ export default function CustomersListPage() {
                 <th className="px-4 py-2 font-medium">Type</th>
                 <th className="px-4 py-2 font-medium">Lead Source</th>
                 <th className="px-4 py-2 font-medium">Campaign</th>
+                <th className="px-4 py-2 font-medium">Created</th>
                 <th className="px-4 py-2 font-medium">Status</th>
               </tr>
             </thead>
@@ -80,6 +86,7 @@ export default function CustomersListPage() {
                     {customer.lead_source ? <Badge tone="info">{customer.lead_source}</Badge> : "—"}
                   </td>
                   <td className="px-4 py-2 text-text-secondary">{customer.advertising_campaign ?? "—"}</td>
+                  <td className="px-4 py-2 text-text-secondary">{formatDate(customer.created_at)}</td>
                   <td className="px-4 py-2">
                     <CustomerArchivedBadge archived={customer.deleted_at !== null} />
                   </td>

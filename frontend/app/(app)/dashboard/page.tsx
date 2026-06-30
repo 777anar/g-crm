@@ -12,6 +12,8 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Badge, LeadStatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { StatCardSkeleton, TableSkeleton } from "@/components/ui/skeleton";
+import { formatDate } from "@/lib/format";
 
 const CHANNEL_LABELS: Record<string, string> = {
   instagram: "Instagram",
@@ -20,10 +22,6 @@ const CHANNEL_LABELS: Record<string, string> = {
   whatsapp: "WhatsApp",
   manual: "Manual",
 };
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-}
 
 export default function DashboardPage() {
   const [fullName, setFullName] = useState<string | null>(null);
@@ -90,7 +88,16 @@ export default function DashboardPage() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      {loading && !error && <p className="text-text-secondary">Loading dashboard...</p>}
+      {loading && !error && (
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <StatCardSkeleton key={i} />
+            ))}
+          </div>
+          <TableSkeleton rows={5} columns={3} />
+        </div>
+      )}
 
       {!loading && (
         <>

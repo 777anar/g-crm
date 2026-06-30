@@ -10,6 +10,8 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { LeadStatusBadge, Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SelectField, TextField } from "@/components/ui/field";
+import { TableSkeleton } from "@/components/ui/skeleton";
+import { formatDate } from "@/lib/format";
 
 const CHANNEL_LABELS: Record<string, string> = {
   instagram: "Instagram",
@@ -87,7 +89,10 @@ export default function LeadsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-text-primary">Leads</h1>
+      <div>
+        <h1 className="text-xl font-semibold text-text-primary">Leads</h1>
+        <p className="text-sm text-text-secondary">Capture and qualify inbound interest across every channel.</p>
+      </div>
 
       <Card>
         <CardHeader title="Capture a Lead" />
@@ -132,7 +137,7 @@ export default function LeadsPage() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      {leads === null && !error && <p className="text-text-secondary">Loading leads...</p>}
+      {leads === null && !error && <TableSkeleton rows={4} columns={5} />}
 
       {leads && leads.length === 0 && <EmptyState title="No leads yet" description="Capture your first lead above." />}
 
@@ -145,6 +150,7 @@ export default function LeadsPage() {
                 <th className="px-4 py-2 font-medium">Channel</th>
                 <th className="px-4 py-2 font-medium">Campaign</th>
                 <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium">Captured</th>
                 <th className="px-4 py-2 font-medium" />
               </tr>
             </thead>
@@ -159,6 +165,7 @@ export default function LeadsPage() {
                   <td className="px-4 py-2">
                     <LeadStatusBadge status={lead.status} />
                   </td>
+                  <td className="px-4 py-2 text-text-secondary">{formatDate(lead.created_at)}</td>
                   <td className="px-4 py-2 text-right">
                     {lead.status !== "converted" && (
                       <Button

@@ -48,7 +48,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg">
+    <div
+      className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg"
+      style={{ backgroundImage: "radial-gradient(circle at top, rgba(31,79,216,0.06), transparent 60%)" }}
+    >
       <Card className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-1 text-center">
           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-sm font-bold text-white">
@@ -101,6 +104,7 @@ export default function LoginPage() {
           </div>
         )}
       </Card>
+      <p className="text-xs text-text-secondary">G-STONE GALLERY · KORONA PREMIUM · NEOLITH BAKU</p>
     </div>
   );
 }
