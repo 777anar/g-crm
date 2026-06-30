@@ -6,7 +6,7 @@ import { me, selectCompany } from "@/lib/api/auth";
 import { listMyCompanies } from "@/lib/api/companies";
 import { setAccessToken } from "@/lib/session";
 import type { Company } from "@/lib/types";
-import { useOutsideClick } from "@/lib/use-outside-click";
+import { useCloseOnEscape, useOutsideClick } from "@/lib/use-outside-click";
 
 export function CompanySwitcher() {
   const t = useTranslations("company");
@@ -29,6 +29,7 @@ export function CompanySwitcher() {
   }, []);
 
   useOutsideClick(containerRef, () => setOpen(false));
+  useCloseOnEscape(open, () => setOpen(false));
 
   async function handleSelect(companyId: string) {
     if (companyId === activeCompanyId) {
@@ -62,7 +63,7 @@ export function CompanySwitcher() {
         className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-bg disabled:opacity-50"
       >
         <span>{activeCompany.name}</span>
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-text-secondary">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-text-secondary" aria-hidden>
           <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>

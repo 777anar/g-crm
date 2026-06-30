@@ -85,7 +85,8 @@
     "tablePhone": "Телефон",
     "tablePipelineStatus": "Этап",
     "filterByStatus": "Фильтр по статусу:",
-    "allStatuses": "Все статусы"
+    "allStatuses": "Все статусы",
+    "searchPlaceholder": "Поиск по имени, телефону, эл. почте, компании... ( / )"
   },
   "customerNew": {
     "title": "Создать клиента",
@@ -183,7 +184,8 @@
     "tableCaptured": "Добавлен",
     "convertToCustomer": "Конвертировать в клиента",
     "converting": "Конвертация...",
-    "convertFailed": "Не удалось конвертировать лид."
+    "convertFailed": "Не удалось конвертировать лид.",
+    "searchPlaceholder": "Поиск по имени, телефону, эл. почте, кампании..."
   },
   "leadStatus": {
     "new": "Новый",
@@ -229,5 +231,10 @@
     "installed": "Установлено",
     "completed": "Завершено",
     "lost": "Потеряно"
+  },
+  "quickCreate": {
+    "title": "Быстрое создание",
+    "newCustomer": "Новый клиент",
+    "newLead": "Новый лид"
   }
 }

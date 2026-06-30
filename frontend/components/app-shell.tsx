@@ -7,6 +7,7 @@ import { clearAccessToken } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import { CompanySwitcher } from "@/components/company-switcher";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { QuickCreateMenu } from "@/components/quick-create-menu";
 
 // Dashboard is core-platform navigation, always present regardless of which
 // modules are installed. The remaining items mirror each enabled module's
@@ -42,6 +43,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="font-semibold text-text-primary">{tCommon("appName")}</span>
         </div>
         <div className="flex items-center gap-3">
+          <QuickCreateMenu />
           <CompanySwitcher />
           <LanguageSwitcher />
           <Button variant="secondary" onClick={handleLogout}>

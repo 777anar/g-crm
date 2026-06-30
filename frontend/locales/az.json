@@ -85,7 +85,8 @@
     "tablePhone": "Telefon",
     "tablePipelineStatus": "Mərhələ",
     "filterByStatus": "Statusa görə filtr:",
-    "allStatuses": "Bütün statuslar"
+    "allStatuses": "Bütün statuslar",
+    "searchPlaceholder": "Ad, telefon, e-poçt, şirkət üzrə axtar... ( / )"
   },
   "customerNew": {
     "title": "Müştəri yarat",
@@ -183,7 +184,8 @@
     "tableCaptured": "Əlavə edilib",
     "convertToCustomer": "Müştəriyə çevir",
     "converting": "Çevrilir...",
-    "convertFailed": "Lead çevrilmədi."
+    "convertFailed": "Lead çevrilmədi.",
+    "searchPlaceholder": "Ad, telefon, e-poçt, kampaniya üzrə axtar..."
   },
   "leadStatus": {
     "new": "Yeni",
@@ -229,5 +231,10 @@
     "installed": "Quraşdırıldı",
     "completed": "Tamamlandı",
     "lost": "İtirildi"
+  },
+  "quickCreate": {
+    "title": "Tez yaratma",
+    "newCustomer": "Yeni müştəri",
+    "newLead": "Yeni lead"
   }
 }

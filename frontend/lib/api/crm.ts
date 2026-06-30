@@ -6,7 +6,10 @@ export function listCustomers(
     includeArchived?: boolean;
     status?: CustomerStatus;
     leadSource?: string;
+    search?: string;
+    sort?: string;
     limit?: number;
+    cursor?: string;
   } = {}
 ) {
   return apiRequest<Paginated<Customer>>("/api/v1/crm/customers", {
@@ -14,7 +17,10 @@ export function listCustomers(
       include_archived: params.includeArchived,
       status: params.status,
       lead_source: params.leadSource,
+      search: params.search || undefined,
+      sort: params.sort,
       limit: params.limit,
+      cursor: params.cursor,
     },
   });
 }
@@ -70,9 +76,18 @@ export function uploadCustomerAttachment(customerId: string, file: File) {
   return apiRequest<Attachment>("/api/v1/core/documents", { method: "POST", formData });
 }
 
-export function listLeads(params: { sourceChannel?: string; status?: string; limit?: number } = {}) {
+export function listLeads(
+  params: { sourceChannel?: string; status?: string; search?: string; sort?: string; limit?: number; cursor?: string } = {}
+) {
   return apiRequest<Paginated<Lead>>("/api/v1/crm/leads", {
-    searchParams: { source_channel: params.sourceChannel, status: params.status, limit: params.limit },
+    searchParams: {
+      source_channel: params.sourceChannel,
+      status: params.status,
+      search: params.search || undefined,
+      sort: params.sort,
+      limit: params.limit,
+      cursor: params.cursor,
+    },
   });
 }
 

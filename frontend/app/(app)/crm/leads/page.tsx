@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { convertLead, createLead, listLeads } from "@/lib/api/crm";
@@ -11,9 +11,14 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { LeadStatusBadge, Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SelectField, TextField } from "@/components/ui/field";
+import { SortableHeader } from "@/components/ui/sortable-header";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/format";
 import { useLeadChannelLabel } from "@/lib/i18n/hooks";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { useListShortcuts } from "@/lib/use-list-shortcuts";
+
+const CAPTURE_FORM_NAME_INPUT_ID = "lead-capture-full-name";
 
 export default function LeadsPage() {
   const router = useRouter();
@@ -22,30 +27,38 @@ export default function LeadsPage() {
   const channelLabel = useLeadChannelLabel();
   const [leads, setLeads] = useState<Lead[] | null>(null);
   const [channelFilter, setChannelFilter] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [sort, setSort] = useState("-created_at");
   const [error, setError] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const search = useDebouncedValue(searchInput, 250);
 
   const [fullName, setFullName] = useState("");
-  const [sourceChannel, setSourceChannel] = useState<string>("manual");
+  const [sourceChannel, setSourceChannel] = useState<string>(LEAD_SOURCE_CHANNELS[0]);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [campaign, setCampaign] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  async function reload() {
+  const reload = useCallback(async () => {
     try {
-      const res = await listLeads({ sourceChannel: channelFilter || undefined });
+      const res = await listLeads({ sourceChannel: channelFilter || undefined, search, sort });
       setLeads(res.items);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
     }
-  }
+  }, [channelFilter, search, sort, t]);
 
   useEffect(() => {
     setLeads(null);
     reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelFilter]);
+  }, [reload]);
+
+  useListShortcuts({
+    searchInputRef,
+    onCreate: () => document.getElementById(CAPTURE_FORM_NAME_INPUT_ID)?.focus(),
+  });
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -94,7 +107,13 @@ export default function LeadsPage() {
       <Card>
         <CardHeader title={t("captureLead")} />
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleCreate}>
-          <TextField label={t("fullName")} value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+          <TextField
+            id={CAPTURE_FORM_NAME_INPUT_ID}
+            label={t("fullName")}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+          />
           <SelectField label={t("sourceChannel")} value={sourceChannel} onChange={(e) => setSourceChannel(e.target.value)}>
             {LEAD_SOURCE_CHANNELS.map((channel) => (
               <option key={channel} value={channel}>
@@ -112,6 +131,15 @@ export default function LeadsPage() {
           </div>
         </form>
       </Card>
+
+      <input
+        ref={searchInputRef}
+        type="search"
+        value={searchInput}
+        onChange={(e) => setSearchInput(e.target.value)}
+        placeholder={t("searchPlaceholder")}
+        className="w-full max-w-xs rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+      />
 
       <div className="flex items-center gap-2">
         <span className="text-sm text-text-secondary">{t("filterByChannel")}</span>
@@ -143,11 +171,11 @@ export default function LeadsPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border bg-bg text-text-secondary">
               <tr>
-                <th className="px-4 py-2 font-medium">{t("tableName")}</th>
+                <SortableHeader field="full_name" label={t("tableName")} sort={sort} onSortChange={setSort} />
                 <th className="px-4 py-2 font-medium">{t("tableChannel")}</th>
                 <th className="px-4 py-2 font-medium">{t("tableCampaign")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableCaptured")}</th>
+                <SortableHeader field="status" label={t("tableStatus")} sort={sort} onSortChange={setSort} />
+                <SortableHeader field="created_at" label={t("tableCaptured")} sort={sort} onSortChange={setSort} />
                 <th className="px-4 py-2 font-medium" />
               </tr>
             </thead>

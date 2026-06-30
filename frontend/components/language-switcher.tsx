@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useLocaleSwitcher } from "@/lib/i18n/locale-context";
 import { SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
-import { useOutsideClick } from "@/lib/use-outside-click";
+import { useCloseOnEscape, useOutsideClick } from "@/lib/use-outside-click";
 
 const LOCALE_FLAG: Record<Locale, string> = {
   az: "🇦🇿",
@@ -19,6 +19,7 @@ export function LanguageSwitcher() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useOutsideClick(containerRef, () => setOpen(false));
+  useCloseOnEscape(open, () => setOpen(false));
 
   return (
     <div ref={containerRef} className="relative">
@@ -30,7 +31,7 @@ export function LanguageSwitcher() {
       >
         <span aria-hidden>{LOCALE_FLAG[locale]}</span>
         <span className="uppercase">{locale}</span>
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-text-secondary">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-text-secondary" aria-hidden>
           <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>

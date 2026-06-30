@@ -85,7 +85,8 @@
     "tablePhone": "Phone",
     "tablePipelineStatus": "Pipeline Status",
     "filterByStatus": "Filter by status:",
-    "allStatuses": "All statuses"
+    "allStatuses": "All statuses",
+    "searchPlaceholder": "Search by name, phone, email, company... ( / )"
   },
   "customerNew": {
     "title": "Create Customer",
@@ -183,7 +184,8 @@
     "tableCaptured": "Captured",
     "convertToCustomer": "Convert to Customer",
     "converting": "Converting...",
-    "convertFailed": "Failed to convert lead."
+    "convertFailed": "Failed to convert lead.",
+    "searchPlaceholder": "Search by name, phone, email, campaign..."
   },
   "leadStatus": {
     "new": "New",
@@ -229,5 +231,10 @@
     "installed": "Installed",
     "completed": "Completed",
     "lost": "Lost"
+  },
+  "quickCreate": {
+    "title": "Quick create",
+    "newCustomer": "New Customer",
+    "newLead": "New Lead"
   }
 }
