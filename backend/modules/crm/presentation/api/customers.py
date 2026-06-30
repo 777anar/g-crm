@@ -44,6 +44,8 @@ def list_customers(
     assigned_manager_id: Optional[uuid.UUID] = Query(default=None),
     status: Optional[str] = Query(default=None),
     lead_source: Optional[str] = Query(default=None),
+    search: Optional[str] = Query(default=None, description="Matches name, phone, email, social handles, or company"),
+    sort: Optional[str] = Query(default=None, description="One of name, created_at, updated_at, status; prefix with - for descending"),
     limit: int = Query(default=25, le=100),
     cursor: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
@@ -59,6 +61,8 @@ def list_customers(
         assigned_manager_id=assigned_manager_id,
         status=status,
         lead_source=lead_source,
+        search=search,
+        sort=sort,
         limit=limit + 1,
         offset=offset,
     )

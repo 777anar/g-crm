@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from modules.crm.domain.entities import Customer as CustomerEntity
@@ -35,6 +35,18 @@ def _to_entity(model: CustomerModel) -> CustomerEntity:
     )
 
 
+# Whitelisted sortable columns -- per API_SPECIFICATION.md's `?sort=field` /
+# `?sort=-field` convention. Whitelisting (rather than getattr-ing whatever
+# the client sends) prevents sorting on arbitrary/sensitive columns.
+_SORTABLE_COLUMNS = {
+    "name": CustomerModel.name,
+    "created_at": CustomerModel.created_at,
+    "updated_at": CustomerModel.updated_at,
+    "status": CustomerModel.status,
+}
+DEFAULT_SORT = "-created_at"
+
+
 class CustomerRepository:
     def __init__(self, db: Session):
         self.db = db
@@ -63,6 +75,8 @@ class CustomerRepository:
         assigned_manager_id: Optional[uuid.UUID] = None,
         status: Optional[str] = None,
         lead_source: Optional[str] = None,
+        search: Optional[str] = None,
+        sort: Optional[str] = None,
         limit: int = 25,
         offset: int = 0,
     ) -> List[CustomerEntity]:
@@ -75,5 +89,24 @@ class CustomerRepository:
             stmt = stmt.where(CustomerModel.status == status)
         if lead_source:
             stmt = stmt.where(CustomerModel.lead_source == lead_source)
-        stmt = stmt.order_by(CustomerModel.created_at.desc()).offset(offset).limit(limit)
+        if search:
+            pattern = f"%{search.strip()}%"
+            stmt = stmt.where(
+                or_(
+                    CustomerModel.name.ilike(pattern),
+                    CustomerModel.phone.ilike(pattern),
+                    CustomerModel.whatsapp.ilike(pattern),
+                    CustomerModel.email.ilike(pattern),
+                    CustomerModel.instagram.ilike(pattern),
+                    CustomerModel.facebook.ilike(pattern),
+                    CustomerModel.company_name.ilike(pattern),
+                )
+            )
+
+        sort = sort or DEFAULT_SORT
+        descending = sort.startswith("-")
+        column = _SORTABLE_COLUMNS.get(sort.lstrip("-"), CustomerModel.created_at)
+        stmt = stmt.order_by(column.desc() if descending else column.asc())
+
+        stmt = stmt.offset(offset).limit(limit)
         return [_to_entity(m) for m in self.db.scalars(stmt).all()]

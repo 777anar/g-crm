@@ -21,6 +21,8 @@ router = APIRouter()
 def list_leads(
     status: Optional[str] = Query(default=None),
     source_channel: Optional[str] = Query(default=None),
+    search: Optional[str] = Query(default=None, description="Matches full name, phone, email, or campaign"),
+    sort: Optional[str] = Query(default=None, description="One of full_name, created_at, status; prefix with - for descending"),
     limit: int = Query(default=25, le=100),
     cursor: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
@@ -32,6 +34,8 @@ def list_leads(
         company_id=current_user.active_company_id,
         status=status,
         source_channel=source_channel,
+        search=search,
+        sort=sort,
         limit=limit + 1,
         offset=offset,
     )
