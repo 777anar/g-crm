@@ -39,7 +39,7 @@ export default function LoginPage() {
     try {
       const result = await selectCompany(companyId);
       setAccessToken(result.access_token);
-      router.push("/crm/customers");
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Could not select company.");
     } finally {

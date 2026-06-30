@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TextAreaField } from "@/components/ui/field";
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString();
+  return new Date(iso).toLocaleString("en-US");
 }
 
 export default function CustomerProfilePage() {

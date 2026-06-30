@@ -8,7 +8,7 @@ export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace(getAccessToken() ? "/crm/customers" : "/login");
+    router.replace(getAccessToken() ? "/dashboard" : "/login");
   }, [router]);
 
   return null;

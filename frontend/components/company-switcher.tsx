@@ -47,7 +47,7 @@ export function CompanySwitcher() {
       // Full reload: every screen's data is scoped to the active company, so
       // the simplest correct way to guarantee nothing stale is shown is to
       // re-fetch the app from scratch under the new company context.
-      window.location.href = "/crm/customers";
+      window.location.href = "/dashboard";
     } finally {
       setSwitching(false);
       setOpen(false);

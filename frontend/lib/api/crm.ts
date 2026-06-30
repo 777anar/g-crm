@@ -1,9 +1,9 @@
 import { apiRequest } from "../api-client";
 import type { Activity, Attachment, Customer, CustomerProfile, Lead, Paginated } from "../types";
 
-export function listCustomers(params: { includeArchived?: boolean } = {}) {
+export function listCustomers(params: { includeArchived?: boolean; limit?: number } = {}) {
   return apiRequest<Paginated<Customer>>("/api/v1/crm/customers", {
-    searchParams: { include_archived: params.includeArchived },
+    searchParams: { include_archived: params.includeArchived, limit: params.limit },
   });
 }
 
@@ -49,9 +49,9 @@ export function uploadCustomerAttachment(customerId: string, file: File) {
   return apiRequest<Attachment>("/api/v1/core/documents", { method: "POST", formData });
 }
 
-export function listLeads(params: { sourceChannel?: string; status?: string } = {}) {
+export function listLeads(params: { sourceChannel?: string; status?: string; limit?: number } = {}) {
   return apiRequest<Paginated<Lead>>("/api/v1/crm/leads", {
-    searchParams: { source_channel: params.sourceChannel, status: params.status },
+    searchParams: { source_channel: params.sourceChannel, status: params.status, limit: params.limit },
   });
 }
 

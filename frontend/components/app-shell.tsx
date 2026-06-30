@@ -6,12 +6,15 @@ import { clearAccessToken } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import { CompanySwitcher } from "@/components/company-switcher";
 
-// Per UI_UX_GUIDELINES.md section 6.1: primary sidebar is rendered from each
-// enabled module's navigation contribution. Only the CRM module is installed
-// as of Phase 2, so this list mirrors backend/modules/crm/navigation.py
-// directly. A future phase replaces this with a real GET /nav-config call
-// once more than one module is installed and per-company enablement matters.
+// Dashboard is core-platform navigation, always present regardless of which
+// modules are installed. The remaining items mirror each enabled module's
+// navigation contribution -- per UI_UX_GUIDELINES.md section 6.1. Only CRM
+// is installed as of Phase 2, so this list mirrors
+// backend/modules/crm/navigation.py directly. A future phase replaces the
+// module portion with a real GET /nav-config call once more than one module
+// is installed and per-company enablement matters.
 const NAV_ITEMS = [
+  { label: "Dashboard", href: "/dashboard" },
   { label: "Customers", href: "/crm/customers" },
   { label: "Leads", href: "/crm/leads" },
 ];
