@@ -86,7 +86,8 @@ class CreateCustomerUseCase:
                 company_id=data.company_id,
                 payload={"customer_id": str(customer.id), "name": customer.name},
                 published_by_module=MODULE_NAME,
-            )
+            ),
+            self.db,
         )
         return customer
 
@@ -139,7 +140,8 @@ class UpdateCustomerUseCase:
                 company_id=data.company_id,
                 payload={"customer_id": str(customer.id), "diff": diff},
                 published_by_module=MODULE_NAME,
-            )
+            ),
+            self.db,
         )
         return customer
 
@@ -177,7 +179,8 @@ class ArchiveCustomerUseCase:
                 company_id=data.company_id,
                 payload={"customer_id": str(customer.id)},
                 published_by_module=MODULE_NAME,
-            )
+            ),
+            self.db,
         )
         return customer
 
@@ -221,6 +224,7 @@ class AddCustomerNoteUseCase:
                 company_id=data.company_id,
                 payload={"customer_id": str(customer.id), "note_id": str(note.id)},
                 published_by_module=MODULE_NAME,
-            )
+            ),
+            self.db,
         )
         return note

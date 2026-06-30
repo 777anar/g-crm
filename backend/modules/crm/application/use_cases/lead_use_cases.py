@@ -79,7 +79,8 @@ class CreateLeadUseCase:
                     "full_name": lead.full_name,
                 },
                 published_by_module=MODULE_NAME,
-            )
+            ),
+            self.db,
         )
         return lead
 
@@ -160,6 +161,7 @@ class ConvertLeadUseCase:
                 company_id=data.company_id,
                 payload={"lead_id": str(lead.id), "customer_id": str(customer.id), "contact_id": str(contact.id)},
                 published_by_module=MODULE_NAME,
-            )
+            ),
+            self.db,
         )
         return customer

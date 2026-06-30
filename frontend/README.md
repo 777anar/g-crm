@@ -10,6 +10,16 @@ Next.js 15 + TypeScript. Implements the CRM screens against the backend's `/api/
 
 ## Setup
 
+Requires Node.js 20+. If you don't have it (no Homebrew on this Mac), download a prebuilt tarball instead of installing system-wide:
+
+```bash
+curl -sL -o /tmp/node.tar.gz "https://nodejs.org/dist/v20.17.0/node-v20.17.0-darwin-x64.tar.gz"
+mkdir -p ~/.local && tar -xzf /tmp/node.tar.gz -C ~/.local && mv ~/.local/node-v20.17.0-darwin-x64 ~/.local/node
+echo 'export PATH="$HOME/.local/node/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+```
+
+Then:
+
 ```bash
 npm install
 cp .env.example .env.local
@@ -20,7 +30,7 @@ Requires the backend running at `NEXT_PUBLIC_API_BASE_URL` (defaults to `http://
 
 ## Status
 
-> **Not yet runtime-verified.** This code was written without a Node.js environment available in the authoring sandbox (no `node`/`npm` present), so `npm install`, `next build`, and a live browser check have not been run. Code follows Next.js 15 App Router and TypeScript conventions throughout and is believed correct, but please run `npm install && npm run build` and click through the screens before treating this as production-verified.
+**Runtime-verified** (2026-06-30): `npm install`, `tsc --noEmit`, and `next build` all succeed with zero errors; all 7 routes compile and respond 200 in both `next build` and `next dev`. No browser extension was available in the verification environment, so visual/click-through QA was not performed — only build success, type-check success, and server-rendered HTML content were confirmed. Recommend a manual click-through before considering this fully production-verified.
 
 ## Design system
 
