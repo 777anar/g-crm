@@ -1,0 +1,18 @@
+[project]
+name = "g-erp-backend"
+version = "0.1.0"
+description = "G-ERP backend: FastAPI plugin core + business modules"
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.importlinter]
+root_package = "core"
+
+[[tool.importlinter.contracts]]
+name = "Core must never import business modules"
+type = "forbidden"
+source_modules = ["core"]
+forbidden_modules = ["modules"]

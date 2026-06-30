@@ -1,0 +1,33 @@
+type Tone = "neutral" | "success" | "warning" | "danger" | "info";
+
+const TONE_CLASSES: Record<Tone, string> = {
+  neutral: "bg-bg text-text-secondary border-border",
+  success: "bg-success/10 text-success border-success/30",
+  warning: "bg-warning/10 text-warning border-warning/30",
+  danger: "bg-danger/10 text-danger border-danger/30",
+  info: "bg-info/10 text-info border-info/30",
+};
+
+export function Badge({ tone = "neutral", children }: { tone?: Tone; children: React.ReactNode }) {
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${TONE_CLASSES[tone]}`}>
+      {children}
+    </span>
+  );
+}
+
+const LEAD_STATUS_TONE: Record<string, Tone> = {
+  new: "info",
+  contacted: "warning",
+  qualified: "warning",
+  converted: "success",
+  disqualified: "danger",
+};
+
+export function LeadStatusBadge({ status }: { status: string }) {
+  return <Badge tone={LEAD_STATUS_TONE[status] ?? "neutral"}>{status}</Badge>;
+}
+
+export function CustomerArchivedBadge({ archived }: { archived: boolean }) {
+  return archived ? <Badge tone="danger">Archived</Badge> : <Badge tone="success">Active</Badge>;
+}

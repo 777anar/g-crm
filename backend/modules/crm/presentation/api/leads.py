@@ -1,0 +1,89 @@
+import uuid
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+
+from core.api.errors import ConflictError, NotFoundError
+from core.db.session import get_db
+from core.rbac.dependencies import CurrentUser, require_permission
+from modules.crm.application.dtos import ConvertLeadInput, CreateLeadInput
+from modules.crm.application.use_cases import ConvertLeadUseCase, CreateLeadUseCase
+from modules.crm.domain.exceptions import LeadAlreadyConvertedError
+from modules.crm.infrastructure.repositories.lead_repository import LeadRepository
+from modules.crm.presentation.schemas.lead import LeadConvertOut, LeadCreate, LeadListOut, LeadOut
+
+router = APIRouter()
+
+
+@router.get("/leads", response_model=LeadListOut)
+def list_leads(
+    status: Optional[str] = Query(default=None),
+    source_channel: Optional[str] = Query(default=None),
+    limit: int = Query(default=25, le=100),
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("crm:leads:read")),
+) -> LeadListOut:
+    repo = LeadRepository(db)
+    items = repo.list(
+        company_id=current_user.active_company_id, status=status, source_channel=source_channel, limit=limit
+    )
+    return LeadListOut(items=[LeadOut.model_validate(lead) for lead in items], next_cursor=None)
+
+
+@router.post("/leads", response_model=LeadOut)
+def create_lead(
+    payload: LeadCreate,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("crm:leads:write")),
+) -> LeadOut:
+    use_case = CreateLeadUseCase(db)
+    lead = use_case.execute(
+        CreateLeadInput(
+            company_id=current_user.active_company_id,
+            actor_user_id=current_user.user_id,
+            full_name=payload.full_name,
+            source_channel=payload.source_channel,
+            email=payload.email,
+            phone=payload.phone,
+            campaign=payload.campaign,
+            assigned_manager_id=payload.assigned_manager_id,
+        )
+    )
+    db.commit()
+    db.refresh(lead)
+    return LeadOut.model_validate(lead)
+
+
+@router.get("/leads/{lead_id}", response_model=LeadOut)
+def get_lead(
+    lead_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("crm:leads:read")),
+) -> LeadOut:
+    repo = LeadRepository(db)
+    lead = repo.get(company_id=current_user.active_company_id, lead_id=lead_id)
+    if lead is None:
+        raise NotFoundError("Lead not found")
+    return LeadOut.model_validate(lead)
+
+
+@router.post("/leads/{lead_id}/convert", response_model=LeadConvertOut)
+def convert_lead(
+    lead_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("crm:leads:write")),
+) -> LeadConvertOut:
+    use_case = ConvertLeadUseCase(db)
+    try:
+        customer = use_case.execute(
+            ConvertLeadInput(
+                company_id=current_user.active_company_id,
+                actor_user_id=current_user.user_id,
+                lead_id=lead_id,
+            )
+        )
+    except LeadAlreadyConvertedError as exc:
+        raise ConflictError(str(exc)) from exc
+    db.commit()
+    return LeadConvertOut(customer_id=customer.id, contact_id=customer.primary_contact_id)
