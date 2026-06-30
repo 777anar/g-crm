@@ -18,6 +18,15 @@ def _to_entity(model: CustomerModel) -> CustomerEntity:
         assigned_manager_id=model.assigned_manager_id,
         lead_source=model.lead_source,
         advertising_campaign=model.advertising_campaign,
+        phone=model.phone,
+        whatsapp=model.whatsapp,
+        instagram=model.instagram,
+        facebook=model.facebook,
+        email=model.email,
+        address=model.address,
+        company_name=model.company_name,
+        notes=model.notes,
+        status=model.status,
         tags=list(model.tags or []),
         created_by=model.created_by,
         created_at=model.created_at,
@@ -52,6 +61,8 @@ class CustomerRepository:
         company_id: uuid.UUID,
         include_archived: bool = False,
         assigned_manager_id: Optional[uuid.UUID] = None,
+        status: Optional[str] = None,
+        lead_source: Optional[str] = None,
         limit: int = 25,
         offset: int = 0,
     ) -> List[CustomerEntity]:
@@ -60,5 +71,9 @@ class CustomerRepository:
             stmt = stmt.where(CustomerModel.deleted_at.is_(None))
         if assigned_manager_id:
             stmt = stmt.where(CustomerModel.assigned_manager_id == assigned_manager_id)
+        if status:
+            stmt = stmt.where(CustomerModel.status == status)
+        if lead_source:
+            stmt = stmt.where(CustomerModel.lead_source == lead_source)
         stmt = stmt.order_by(CustomerModel.created_at.desc()).offset(offset).limit(limit)
         return [_to_entity(m) for m in self.db.scalars(stmt).all()]

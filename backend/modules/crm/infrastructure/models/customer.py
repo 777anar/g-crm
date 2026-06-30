@@ -1,10 +1,11 @@
 from typing import List, Optional
 
-from sqlalchemy import DateTime, ForeignKey, JSON, String
+from sqlalchemy import DateTime, ForeignKey, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.db.base import Base
 from core.db.mixins import GUID, TimestampMixin, UUIDPrimaryKeyMixin
+from modules.crm.domain.value_objects import DEFAULT_CUSTOMER_STATUS
 
 
 class Customer(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -19,6 +20,18 @@ class Customer(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     assigned_manager_id: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
     lead_source: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     advertising_campaign: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    # Stone-industry customer fields (Phase 3 / G-STONE GALLERY customization).
+    phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    whatsapp: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    instagram: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    facebook: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    company_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String, nullable=False, default=DEFAULT_CUSTOMER_STATUS, index=True)
+
     tags: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     created_by: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
     deleted_at: Mapped[Optional[object]] = mapped_column(DateTime(timezone=True), nullable=True)

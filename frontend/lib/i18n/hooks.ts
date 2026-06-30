@@ -19,3 +19,10 @@ export function useCustomerTypeLabel() {
   const t = useTranslations("customerType");
   return (type: string) => t(type);
 }
+
+/** Translates a stone-industry sales pipeline status code (e.g.
+ * "in_production") to its display label. */
+export function useCustomerStatusLabel() {
+  const t = useTranslations("customerStatus");
+  return (status: string) => t(status);
+}

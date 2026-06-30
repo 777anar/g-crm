@@ -5,22 +5,22 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { listCustomers, listLeads } from "@/lib/api/crm";
 import { me } from "@/lib/api/auth";
-import type { Customer, Lead } from "@/lib/types";
-import { LEAD_SOURCE_CHANNELS } from "@/lib/types";
+import { CUSTOMER_STATUSES, type Customer, type Lead } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
-import { Badge, LeadChannelBadge, LeadStatusBadge } from "@/components/ui/badge";
+import { Badge, CustomerStatusBadge, LeadStatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCardSkeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/format";
-import { useLeadChannelLabel } from "@/lib/i18n/hooks";
+import { useCustomerStatusLabel, useLeadChannelLabel } from "@/lib/i18n/hooks";
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
   const channelLabel = useLeadChannelLabel();
+  const statusLabel = useCustomerStatusLabel();
   const [fullName, setFullName] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [customers, setCustomers] = useState<Customer[] | null>(null);
@@ -45,14 +45,17 @@ export default function DashboardPage() {
   const loading = customers === null || leads === null;
 
   const activeCustomers = customers?.filter((c) => c.deleted_at === null) ?? [];
-  const archivedCustomers = customers?.filter((c) => c.deleted_at !== null) ?? [];
-  const convertedLeads = leads?.filter((l) => l.status === "converted") ?? [];
-  const openLeads = leads?.filter((l) => l.status !== "converted" && l.status !== "disqualified") ?? [];
 
-  const leadsByChannel = LEAD_SOURCE_CHANNELS.map((channel) => ({
-    channel,
-    count: leads?.filter((l) => l.source_channel === channel).length ?? 0,
+  const customersByStatus = CUSTOMER_STATUSES.map((status) => ({
+    status,
+    count: activeCustomers.filter((c) => c.status === status).length,
   }));
+
+  const newInquiries = activeCustomers.filter((c) => c.status === "new_inquiry").length;
+  const inProduction = activeCustomers.filter(
+    (c) => c.status === "in_production" || c.status === "installation_scheduled"
+  ).length;
+  const lostCustomers = activeCustomers.filter((c) => c.status === "lost").length;
 
   const recentCustomers = [...activeCustomers]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -98,9 +101,9 @@ export default function DashboardPage() {
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label={t("statActiveCustomers")} value={activeCustomers.length} tone="primary" />
-            <StatCard label={t("statArchivedCustomers")} value={archivedCustomers.length} />
-            <StatCard label={t("statOpenLeads")} value={openLeads.length} tone="warning" />
-            <StatCard label={t("statConvertedLeads")} value={convertedLeads.length} tone="success" />
+            <StatCard label={statusLabel("new_inquiry")} value={newInquiries} tone="info" />
+            <StatCard label={t("statInProduction")} value={inProduction} tone="warning" />
+            <StatCard label={statusLabel("lost")} value={lostCustomers} tone="danger" />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -127,7 +130,7 @@ export default function DashboardPage() {
                           {t("createdOn", { date: formatDate(customer.created_at) })}
                         </p>
                       </div>
-                      {customer.lead_source && <LeadChannelBadge channel={customer.lead_source} />}
+                      <CustomerStatusBadge status={customer.status} />
                     </li>
                   ))}
                 </ul>
@@ -135,23 +138,28 @@ export default function DashboardPage() {
             </Card>
 
             <Card>
-              <CardHeader title={t("leadsByChannel")} />
+              <CardHeader title={t("customersByStatus")} />
               <ul className="flex flex-col gap-3">
-                {leadsByChannel.map(({ channel, count }) => {
-                  const max = Math.max(...leadsByChannel.map((c) => c.count), 1);
-                  const pct = Math.round((count / max) * 100);
-                  return (
-                    <li key={channel}>
-                      <div className="mb-1 flex items-center justify-between text-sm">
-                        <span className="text-text-primary">{channelLabel(channel)}</span>
-                        <span className="text-text-secondary">{count}</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-bg">
-                        <div className="h-1.5 rounded-full bg-primary" style={{ width: `${pct}%` }} />
-                      </div>
-                    </li>
-                  );
-                })}
+                {customersByStatus
+                  .filter(({ count }) => count > 0)
+                  .map(({ status, count }) => {
+                    const max = Math.max(...customersByStatus.map((c) => c.count), 1);
+                    const pct = Math.round((count / max) * 100);
+                    return (
+                      <li key={status}>
+                        <div className="mb-1 flex items-center justify-between text-sm">
+                          <span className="text-text-primary">{statusLabel(status)}</span>
+                          <span className="text-text-secondary">{count}</span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-bg">
+                          <div className="h-1.5 rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                        </div>
+                      </li>
+                    );
+                  })}
+                {customersByStatus.every(({ count }) => count === 0) && (
+                  <p className="text-sm text-text-secondary">{t("noCustomersYet")}</p>
+                )}
               </ul>
             </Card>
           </div>

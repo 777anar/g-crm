@@ -1,9 +1,21 @@
 import { apiRequest } from "../api-client";
-import type { Activity, Attachment, Customer, CustomerProfile, Lead, Paginated } from "../types";
+import type { Activity, Attachment, Customer, CustomerProfile, CustomerStatus, Lead, Paginated } from "../types";
 
-export function listCustomers(params: { includeArchived?: boolean; limit?: number } = {}) {
+export function listCustomers(
+  params: {
+    includeArchived?: boolean;
+    status?: CustomerStatus;
+    leadSource?: string;
+    limit?: number;
+  } = {}
+) {
   return apiRequest<Paginated<Customer>>("/api/v1/crm/customers", {
-    searchParams: { include_archived: params.includeArchived, limit: params.limit },
+    searchParams: {
+      include_archived: params.includeArchived,
+      status: params.status,
+      lead_source: params.leadSource,
+      limit: params.limit,
+    },
   });
 }
 
@@ -20,6 +32,15 @@ export type CreateCustomerInput = {
   type: "individual" | "business";
   lead_source?: string;
   advertising_campaign?: string;
+  phone?: string;
+  whatsapp?: string;
+  instagram?: string;
+  facebook?: string;
+  email?: string;
+  address?: string;
+  company_name?: string;
+  notes?: string;
+  status?: CustomerStatus;
   tags?: string[];
   contact?: { full_name: string; email?: string; phone?: string };
 };

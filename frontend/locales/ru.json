@@ -62,7 +62,9 @@
     "tableName": "Имя",
     "tableChannel": "Канал",
     "tableStatus": "Статус",
-    "tableCaptured": "Добавлен"
+    "tableCaptured": "Добавлен",
+    "statInProduction": "В производстве",
+    "customersByStatus": "Клиенты по статусу"
   },
   "customers": {
     "title": "Клиенты",
@@ -79,7 +81,11 @@
     "tableCreated": "Создан",
     "tableStatus": "Статус",
     "statusActive": "Активен",
-    "statusArchived": "Архивный"
+    "statusArchived": "Архивный",
+    "tablePhone": "Телефон",
+    "tablePipelineStatus": "Этап",
+    "filterByStatus": "Фильтр по статусу:",
+    "allStatuses": "Все статусы"
   },
   "customerNew": {
     "title": "Создать клиента",
@@ -93,7 +99,16 @@
     "contactEmail": "Эл. почта контакта",
     "contactPhone": "Телефон контакта",
     "creating": "Создание...",
-    "createFailed": "Не удалось создать клиента."
+    "createFailed": "Не удалось создать клиента.",
+    "phone": "Телефон",
+    "whatsapp": "WhatsApp",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "email": "Эл. почта",
+    "address": "Адрес",
+    "companyName": "Компания",
+    "notes": "Заметки",
+    "status": "Статус клиента"
   },
   "customerProfile": {
     "breadcrumbCustomers": "Клиенты",
@@ -133,7 +148,16 @@
     "saving": "Сохранение...",
     "noteFailed": "Не удалось добавить заметку.",
     "activityTimeline": "Лента активности",
-    "noActivity": "Активности пока нет"
+    "noActivity": "Активности пока нет",
+    "phone": "Телефон",
+    "whatsapp": "WhatsApp",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "email": "Эл. почта",
+    "address": "Адрес",
+    "companyName": "Компания",
+    "notes": "Заметки",
+    "status": "Статус клиента"
   },
   "leads": {
     "title": "Лиды",
@@ -173,7 +197,11 @@
     "facebook": "Facebook",
     "messenger": "Messenger",
     "whatsapp": "WhatsApp",
-    "manual": "Вручную"
+    "phone_call": "Звонок",
+    "website": "Сайт",
+    "office_visit": "Визит в офис",
+    "referral": "Рекомендация",
+    "other": "Другое"
   },
   "customerType": {
     "individual": "Физическое лицо",
@@ -185,5 +213,21 @@
     "call": "Звонок",
     "email": "Эл. почта",
     "meeting": "Встреча"
+  },
+  "customerStatus": {
+    "new_inquiry": "Новый запрос",
+    "contacted": "Связались",
+    "measurement_scheduled": "Замер назначен",
+    "measurement_completed": "Замер выполнен",
+    "preparing_quote": "Подготовка КП",
+    "quote_sent": "КП отправлено",
+    "waiting_for_decision": "Ожидание решения",
+    "approved": "Одобрено",
+    "payment_received": "Оплата получена",
+    "in_production": "В производстве",
+    "installation_scheduled": "Монтаж назначен",
+    "installed": "Установлено",
+    "completed": "Завершено",
+    "lost": "Потеряно"
   }
 }

@@ -5,21 +5,29 @@ CUSTOMER_TYPE_INDIVIDUAL = "individual"
 CUSTOMER_TYPE_BUSINESS = "business"
 VALID_CUSTOMER_TYPES = {CUSTOMER_TYPE_INDIVIDUAL, CUSTOMER_TYPE_BUSINESS}
 
-# "Lead Management" channels, per Phase 2 requirements. WhatsApp is included
-# now (future-ready) even though no inbound webhook integration exists yet --
-# the enum value and manual-entry path both work today; an automated
-# WhatsApp ingestion path is a later, additive change to the same field.
+# Lead sources, customized for the G-STONE GALLERY stone-industry workflow
+# (Phase 3). Shared by both the Lead capture channel field and the
+# Customer "Lead Source" field -- one vocabulary, since a lead's source
+# channel becomes the resulting customer's lead source on conversion.
 LEAD_SOURCE_INSTAGRAM = "instagram"
 LEAD_SOURCE_FACEBOOK = "facebook"
 LEAD_SOURCE_MESSENGER = "messenger"
 LEAD_SOURCE_WHATSAPP = "whatsapp"
-LEAD_SOURCE_MANUAL = "manual"
+LEAD_SOURCE_PHONE_CALL = "phone_call"
+LEAD_SOURCE_WEBSITE = "website"
+LEAD_SOURCE_OFFICE_VISIT = "office_visit"
+LEAD_SOURCE_REFERRAL = "referral"
+LEAD_SOURCE_OTHER = "other"
 VALID_LEAD_SOURCES = {
     LEAD_SOURCE_INSTAGRAM,
     LEAD_SOURCE_FACEBOOK,
     LEAD_SOURCE_MESSENGER,
     LEAD_SOURCE_WHATSAPP,
-    LEAD_SOURCE_MANUAL,
+    LEAD_SOURCE_PHONE_CALL,
+    LEAD_SOURCE_WEBSITE,
+    LEAD_SOURCE_OFFICE_VISIT,
+    LEAD_SOURCE_REFERRAL,
+    LEAD_SOURCE_OTHER,
 }
 
 LEAD_STATUS_NEW = "new"
@@ -34,6 +42,44 @@ VALID_LEAD_STATUSES = {
     LEAD_STATUS_CONVERTED,
     LEAD_STATUS_DISQUALIFIED,
 }
+
+# Stone-industry sales pipeline status (Phase 3 / G-STONE GALLERY
+# customization). Ordered list reflects the real workflow stage sequence
+# (used for display ordering); CUSTOMER_STATUS_LOST is a terminal state
+# reachable from any stage, not a sequential step.
+CUSTOMER_STATUS_NEW_INQUIRY = "new_inquiry"
+CUSTOMER_STATUS_CONTACTED = "contacted"
+CUSTOMER_STATUS_MEASUREMENT_SCHEDULED = "measurement_scheduled"
+CUSTOMER_STATUS_MEASUREMENT_COMPLETED = "measurement_completed"
+CUSTOMER_STATUS_PREPARING_QUOTE = "preparing_quote"
+CUSTOMER_STATUS_QUOTE_SENT = "quote_sent"
+CUSTOMER_STATUS_WAITING_FOR_DECISION = "waiting_for_decision"
+CUSTOMER_STATUS_APPROVED = "approved"
+CUSTOMER_STATUS_PAYMENT_RECEIVED = "payment_received"
+CUSTOMER_STATUS_IN_PRODUCTION = "in_production"
+CUSTOMER_STATUS_INSTALLATION_SCHEDULED = "installation_scheduled"
+CUSTOMER_STATUS_INSTALLED = "installed"
+CUSTOMER_STATUS_COMPLETED = "completed"
+CUSTOMER_STATUS_LOST = "lost"
+
+CUSTOMER_STATUS_ORDER = [
+    CUSTOMER_STATUS_NEW_INQUIRY,
+    CUSTOMER_STATUS_CONTACTED,
+    CUSTOMER_STATUS_MEASUREMENT_SCHEDULED,
+    CUSTOMER_STATUS_MEASUREMENT_COMPLETED,
+    CUSTOMER_STATUS_PREPARING_QUOTE,
+    CUSTOMER_STATUS_QUOTE_SENT,
+    CUSTOMER_STATUS_WAITING_FOR_DECISION,
+    CUSTOMER_STATUS_APPROVED,
+    CUSTOMER_STATUS_PAYMENT_RECEIVED,
+    CUSTOMER_STATUS_IN_PRODUCTION,
+    CUSTOMER_STATUS_INSTALLATION_SCHEDULED,
+    CUSTOMER_STATUS_INSTALLED,
+    CUSTOMER_STATUS_COMPLETED,
+    CUSTOMER_STATUS_LOST,
+]
+VALID_CUSTOMER_STATUSES = set(CUSTOMER_STATUS_ORDER)
+DEFAULT_CUSTOMER_STATUS = CUSTOMER_STATUS_NEW_INQUIRY
 
 ACTIVITY_TYPE_NOTE = "note"
 ACTIVITY_TYPE_CALL = "call"

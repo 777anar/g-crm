@@ -51,7 +51,7 @@ def _lead(**overrides):
         full_name="Test Lead",
         email=None,
         phone=None,
-        source_channel="manual",
+        source_channel="phone_call",
         campaign=None,
         status="new",
         assigned_manager_id=None,

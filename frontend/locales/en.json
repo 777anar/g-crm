@@ -62,7 +62,9 @@
     "tableName": "Name",
     "tableChannel": "Channel",
     "tableStatus": "Status",
-    "tableCaptured": "Captured"
+    "tableCaptured": "Captured",
+    "statInProduction": "In Production",
+    "customersByStatus": "Customers by Status"
   },
   "customers": {
     "title": "Customers",
@@ -79,7 +81,11 @@
     "tableCreated": "Created",
     "tableStatus": "Status",
     "statusActive": "Active",
-    "statusArchived": "Archived"
+    "statusArchived": "Archived",
+    "tablePhone": "Phone",
+    "tablePipelineStatus": "Pipeline Status",
+    "filterByStatus": "Filter by status:",
+    "allStatuses": "All statuses"
   },
   "customerNew": {
     "title": "Create Customer",
@@ -93,7 +99,16 @@
     "contactEmail": "Contact Email",
     "contactPhone": "Contact Phone",
     "creating": "Creating...",
-    "createFailed": "Failed to create customer."
+    "createFailed": "Failed to create customer.",
+    "phone": "Phone",
+    "whatsapp": "WhatsApp",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "email": "Email",
+    "address": "Address",
+    "companyName": "Company",
+    "notes": "Notes",
+    "status": "Customer Status"
   },
   "customerProfile": {
     "breadcrumbCustomers": "Customers",
@@ -133,7 +148,16 @@
     "saving": "Saving...",
     "noteFailed": "Failed to add note.",
     "activityTimeline": "Activity Timeline",
-    "noActivity": "No activity yet"
+    "noActivity": "No activity yet",
+    "phone": "Phone",
+    "whatsapp": "WhatsApp",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "email": "Email",
+    "address": "Address",
+    "companyName": "Company",
+    "notes": "Notes",
+    "status": "Customer Status"
   },
   "leads": {
     "title": "Leads",
@@ -173,7 +197,11 @@
     "facebook": "Facebook",
     "messenger": "Messenger",
     "whatsapp": "WhatsApp",
-    "manual": "Manual"
+    "phone_call": "Phone Call",
+    "website": "Website",
+    "office_visit": "Office Visit",
+    "referral": "Referral",
+    "other": "Other"
   },
   "customerType": {
     "individual": "Individual",
@@ -185,5 +213,21 @@
     "call": "Call",
     "email": "Email",
     "meeting": "Meeting"
+  },
+  "customerStatus": {
+    "new_inquiry": "New Inquiry",
+    "contacted": "Contacted",
+    "measurement_scheduled": "Measurement Scheduled",
+    "measurement_completed": "Measurement Completed",
+    "preparing_quote": "Preparing Quote",
+    "quote_sent": "Quote Sent",
+    "waiting_for_decision": "Waiting for Decision",
+    "approved": "Approved",
+    "payment_received": "Payment Received",
+    "in_production": "In Production",
+    "installation_scheduled": "Installation Scheduled",
+    "installed": "Installed",
+    "completed": "Completed",
+    "lost": "Lost"
   }
 }

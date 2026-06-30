@@ -14,7 +14,7 @@ from modules.crm.application.dtos import (
     UpdateCustomerInput,
 )
 from modules.crm.domain import events as crm_events
-from modules.crm.domain.value_objects import ACTIVITY_TYPE_NOTE, ACTIVITY_TYPE_SYSTEM
+from modules.crm.domain.value_objects import ACTIVITY_TYPE_NOTE, ACTIVITY_TYPE_SYSTEM, DEFAULT_CUSTOMER_STATUS
 from modules.crm.infrastructure.models.activity import Activity
 from modules.crm.infrastructure.models.contact import Contact
 from modules.crm.infrastructure.models.customer import Customer
@@ -40,6 +40,15 @@ class CreateCustomerUseCase:
             assigned_manager_id=data.assigned_manager_id,
             lead_source=data.lead_source,
             advertising_campaign=data.advertising_campaign,
+            phone=data.phone,
+            whatsapp=data.whatsapp,
+            instagram=data.instagram,
+            facebook=data.facebook,
+            email=data.email,
+            address=data.address,
+            company_name=data.company_name,
+            notes=data.notes,
+            status=data.status or DEFAULT_CUSTOMER_STATUS,
             tags=data.tags,
             created_by=data.actor_user_id,
         )
@@ -118,9 +127,21 @@ class UpdateCustomerUseCase:
         if data.advertising_campaign is not None and data.advertising_campaign != customer.advertising_campaign:
             diff["advertising_campaign"] = {"old": customer.advertising_campaign, "new": data.advertising_campaign}
             customer.advertising_campaign = data.advertising_campaign
+        for field_name in ("phone", "whatsapp", "instagram", "facebook", "email", "address", "company_name", "notes"):
+            new_value = getattr(data, field_name)
+            if new_value is not None and new_value != getattr(customer, field_name):
+                diff[field_name] = {"old": getattr(customer, field_name), "new": new_value}
+                setattr(customer, field_name, new_value)
         if data.tags is not None and data.tags != list(customer.tags or []):
             diff["tags"] = {"old": customer.tags, "new": data.tags}
             customer.tags = data.tags
+
+        status_changed = False
+        old_status = customer.status
+        if data.status is not None and data.status != customer.status:
+            diff["status"] = {"old": customer.status, "new": data.status}
+            customer.status = data.status
+            status_changed = True
 
         record_audit(
             self.db,
@@ -143,6 +164,17 @@ class UpdateCustomerUseCase:
             ),
             self.db,
         )
+
+        if status_changed:
+            event_bus.publish(
+                Event(
+                    name=crm_events.CUSTOMER_STATUS_CHANGED,
+                    company_id=data.company_id,
+                    payload={"customer_id": str(customer.id), "old_status": old_status, "new_status": customer.status},
+                    published_by_module=MODULE_NAME,
+                ),
+                self.db,
+            )
         return customer
 
 

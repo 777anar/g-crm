@@ -7,11 +7,19 @@ from datetime import datetime
 from typing import List, Optional
 
 from modules.crm.domain.exceptions import CustomerAlreadyArchivedError, LeadAlreadyConvertedError
-from modules.crm.domain.value_objects import LEAD_STATUS_CONVERTED
+from modules.crm.domain.value_objects import (
+    DEFAULT_CUSTOMER_STATUS,
+    LEAD_STATUS_CONVERTED,
+    VALID_CUSTOMER_STATUSES,
+)
 
 
 @dataclass
 class Customer:
+    """A G-STONE GALLERY customer: a person (Full Name), optionally
+    affiliated with a Company, tracked through the stone-industry sales
+    pipeline via `status` (see value_objects.CUSTOMER_STATUS_ORDER)."""
+
     id: uuid.UUID
     company_id: uuid.UUID
     name: str
@@ -20,6 +28,15 @@ class Customer:
     assigned_manager_id: Optional[uuid.UUID]
     lead_source: Optional[str]
     advertising_campaign: Optional[str]
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    instagram: Optional[str] = None
+    facebook: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    company_name: Optional[str] = None
+    notes: Optional[str] = None
+    status: str = DEFAULT_CUSTOMER_STATUS
     tags: List[str] = field(default_factory=list)
     created_by: Optional[uuid.UUID] = None
     created_at: Optional[datetime] = None
@@ -34,6 +51,11 @@ class Customer:
         if self.is_archived:
             raise CustomerAlreadyArchivedError(f"Customer {self.id} is already archived")
         self.deleted_at = at
+
+    def set_status(self, status: str) -> None:
+        if status not in VALID_CUSTOMER_STATUSES:
+            raise ValueError(f"'{status}' is not a valid customer status")
+        self.status = status
 
 
 @dataclass

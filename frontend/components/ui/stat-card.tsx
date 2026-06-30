@@ -9,7 +9,7 @@ export function StatCard({
   label: string;
   value: string | number;
   hint?: string;
-  tone?: "neutral" | "primary" | "success" | "warning";
+  tone?: "neutral" | "primary" | "success" | "warning" | "danger" | "info";
 }) {
   const valueClass =
     tone === "primary"
@@ -18,7 +18,11 @@ export function StatCard({
         ? "text-success"
         : tone === "warning"
           ? "text-warning"
-          : "text-text-primary";
+          : tone === "danger"
+            ? "text-danger"
+            : tone === "info"
+              ? "text-info"
+              : "text-text-primary";
 
   return (
     <Card>

@@ -3,7 +3,7 @@ import uuid
 import pytest
 
 
-@pytest.mark.parametrize("channel", ["instagram", "facebook", "messenger", "whatsapp", "manual"])
+@pytest.mark.parametrize("channel", ["instagram", "facebook", "messenger", "whatsapp", "phone_call"])
 def test_create_lead_for_each_channel(app_client, owner_headers, channel):
     response = app_client.post(
         "/api/v1/crm/leads",
@@ -27,7 +27,7 @@ def test_create_lead_invalid_channel_rejected(app_client, owner_headers):
 
 def test_create_lead_requires_write_permission(app_client, viewer_headers):
     response = app_client.post(
-        "/api/v1/crm/leads", headers=viewer_headers, json={"full_name": "Blocked Lead", "source_channel": "manual"}
+        "/api/v1/crm/leads", headers=viewer_headers, json={"full_name": "Blocked Lead", "source_channel": "phone_call"}
     )
     assert response.status_code == 403
 
@@ -82,7 +82,7 @@ def test_convert_lead_creates_customer_and_contact(app_client, owner_headers):
 
 def test_convert_already_converted_lead_returns_conflict(app_client, owner_headers):
     lead = app_client.post(
-        "/api/v1/crm/leads", headers=owner_headers, json={"full_name": "Double Convert", "source_channel": "manual"}
+        "/api/v1/crm/leads", headers=owner_headers, json={"full_name": "Double Convert", "source_channel": "phone_call"}
     ).json()
     app_client.post(f"/api/v1/crm/leads/{lead['id']}/convert", headers=owner_headers)
 

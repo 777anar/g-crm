@@ -42,3 +42,28 @@ export function CustomerArchivedBadge({ archived }: { archived: boolean }) {
   const t = useTranslations("customers");
   return archived ? <Badge tone="danger">{t("statusArchived")}</Badge> : <Badge tone="success">{t("statusActive")}</Badge>;
 }
+
+// Stone-industry sales pipeline status tones: cool grey while unqualified,
+// warm while a quote is in motion, green once money/installation is
+// locked in, red for the one terminal failure state.
+const CUSTOMER_STATUS_TONE: Record<string, Tone> = {
+  new_inquiry: "neutral",
+  contacted: "neutral",
+  measurement_scheduled: "info",
+  measurement_completed: "info",
+  preparing_quote: "warning",
+  quote_sent: "warning",
+  waiting_for_decision: "warning",
+  approved: "success",
+  payment_received: "success",
+  in_production: "info",
+  installation_scheduled: "info",
+  installed: "success",
+  completed: "success",
+  lost: "danger",
+};
+
+export function CustomerStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("customerStatus");
+  return <Badge tone={CUSTOMER_STATUS_TONE[status] ?? "neutral"}>{t(status)}</Badge>;
+}

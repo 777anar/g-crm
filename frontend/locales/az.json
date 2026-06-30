@@ -62,7 +62,9 @@
     "tableName": "Ad",
     "tableChannel": "Kanal",
     "tableStatus": "Status",
-    "tableCaptured": "Əlavə edilib"
+    "tableCaptured": "Əlavə edilib",
+    "statInProduction": "İstehsalatda",
+    "customersByStatus": "Statusa görə müştərilər"
   },
   "customers": {
     "title": "Müştərilər",
@@ -79,7 +81,11 @@
     "tableCreated": "Yaradılıb",
     "tableStatus": "Status",
     "statusActive": "Aktiv",
-    "statusArchived": "Arxivləndi"
+    "statusArchived": "Arxivləndi",
+    "tablePhone": "Telefon",
+    "tablePipelineStatus": "Mərhələ",
+    "filterByStatus": "Statusa görə filtr:",
+    "allStatuses": "Bütün statuslar"
   },
   "customerNew": {
     "title": "Müştəri yarat",
@@ -93,7 +99,16 @@
     "contactEmail": "Əlaqənin e-poçtu",
     "contactPhone": "Əlaqənin telefonu",
     "creating": "Yaradılır...",
-    "createFailed": "Müştəri yaradıla bilmədi."
+    "createFailed": "Müştəri yaradıla bilmədi.",
+    "phone": "Telefon",
+    "whatsapp": "WhatsApp",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "email": "E-poçt",
+    "address": "Ünvan",
+    "companyName": "Şirkət",
+    "notes": "Qeydlər",
+    "status": "Müştəri statusu"
   },
   "customerProfile": {
     "breadcrumbCustomers": "Müştərilər",
@@ -133,7 +148,16 @@
     "saving": "Yadda saxlanılır...",
     "noteFailed": "Qeyd əlavə edilmədi.",
     "activityTimeline": "Fəaliyyət lenti",
-    "noActivity": "Hələ fəaliyyət yoxdur"
+    "noActivity": "Hələ fəaliyyət yoxdur",
+    "phone": "Telefon",
+    "whatsapp": "WhatsApp",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "email": "E-poçt",
+    "address": "Ünvan",
+    "companyName": "Şirkət",
+    "notes": "Qeydlər",
+    "status": "Müştəri statusu"
   },
   "leads": {
     "title": "Leadlər",
@@ -173,7 +197,11 @@
     "facebook": "Facebook",
     "messenger": "Messenger",
     "whatsapp": "WhatsApp",
-    "manual": "Əl ilə"
+    "phone_call": "Telefon zəngi",
+    "website": "Veb sayt",
+    "office_visit": "Ofisə baş çəkmə",
+    "referral": "Tövsiyə",
+    "other": "Digər"
   },
   "customerType": {
     "individual": "Fərdi",
@@ -185,5 +213,21 @@
     "call": "Zəng",
     "email": "E-poçt",
     "meeting": "Görüş"
+  },
+  "customerStatus": {
+    "new_inquiry": "Yeni sorğu",
+    "contacted": "Əlaqə saxlanıldı",
+    "measurement_scheduled": "Ölçü təyin edildi",
+    "measurement_completed": "Ölçü tamamlandı",
+    "preparing_quote": "Təklif hazırlanır",
+    "quote_sent": "Təklif göndərildi",
+    "waiting_for_decision": "Qərar gözlənilir",
+    "approved": "Təsdiqləndi",
+    "payment_received": "Ödəniş alındı",
+    "in_production": "İstehsalatda",
+    "installation_scheduled": "Quraşdırma təyin edildi",
+    "installed": "Quraşdırıldı",
+    "completed": "Tamamlandı",
+    "lost": "İtirildi"
   }
 }

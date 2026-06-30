@@ -4,29 +4,30 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { listCustomers } from "@/lib/api/crm";
-import type { Customer } from "@/lib/types";
+import { CUSTOMER_STATUSES, type Customer, type CustomerStatus } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { CustomerArchivedBadge, LeadChannelBadge } from "@/components/ui/badge";
+import { CustomerArchivedBadge, CustomerStatusBadge, LeadChannelBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
-import { useCustomerTypeLabel } from "@/lib/i18n/hooks";
+import { useCustomerStatusLabel } from "@/lib/i18n/hooks";
 
 export default function CustomersListPage() {
   const t = useTranslations("customers");
   const tCommon = useTranslations("common");
-  const customerTypeLabel = useCustomerTypeLabel();
+  const statusLabel = useCustomerStatusLabel();
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<CustomerStatus | "">("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setCustomers(null);
-    listCustomers({ includeArchived })
+    listCustomers({ includeArchived, status: statusFilter || undefined })
       .then((res) => setCustomers(res.items))
       .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
-  }, [includeArchived, t]);
+  }, [includeArchived, statusFilter, t]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -40,14 +41,35 @@ export default function CustomersListPage() {
         </Link>
       </div>
 
-      <label className="flex w-fit items-center gap-2 text-sm text-text-secondary">
-        <input
-          type="checkbox"
-          checked={includeArchived}
-          onChange={(e) => setIncludeArchived(e.target.checked)}
-        />
-        {t("showArchived")}
-      </label>
+      <div className="flex flex-wrap items-center gap-4">
+        <label className="flex w-fit items-center gap-2 text-sm text-text-secondary">
+          <input
+            type="checkbox"
+            checked={includeArchived}
+            onChange={(e) => setIncludeArchived(e.target.checked)}
+          />
+          {t("showArchived")}
+        </label>
+
+        <div className="flex items-center gap-2">
+          <label htmlFor="customer-status-filter" className="text-sm text-text-secondary">
+            {t("filterByStatus")}
+          </label>
+          <select
+            id="customer-status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as CustomerStatus | "")}
+            className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+          >
+            <option value="">{t("allStatuses")}</option>
+            {CUSTOMER_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {statusLabel(s)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
@@ -71,9 +93,9 @@ export default function CustomersListPage() {
             <thead className="sticky top-0 border-b border-border bg-bg text-text-secondary">
               <tr>
                 <th className="px-4 py-2 font-medium">{t("tableName")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableType")}</th>
+                <th className="px-4 py-2 font-medium">{t("tablePhone")}</th>
                 <th className="px-4 py-2 font-medium">{t("tableLeadSource")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableCampaign")}</th>
+                <th className="px-4 py-2 font-medium">{t("tablePipelineStatus")}</th>
                 <th className="px-4 py-2 font-medium">{t("tableCreated")}</th>
                 <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
               </tr>
@@ -86,12 +108,12 @@ export default function CustomersListPage() {
                       {customer.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-2">{customerTypeLabel(customer.type)}</td>
+                  <td className="px-4 py-2 text-text-secondary">{customer.phone ?? tCommon("dash")}</td>
                   <td className="px-4 py-2">
                     {customer.lead_source ? <LeadChannelBadge channel={customer.lead_source} /> : tCommon("dash")}
                   </td>
-                  <td className="px-4 py-2 text-text-secondary">
-                    {customer.advertising_campaign ?? tCommon("dash")}
+                  <td className="px-4 py-2">
+                    <CustomerStatusBadge status={customer.status} />
                   </td>
                   <td className="px-4 py-2 text-text-secondary">{formatDate(customer.created_at)}</td>
                   <td className="px-4 py-2">

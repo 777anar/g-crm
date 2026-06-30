@@ -15,6 +15,15 @@ class CreateCustomerInput:
     assigned_manager_id: Optional[uuid.UUID] = None
     lead_source: Optional[str] = None
     advertising_campaign: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    instagram: Optional[str] = None
+    facebook: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    company_name: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
     tags: List[str] = field(default_factory=list)
     contact_full_name: Optional[str] = None
     contact_email: Optional[str] = None
@@ -30,6 +39,15 @@ class UpdateCustomerInput:
     assigned_manager_id: Optional[uuid.UUID] = None
     lead_source: Optional[str] = None
     advertising_campaign: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    instagram: Optional[str] = None
+    facebook: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    company_name: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
     tags: Optional[List[str]] = None
 
 

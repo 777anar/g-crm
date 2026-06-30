@@ -7,23 +7,29 @@ import { createCustomer } from "@/lib/api/crm";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
-import { SelectField, TextField } from "@/components/ui/field";
-import { LEAD_SOURCE_CHANNELS } from "@/lib/types";
-import { useLeadChannelLabel } from "@/lib/i18n/hooks";
+import { SelectField, TextAreaField, TextField } from "@/components/ui/field";
+import { CUSTOMER_STATUSES, LEAD_SOURCE_CHANNELS } from "@/lib/types";
+import { useCustomerStatusLabel, useLeadChannelLabel } from "@/lib/i18n/hooks";
 
 export default function NewCustomerPage() {
   const router = useRouter();
   const t = useTranslations("customerNew");
   const tCommon = useTranslations("common");
-  const tCustomerType = useTranslations("customerType");
   const channelLabel = useLeadChannelLabel();
+  const statusLabel = useCustomerStatusLabel();
+
   const [name, setName] = useState("");
-  const [type, setType] = useState<"individual" | "business">("business");
+  const [phone, setPhone] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [facebook, setFacebook] = useState("");
+  const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [leadSource, setLeadSource] = useState("");
   const [campaign, setCampaign] = useState("");
-  const [contactName, setContactName] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
+  const [status, setStatus] = useState<string>(CUSTOMER_STATUSES[0]);
+  const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -34,12 +40,18 @@ export default function NewCustomerPage() {
     try {
       const customer = await createCustomer({
         name,
-        type,
+        type: "individual",
+        phone: phone || undefined,
+        whatsapp: whatsapp || undefined,
+        instagram: instagram || undefined,
+        facebook: facebook || undefined,
+        email: email || undefined,
+        address: address || undefined,
+        company_name: companyName || undefined,
         lead_source: leadSource || undefined,
         advertising_campaign: campaign || undefined,
-        contact: contactName
-          ? { full_name: contactName, email: contactEmail || undefined, phone: contactPhone || undefined }
-          : undefined,
+        status: status as (typeof CUSTOMER_STATUSES)[number],
+        notes: notes || undefined,
       });
       router.push(`/crm/customers/${customer.id}`);
     } catch (err) {
@@ -55,33 +67,39 @@ export default function NewCustomerPage() {
         <CardHeader title={t("title")} />
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <TextField label={t("name")} value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
-          <SelectField label={t("type")} value={type} onChange={(e) => setType(e.target.value as "individual" | "business")}>
-            <option value="business">{tCustomerType("business")}</option>
-            <option value="individual">{tCustomerType("individual")}</option>
-          </SelectField>
-          <SelectField label={t("leadSource")} value={leadSource} onChange={(e) => setLeadSource(e.target.value)}>
-            <option value="">{t("leadSourceNone")}</option>
-            {LEAD_SOURCE_CHANNELS.map((channel) => (
-              <option key={channel} value={channel}>
-                {channelLabel(channel)}
-              </option>
-            ))}
-          </SelectField>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TextField label={t("phone")} value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <TextField label={t("whatsapp")} value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
+            <TextField label={t("instagram")} value={instagram} onChange={(e) => setInstagram(e.target.value)} />
+            <TextField label={t("facebook")} value={facebook} onChange={(e) => setFacebook(e.target.value)} />
+            <TextField label={t("email")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <TextField label={t("companyName")} value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+          </div>
+
+          <TextField label={t("address")} value={address} onChange={(e) => setAddress(e.target.value)} />
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <SelectField label={t("leadSource")} value={leadSource} onChange={(e) => setLeadSource(e.target.value)}>
+              <option value="">{t("leadSourceNone")}</option>
+              {LEAD_SOURCE_CHANNELS.map((channel) => (
+                <option key={channel} value={channel}>
+                  {channelLabel(channel)}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField label={t("status")} value={status} onChange={(e) => setStatus(e.target.value)}>
+              {CUSTOMER_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {statusLabel(s)}
+                </option>
+              ))}
+            </SelectField>
+          </div>
+
           <TextField label={t("advertisingCampaign")} value={campaign} onChange={(e) => setCampaign(e.target.value)} />
 
-          <div className="border-t border-border pt-4">
-            <p className="mb-3 text-sm font-medium text-text-primary">{t("primaryContact")}</p>
-            <div className="flex flex-col gap-4">
-              <TextField label={t("contactFullName")} value={contactName} onChange={(e) => setContactName(e.target.value)} />
-              <TextField
-                label={t("contactEmail")}
-                type="email"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-              />
-              <TextField label={t("contactPhone")} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
-            </div>
-          </div>
+          <TextAreaField label={t("notes")} value={notes} onChange={(e) => setNotes(e.target.value)} />
 
           {error && <p className="text-sm text-danger">{error}</p>}
 

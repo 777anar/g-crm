@@ -4,17 +4,23 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { addCustomerNote, archiveCustomer, getCustomerProfile, uploadCustomerAttachment } from "@/lib/api/crm";
-import type { CustomerProfile } from "@/lib/types";
+import {
+  addCustomerNote,
+  archiveCustomer,
+  getCustomerProfile,
+  updateCustomer,
+  uploadCustomerAttachment,
+} from "@/lib/api/crm";
+import { CUSTOMER_STATUSES, type CustomerProfile, type CustomerStatus } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Badge, CustomerArchivedBadge, LeadChannelBadge } from "@/components/ui/badge";
+import { Badge, CustomerArchivedBadge, CustomerStatusBadge, LeadChannelBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TextAreaField } from "@/components/ui/field";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { formatDateTime } from "@/lib/format";
-import { useCustomerTypeLabel } from "@/lib/i18n/hooks";
+import { useCustomerStatusLabel } from "@/lib/i18n/hooks";
 
 export default function CustomerProfilePage() {
   const params = useParams<{ id: string }>();
@@ -24,7 +30,7 @@ export default function CustomerProfilePage() {
   const t = useTranslations("customerProfile");
   const tCommon = useTranslations("common");
   const tActivityType = useTranslations("activityType");
-  const customerTypeLabel = useCustomerTypeLabel();
+  const statusLabel = useCustomerStatusLabel();
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,11 +38,15 @@ export default function CustomerProfilePage() {
   const [savingNote, setSavingNote] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [customerNotes, setCustomerNotes] = useState("");
+  const [savingCustomerNotes, setSavingCustomerNotes] = useState(false);
 
   async function reload() {
     try {
       const data = await getCustomerProfile(customerId);
       setProfile(data);
+      setCustomerNotes(data.customer.notes ?? "");
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
     }
@@ -72,6 +82,32 @@ export default function CustomerProfilePage() {
       setError(err instanceof ApiRequestError ? err.message : t("archiveFailed"));
     } finally {
       setArchiving(false);
+    }
+  }
+
+  async function handleStatusChange(status: CustomerStatus) {
+    setUpdatingStatus(true);
+    setError(null);
+    try {
+      await updateCustomer(customerId, { status });
+      await reload();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    } finally {
+      setUpdatingStatus(false);
+    }
+  }
+
+  async function handleSaveCustomerNotes() {
+    setSavingCustomerNotes(true);
+    setError(null);
+    try {
+      await updateCustomer(customerId, { notes: customerNotes });
+      await reload();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("noteFailed"));
+    } finally {
+      setSavingCustomerNotes(false);
     }
   }
 
@@ -111,13 +147,22 @@ export default function CustomerProfilePage() {
     );
   }
 
-  const { customer, contacts, attachments, timeline, projects, quotes, orders, payments } = profile;
+  const { customer, attachments, timeline, projects, quotes, orders, payments } = profile;
 
   const crossModuleSections = [
     { label: t("projects"), count: projects.length, module: t("viaProduction") },
     { label: t("quotes"), count: quotes.length, module: t("viaSales") },
     { label: t("orders"), count: orders.length, module: t("viaSales") },
     { label: t("payments"), count: payments.length, module: t("viaFinance") },
+  ];
+
+  const contactDetails = [
+    { label: t("phone"), value: customer.phone },
+    { label: t("whatsapp"), value: customer.whatsapp },
+    { label: t("instagram"), value: customer.instagram },
+    { label: t("facebook"), value: customer.facebook },
+    { label: t("email"), value: customer.email },
+    { label: t("address"), value: customer.address },
   ];
 
   return (
@@ -149,31 +194,45 @@ export default function CustomerProfilePage() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
+      <Card>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-text-secondary">{t("status")}</span>
+          <CustomerStatusBadge status={customer.status} />
+          <select
+            value={customer.status}
+            disabled={updatingStatus}
+            onChange={(e) => handleStatusChange(e.target.value as CustomerStatus)}
+            className="ml-auto rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary disabled:opacity-50"
+          >
+            {CUSTOMER_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {statusLabel(s)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </Card>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="flex flex-col gap-4 lg:col-span-1">
           <Card>
             <CardHeader title={t("contactInformation")} />
-            {contacts.length === 0 ? (
-              <p className="text-sm text-text-secondary">{t("noContacts")}</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {contacts.map((contact) => (
-                  <li key={contact.id} className="text-sm">
-                    <p className="font-medium text-text-primary">{contact.full_name}</p>
-                    {contact.email && <p className="text-text-secondary">{contact.email}</p>}
-                    {contact.phone && <p className="text-text-secondary">{contact.phone}</p>}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <dl className="flex flex-col gap-2 text-sm">
+              {contactDetails.map((detail) => (
+                <div key={detail.label}>
+                  <dt className="text-text-secondary">{detail.label}</dt>
+                  <dd className="text-text-primary">{detail.value || tCommon("dash")}</dd>
+                </div>
+              ))}
+            </dl>
           </Card>
 
           <Card>
             <CardHeader title={t("company")} />
             <dl className="flex flex-col gap-2 text-sm">
               <div>
-                <dt className="text-text-secondary">{t("type")}</dt>
-                <dd className="text-text-primary">{customerTypeLabel(customer.type)}</dd>
+                <dt className="text-text-secondary">{t("companyName")}</dt>
+                <dd className="text-text-primary">{customer.company_name ?? tCommon("dash")}</dd>
               </div>
               <div>
                 <dt className="text-text-secondary">{t("assignedManager")}</dt>
@@ -225,6 +284,24 @@ export default function CustomerProfilePage() {
                   <p className="mt-0.5 text-[11px] text-text-secondary">{section.module}</p>
                 </div>
               ))}
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader title={t("notes")} />
+            <TextAreaField
+              label=""
+              value={customerNotes}
+              onChange={(e) => setCustomerNotes(e.target.value)}
+              placeholder={t("addNotePlaceholder")}
+            />
+            <div className="mt-2 flex justify-end">
+              <Button
+                onClick={handleSaveCustomerNotes}
+                disabled={savingCustomerNotes || customerNotes === (customer.notes ?? "")}
+              >
+                {savingCustomerNotes ? t("saving") : tCommon("save")}
+              </Button>
             </div>
           </Card>
 

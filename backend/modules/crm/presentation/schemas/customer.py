@@ -4,7 +4,12 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from modules.crm.domain.value_objects import VALID_CUSTOMER_TYPES
+from modules.crm.domain.value_objects import (
+    DEFAULT_CUSTOMER_STATUS,
+    VALID_CUSTOMER_STATUSES,
+    VALID_CUSTOMER_TYPES,
+    VALID_LEAD_SOURCES,
+)
 
 
 class ContactCreate(BaseModel):
@@ -19,12 +24,25 @@ class CustomerCreate(BaseModel):
     assigned_manager_id: Optional[uuid.UUID] = None
     lead_source: Optional[str] = None
     advertising_campaign: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    instagram: Optional[str] = None
+    facebook: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    company_name: Optional[str] = None
+    notes: Optional[str] = None
+    status: str = Field(default=DEFAULT_CUSTOMER_STATUS)
     tags: List[str] = Field(default_factory=list)
     contact: Optional[ContactCreate] = None
 
     def model_post_init(self, __context) -> None:
         if self.type not in VALID_CUSTOMER_TYPES:
             raise ValueError(f"type must be one of {sorted(VALID_CUSTOMER_TYPES)}")
+        if self.lead_source is not None and self.lead_source not in VALID_LEAD_SOURCES:
+            raise ValueError(f"lead_source must be one of {sorted(VALID_LEAD_SOURCES)}")
+        if self.status not in VALID_CUSTOMER_STATUSES:
+            raise ValueError(f"status must be one of {sorted(VALID_CUSTOMER_STATUSES)}")
 
 
 class CustomerUpdate(BaseModel):
@@ -32,7 +50,22 @@ class CustomerUpdate(BaseModel):
     assigned_manager_id: Optional[uuid.UUID] = None
     lead_source: Optional[str] = None
     advertising_campaign: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    instagram: Optional[str] = None
+    facebook: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    company_name: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
     tags: Optional[List[str]] = None
+
+    def model_post_init(self, __context) -> None:
+        if self.lead_source is not None and self.lead_source not in VALID_LEAD_SOURCES:
+            raise ValueError(f"lead_source must be one of {sorted(VALID_LEAD_SOURCES)}")
+        if self.status is not None and self.status not in VALID_CUSTOMER_STATUSES:
+            raise ValueError(f"status must be one of {sorted(VALID_CUSTOMER_STATUSES)}")
 
 
 class CustomerOut(BaseModel):
@@ -45,6 +78,15 @@ class CustomerOut(BaseModel):
     assigned_manager_id: Optional[uuid.UUID]
     lead_source: Optional[str]
     advertising_campaign: Optional[str]
+    phone: Optional[str]
+    whatsapp: Optional[str]
+    instagram: Optional[str]
+    facebook: Optional[str]
+    email: Optional[str]
+    address: Optional[str]
+    company_name: Optional[str]
+    notes: Optional[str]
+    status: str
     tags: List[str]
     created_by: Optional[uuid.UUID]
     created_at: datetime

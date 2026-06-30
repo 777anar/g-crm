@@ -5,7 +5,7 @@ def test_create_customer(app_client, owner_headers):
         json={
             "name": "Acme Renovations",
             "type": "business",
-            "lead_source": "manual",
+            "lead_source": "phone_call",
             "tags": ["vip"],
             "contact": {"full_name": "John Doe", "email": "john@acme.test", "phone": "+994501234567"},
         },

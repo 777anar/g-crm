@@ -27,6 +27,24 @@ export type Company = {
   enabled_modules: string[];
 };
 
+export const CUSTOMER_STATUSES = [
+  "new_inquiry",
+  "contacted",
+  "measurement_scheduled",
+  "measurement_completed",
+  "preparing_quote",
+  "quote_sent",
+  "waiting_for_decision",
+  "approved",
+  "payment_received",
+  "in_production",
+  "installation_scheduled",
+  "installed",
+  "completed",
+  "lost",
+] as const;
+export type CustomerStatus = (typeof CUSTOMER_STATUSES)[number];
+
 export type Customer = {
   id: string;
   name: string;
@@ -35,6 +53,15 @@ export type Customer = {
   assigned_manager_id: string | null;
   lead_source: string | null;
   advertising_campaign: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  email: string | null;
+  address: string | null;
+  company_name: string | null;
+  notes: string | null;
+  status: CustomerStatus;
   tags: string[];
   created_by: string | null;
   created_at: string;
@@ -59,7 +86,17 @@ export type CustomerProfile = {
   payments: Record<string, unknown>[];
 };
 
-export const LEAD_SOURCE_CHANNELS = ["instagram", "facebook", "messenger", "whatsapp", "manual"] as const;
+export const LEAD_SOURCE_CHANNELS = [
+  "instagram",
+  "facebook",
+  "messenger",
+  "whatsapp",
+  "phone_call",
+  "website",
+  "office_visit",
+  "referral",
+  "other",
+] as const;
 export type LeadSourceChannel = (typeof LEAD_SOURCE_CHANNELS)[number];
 
 export type Lead = {

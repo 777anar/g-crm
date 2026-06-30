@@ -55,7 +55,7 @@ def test_add_note_writes_audit_and_event(app_client, owner_headers, db_session):
 
 def test_create_lead_writes_audit_and_event(app_client, owner_headers, db_session):
     app_client.post(
-        "/api/v1/crm/leads", headers=owner_headers, json={"full_name": "Audit Lead", "source_channel": "manual"}
+        "/api/v1/crm/leads", headers=owner_headers, json={"full_name": "Audit Lead", "source_channel": "phone_call"}
     )
 
     assert "lead.created" in _audit_actions(db_session, "lead")
@@ -64,7 +64,7 @@ def test_create_lead_writes_audit_and_event(app_client, owner_headers, db_sessio
 
 def test_convert_lead_writes_audit_and_event(app_client, owner_headers, db_session):
     lead = app_client.post(
-        "/api/v1/crm/leads", headers=owner_headers, json={"full_name": "Audit Convert Lead", "source_channel": "manual"}
+        "/api/v1/crm/leads", headers=owner_headers, json={"full_name": "Audit Convert Lead", "source_channel": "phone_call"}
     ).json()
     app_client.post(f"/api/v1/crm/leads/{lead['id']}/convert", headers=owner_headers)
 
