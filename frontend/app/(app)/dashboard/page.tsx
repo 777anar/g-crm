@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { listCustomers, listLeads } from "@/lib/api/crm";
 import { me } from "@/lib/api/auth";
 import type { Customer, Lead } from "@/lib/types";
@@ -9,21 +10,17 @@ import { LEAD_SOURCE_CHANNELS } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
-import { Badge, LeadStatusBadge } from "@/components/ui/badge";
+import { Badge, LeadChannelBadge, LeadStatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCardSkeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/format";
-
-const CHANNEL_LABELS: Record<string, string> = {
-  instagram: "Instagram",
-  facebook: "Facebook",
-  messenger: "Messenger",
-  whatsapp: "WhatsApp",
-  manual: "Manual",
-};
+import { useLeadChannelLabel } from "@/lib/i18n/hooks";
 
 export default function DashboardPage() {
+  const t = useTranslations("dashboard");
+  const tCommon = useTranslations("common");
+  const channelLabel = useLeadChannelLabel();
   const [fullName, setFullName] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [customers, setCustomers] = useState<Customer[] | null>(null);
@@ -42,8 +39,8 @@ export default function DashboardPage() {
         setCustomers(customerRes.items);
         setLeads(leadRes.items);
       })
-      .catch((err) => setError(err instanceof ApiRequestError ? err.message : "Failed to load dashboard data."));
-  }, []);
+      .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
+  }, [t]);
 
   const loading = customers === null || leads === null;
 
@@ -70,18 +67,16 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-text-primary">
-            {fullName ? `Welcome back, ${fullName.split(" ")[0]}` : "Dashboard"}
+            {fullName ? t("welcomeBack", { name: fullName.split(" ")[0] }) : t("title")}
           </h1>
-          <p className="text-sm text-text-secondary">
-            {role ? `Signed in as ${role}` : "Overview of your CRM activity"}
-          </p>
+          <p className="text-sm text-text-secondary">{role ? t("signedInAs", { role }) : t("overview")}</p>
         </div>
         <div className="flex gap-2">
           <Link href="/crm/leads">
-            <Button variant="secondary">Capture Lead</Button>
+            <Button variant="secondary">{t("captureLead")}</Button>
           </Link>
           <Link href="/crm/customers/new">
-            <Button>Create Customer</Button>
+            <Button>{t("createCustomer")}</Button>
           </Link>
         </div>
       </div>
@@ -102,17 +97,24 @@ export default function DashboardPage() {
       {!loading && (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Active Customers" value={activeCustomers.length} tone="primary" />
-            <StatCard label="Archived Customers" value={archivedCustomers.length} />
-            <StatCard label="Open Leads" value={openLeads.length} tone="warning" />
-            <StatCard label="Converted Leads" value={convertedLeads.length} tone="success" />
+            <StatCard label={t("statActiveCustomers")} value={activeCustomers.length} tone="primary" />
+            <StatCard label={t("statArchivedCustomers")} value={archivedCustomers.length} />
+            <StatCard label={t("statOpenLeads")} value={openLeads.length} tone="warning" />
+            <StatCard label={t("statConvertedLeads")} value={convertedLeads.length} tone="success" />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-2">
-              <CardHeader title="Recent Customers" action={<Link href="/crm/customers" className="text-sm text-primary hover:underline">View all</Link>} />
+              <CardHeader
+                title={t("recentCustomers")}
+                action={
+                  <Link href="/crm/customers" className="text-sm text-primary hover:underline">
+                    {tCommon("viewAll")}
+                  </Link>
+                }
+              />
               {recentCustomers.length === 0 ? (
-                <EmptyState title="No customers yet" description="Create your first customer to see it here." />
+                <EmptyState title={t("noCustomersYet")} description={t("noCustomersDesc")} />
               ) : (
                 <ul className="flex flex-col divide-y divide-border">
                   {recentCustomers.map((customer) => (
@@ -121,9 +123,11 @@ export default function DashboardPage() {
                         <Link href={`/crm/customers/${customer.id}`} className="font-medium text-primary hover:underline">
                           {customer.name}
                         </Link>
-                        <p className="text-xs text-text-secondary">Created {formatDate(customer.created_at)}</p>
+                        <p className="text-xs text-text-secondary">
+                          {t("createdOn", { date: formatDate(customer.created_at) })}
+                        </p>
                       </div>
-                      {customer.lead_source && <Badge tone="info">{customer.lead_source}</Badge>}
+                      {customer.lead_source && <LeadChannelBadge channel={customer.lead_source} />}
                     </li>
                   ))}
                 </ul>
@@ -131,7 +135,7 @@ export default function DashboardPage() {
             </Card>
 
             <Card>
-              <CardHeader title="Leads by Channel" />
+              <CardHeader title={t("leadsByChannel")} />
               <ul className="flex flex-col gap-3">
                 {leadsByChannel.map(({ channel, count }) => {
                   const max = Math.max(...leadsByChannel.map((c) => c.count), 1);
@@ -139,7 +143,7 @@ export default function DashboardPage() {
                   return (
                     <li key={channel}>
                       <div className="mb-1 flex items-center justify-between text-sm">
-                        <span className="text-text-primary">{CHANNEL_LABELS[channel]}</span>
+                        <span className="text-text-primary">{channelLabel(channel)}</span>
                         <span className="text-text-secondary">{count}</span>
                       </div>
                       <div className="h-1.5 w-full rounded-full bg-bg">
@@ -153,18 +157,25 @@ export default function DashboardPage() {
           </div>
 
           <Card>
-            <CardHeader title="Recent Leads" action={<Link href="/crm/leads" className="text-sm text-primary hover:underline">View all</Link>} />
+            <CardHeader
+              title={t("recentLeads")}
+              action={
+                <Link href="/crm/leads" className="text-sm text-primary hover:underline">
+                  {tCommon("viewAll")}
+                </Link>
+              }
+            />
             {recentLeads.length === 0 ? (
-              <EmptyState title="No leads yet" description="Capture your first lead to see it here." />
+              <EmptyState title={t("noLeadsYet")} description={t("noLeadsDesc")} />
             ) : (
               <div className="overflow-hidden rounded-md border border-border">
                 <table className="w-full text-left text-sm">
                   <thead className="border-b border-border bg-bg text-text-secondary">
                     <tr>
-                      <th className="px-4 py-2 font-medium">Name</th>
-                      <th className="px-4 py-2 font-medium">Channel</th>
-                      <th className="px-4 py-2 font-medium">Status</th>
-                      <th className="px-4 py-2 font-medium">Captured</th>
+                      <th className="px-4 py-2 font-medium">{t("tableName")}</th>
+                      <th className="px-4 py-2 font-medium">{t("tableChannel")}</th>
+                      <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
+                      <th className="px-4 py-2 font-medium">{t("tableCaptured")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -172,7 +183,7 @@ export default function DashboardPage() {
                       <tr key={lead.id} className="border-b border-border last:border-0">
                         <td className="px-4 py-2 font-medium text-text-primary">{lead.full_name}</td>
                         <td className="px-4 py-2">
-                          <Badge tone="info">{CHANNEL_LABELS[lead.source_channel]}</Badge>
+                          <Badge tone="info">{channelLabel(lead.source_channel)}</Badge>
                         </td>
                         <td className="px-4 py-2">
                           <LeadStatusBadge status={lead.status} />

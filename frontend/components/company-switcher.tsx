@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { me, selectCompany } from "@/lib/api/auth";
 import { listMyCompanies } from "@/lib/api/companies";
 import { setAccessToken } from "@/lib/session";
 import type { Company } from "@/lib/types";
+import { useOutsideClick } from "@/lib/use-outside-click";
 
 export function CompanySwitcher() {
+  const t = useTranslations("company");
   const [companies, setCompanies] = useState<Company[]>([]);
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -25,15 +28,7 @@ export function CompanySwitcher() {
       });
   }, []);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  useOutsideClick(containerRef, () => setOpen(false));
 
   async function handleSelect(companyId: string) {
     if (companyId === activeCompanyId) {
@@ -75,7 +70,7 @@ export function CompanySwitcher() {
       {open && (
         <div className="absolute left-0 top-full z-10 mt-1 w-56 rounded-md border border-border bg-surface py-1 shadow-lg">
           <p className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-text-secondary">
-            Switch company
+            {t("switchCompany")}
           </p>
           {companies.map((company) => (
             <button

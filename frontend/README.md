@@ -35,3 +35,21 @@ Requires the backend running at `NEXT_PUBLIC_API_BASE_URL` (defaults to `http://
 ## Design system
 
 Colors, typography, and component rules come directly from [`UI_UX_GUIDELINES.md`](../UI_UX_GUIDELINES.md) — see `tailwind.config.ts` and `app/globals.css` for the token values, and `components/ui/` for the shared primitives (Button, Badge, Card, Field, EmptyState).
+
+## Internationalization (i18n)
+
+Built with [next-intl](https://next-intl.dev/). Three languages, no hardcoded UI strings:
+
+- **Default**: Azerbaijani (`az`)
+- **Second**: Russian (`ru`)
+- **Fallback**: English (`en`) — any key missing from `az`/`ru` automatically falls back to the English value (see `lib/i18n/config.ts`'s `deepMerge`).
+
+Translation files: [`locales/az.json`](locales/az.json), [`locales/ru.json`](locales/ru.json), [`locales/en.json`](locales/en.json).
+
+**Architecture note**: this app does not use next-intl's URL-based routing (no `/az/...`, `/ru/...` path segments) — existing routes (`/login`, `/dashboard`, `/crm/customers`, ...) are unchanged. Instead, `lib/i18n/locale-context.tsx` provides a client-side `LocaleProvider` (wrapping `NextIntlClientProvider`) that holds the active locale in React state and renders the corresponding merged message set. This was a deliberate choice to localize the UI without restructuring the route tree.
+
+**Persistence**: the selected language is saved to `localStorage` (`g_erp_locale`) and restored on next visit — "remembered per user" in the practical sense that each user has their own browser profile. There is no per-user locale field in the backend; if multi-device sync of the language preference is needed later, that would mean adding a `locale` column to `users` and a `PATCH /api/v1/auth/me` endpoint — out of scope for this pass.
+
+**Switching language**: the globe/flag dropdown in the top header (`components/language-switcher.tsx`), available on every authenticated page and on `/login`.
+
+**Known limitation**: a handful of strings are generated server-side and stored as data (e.g. the system activity-timeline entry "Customer 'X' created."). These come from the backend's audit/activity records, not frontend components, so they are not covered by this frontend-only i18n pass and currently always render in English.

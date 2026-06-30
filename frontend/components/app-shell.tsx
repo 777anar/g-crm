@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { clearAccessToken } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import { CompanySwitcher } from "@/components/company-switcher";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 // Dashboard is core-platform navigation, always present regardless of which
 // modules are installed. The remaining items mirror each enabled module's
@@ -14,14 +16,16 @@ import { CompanySwitcher } from "@/components/company-switcher";
 // module portion with a real GET /nav-config call once more than one module
 // is installed and per-company enablement matters.
 const NAV_ITEMS = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Customers", href: "/crm/customers" },
-  { label: "Leads", href: "/crm/leads" },
-];
+  { labelKey: "dashboard", href: "/dashboard" },
+  { labelKey: "customers", href: "/crm/customers" },
+  { labelKey: "leads", href: "/crm/leads" },
+] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const tNav = useTranslations("nav");
+  const tCommon = useTranslations("common");
 
   function handleLogout() {
     clearAccessToken();
@@ -35,12 +39,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-white">
             GS
           </div>
-          <span className="font-semibold text-text-primary">G-STONE ERP</span>
+          <span className="font-semibold text-text-primary">{tCommon("appName")}</span>
         </div>
         <div className="flex items-center gap-3">
           <CompanySwitcher />
+          <LanguageSwitcher />
           <Button variant="secondary" onClick={handleLogout}>
-            Log out
+            {tCommon("signOut")}
           </Button>
         </div>
       </header>
@@ -57,7 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       active ? "bg-primary text-white" : "text-text-primary hover:bg-bg"
                     }`}
                   >
-                    {item.label}
+                    {tNav(item.labelKey)}
                   </Link>
                 </li>
               );

@@ -2,16 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { listCustomers } from "@/lib/api/crm";
 import type { Customer } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Badge, CustomerArchivedBadge } from "@/components/ui/badge";
+import { CustomerArchivedBadge, LeadChannelBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
+import { useCustomerTypeLabel } from "@/lib/i18n/hooks";
 
 export default function CustomersListPage() {
+  const t = useTranslations("customers");
+  const tCommon = useTranslations("common");
+  const customerTypeLabel = useCustomerTypeLabel();
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [includeArchived, setIncludeArchived] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,18 +25,18 @@ export default function CustomersListPage() {
     setCustomers(null);
     listCustomers({ includeArchived })
       .then((res) => setCustomers(res.items))
-      .catch((err) => setError(err instanceof ApiRequestError ? err.message : "Failed to load customers."));
-  }, [includeArchived]);
+      .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
+  }, [includeArchived, t]);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">Customers</h1>
-          <p className="text-sm text-text-secondary">Manage customer profiles, contacts, and activity.</p>
+          <h1 className="text-xl font-semibold text-text-primary">{t("title")}</h1>
+          <p className="text-sm text-text-secondary">{t("subtitle")}</p>
         </div>
         <Link href="/crm/customers/new">
-          <Button>Create Customer</Button>
+          <Button>{t("createCustomer")}</Button>
         </Link>
       </div>
 
@@ -41,7 +46,7 @@ export default function CustomersListPage() {
           checked={includeArchived}
           onChange={(e) => setIncludeArchived(e.target.checked)}
         />
-        Show archived
+        {t("showArchived")}
       </label>
 
       {error && <p className="text-sm text-danger">{error}</p>}
@@ -50,11 +55,11 @@ export default function CustomersListPage() {
 
       {customers && customers.length === 0 && (
         <EmptyState
-          title="No customers yet"
-          description="Create your first customer to start tracking their profile, notes, and activity."
+          title={t("noCustomersYet")}
+          description={t("noCustomersDesc")}
           action={
             <Link href="/crm/customers/new">
-              <Button>Create Customer</Button>
+              <Button>{t("createCustomer")}</Button>
             </Link>
           }
         />
@@ -65,12 +70,12 @@ export default function CustomersListPage() {
           <table className="w-full text-left text-sm">
             <thead className="sticky top-0 border-b border-border bg-bg text-text-secondary">
               <tr>
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 font-medium">Type</th>
-                <th className="px-4 py-2 font-medium">Lead Source</th>
-                <th className="px-4 py-2 font-medium">Campaign</th>
-                <th className="px-4 py-2 font-medium">Created</th>
-                <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium">{t("tableName")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableType")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableLeadSource")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableCampaign")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableCreated")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
               </tr>
             </thead>
             <tbody>
@@ -81,11 +86,13 @@ export default function CustomersListPage() {
                       {customer.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-2 capitalize">{customer.type}</td>
+                  <td className="px-4 py-2">{customerTypeLabel(customer.type)}</td>
                   <td className="px-4 py-2">
-                    {customer.lead_source ? <Badge tone="info">{customer.lead_source}</Badge> : "—"}
+                    {customer.lead_source ? <LeadChannelBadge channel={customer.lead_source} /> : tCommon("dash")}
                   </td>
-                  <td className="px-4 py-2 text-text-secondary">{customer.advertising_campaign ?? "—"}</td>
+                  <td className="px-4 py-2 text-text-secondary">
+                    {customer.advertising_campaign ?? tCommon("dash")}
+                  </td>
                   <td className="px-4 py-2 text-text-secondary">{formatDate(customer.created_at)}</td>
                   <td className="px-4 py-2">
                     <CustomerArchivedBadge archived={customer.deleted_at !== null} />

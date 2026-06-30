@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 type Tone = "neutral" | "success" | "warning" | "danger" | "info";
 
 const TONE_CLASSES: Record<Tone, string> = {
@@ -25,9 +29,16 @@ const LEAD_STATUS_TONE: Record<string, Tone> = {
 };
 
 export function LeadStatusBadge({ status }: { status: string }) {
-  return <Badge tone={LEAD_STATUS_TONE[status] ?? "neutral"}>{status}</Badge>;
+  const t = useTranslations("leadStatus");
+  return <Badge tone={LEAD_STATUS_TONE[status] ?? "neutral"}>{t(status)}</Badge>;
+}
+
+export function LeadChannelBadge({ channel }: { channel: string }) {
+  const t = useTranslations("leadChannel");
+  return <Badge tone="info">{t(channel)}</Badge>;
 }
 
 export function CustomerArchivedBadge({ archived }: { archived: boolean }) {
-  return archived ? <Badge tone="danger">Archived</Badge> : <Badge tone="success">Active</Badge>;
+  const t = useTranslations("customers");
+  return archived ? <Badge tone="danger">{t("statusArchived")}</Badge> : <Badge tone="success">{t("statusActive")}</Badge>;
 }
