@@ -17,6 +17,7 @@ from core.audit import models as audit_models  # noqa: F401
 from core.events import models as events_models  # noqa: F401
 from core.storage import models as storage_models  # noqa: F401
 from modules.crm.infrastructure import models as crm_models  # noqa: F401
+from modules.catalog.infrastructure import models as catalog_models  # noqa: F401
 
 
 @pytest.fixture()

@@ -25,11 +25,13 @@ from core.rbac.permissions import register_module_permissions
 logger = logging.getLogger("core.module_registry")
 
 # Step 1 (Core Platform) proved the core boots with zero modules. Phase 2
-# installs CRM -- the first production business module. Sales and later
-# modules are appended here as their phase begins; no other core file
-# changes when that happens.
+# installed CRM -- the first production business module. Version 2.0 adds
+# Stone Catalog, per ROADMAP.md's approved dependency chain (CRM -> Tasks &
+# Reminders -> Stone Catalog -> Sales). Later modules are appended here as
+# their phase begins; no other core file changes when that happens.
 INSTALLED_MODULES: List[str] = [
     "modules.crm",
+    "modules.catalog",
 ]
 
 _loaded_manifests: List[ModuleManifest] = []

@@ -20,6 +20,7 @@ from core.storage import models as storage_models  # noqa: F401
 # frozen architecture each module conceptually owns its own migration
 # history even though they run through this one unified Alembic chain.
 from modules.crm.infrastructure import models as crm_models  # noqa: F401
+from modules.catalog.infrastructure import models as catalog_models  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

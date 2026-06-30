@@ -1,0 +1,16 @@
+CATALOG_PERMISSIONS = [
+    "catalog:brands:read",
+    "catalog:brands:write",
+    "catalog:collections:read",
+    "catalog:collections:write",
+    "catalog:materials:read",
+    "catalog:materials:write",
+    "catalog:warehouses:read",
+    "catalog:warehouses:write",
+    "catalog:slabs:read",
+    "catalog:slabs:write",
+    "catalog:price_lists:read",
+    "catalog:price_lists:write",
+    "catalog:settings:read",
+    "catalog:settings:write",
+]
