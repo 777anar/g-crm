@@ -3,10 +3,17 @@ to local disk for development so the platform runs without external
 dependencies during early Phase 1 work. Both implementations satisfy the same
 interface so callers never branch on which backend is active."""
 import os
+import re
 import uuid
 from abc import ABC, abstractmethod
 
 from core.config import settings
+
+_SAFE_FILENAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
+# Stricter than the filename pattern: module is a raw path *segment* (never
+# basename()'d), so dots are disallowed entirely -- otherwise "..", "...",
+# etc. could reconstruct a traversal sequence once joined with "/".
+_SAFE_PATH_SEGMENT_RE = re.compile(r"[^A-Za-z0-9_-]+")
 
 
 class StorageClient(ABC):
@@ -25,7 +32,12 @@ class LocalDiskStorageClient(StorageClient):
         os.makedirs(base_dir, exist_ok=True)
 
     def upload(self, *, key: str, content: bytes, mime_type: str) -> str:
-        path = os.path.join(self.base_dir, key)
+        base_dir = os.path.abspath(self.base_dir)
+        path = os.path.abspath(os.path.join(base_dir, key))
+        # Defense-in-depth: even though new_storage_key() sanitizes its inputs,
+        # refuse to write anywhere outside the configured storage directory.
+        if os.path.commonpath([base_dir, path]) != base_dir:
+            raise ValueError(f"Refusing to write outside storage directory: {key}")
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as f:
             f.write(content)
@@ -64,5 +76,17 @@ def build_storage_client() -> StorageClient:
 storage_client = build_storage_client()
 
 
+def sanitize_filename(filename: str) -> str:
+    """Strips any directory components and restricts to a safe character set,
+    preventing path traversal (e.g. "../../etc/cron.d/evil") from reaching a
+    storage key that gets joined onto a real filesystem path. Always returns
+    a non-empty name."""
+    base = os.path.basename(filename or "")
+    base = base.lstrip(".")  # drop leading dots so ".." / hidden-file tricks can't survive basename()
+    safe = _SAFE_FILENAME_RE.sub("_", base)[:200]
+    return safe or "file"
+
+
 def new_storage_key(company_id: uuid.UUID, module: str, filename: str) -> str:
-    return f"{company_id}/{module}/{uuid.uuid4()}-{filename}"
+    safe_module = _SAFE_PATH_SEGMENT_RE.sub("_", module or "misc")[:50] or "misc"
+    return f"{company_id}/{safe_module}/{uuid.uuid4()}-{sanitize_filename(filename)}"

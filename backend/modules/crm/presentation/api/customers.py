@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from core.api.errors import ConflictError
+from core.api.pagination import decode_cursor, encode_cursor
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, require_permission
 from modules.crm.application.dtos import (
@@ -44,19 +45,27 @@ def list_customers(
     status: Optional[str] = Query(default=None),
     lead_source: Optional[str] = Query(default=None),
     limit: int = Query(default=25, le=100),
+    cursor: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_permission("crm:customers:read")),
 ) -> CustomerListOut:
     repo = CustomerRepository(db)
+    offset = decode_cursor(cursor)
+    # Fetch one extra row past `limit` purely to detect whether a further
+    # page exists -- never returned to the client.
     items = repo.list(
         company_id=current_user.active_company_id,
         include_archived=include_archived,
         assigned_manager_id=assigned_manager_id,
         status=status,
         lead_source=lead_source,
-        limit=limit,
+        limit=limit + 1,
+        offset=offset,
     )
-    return CustomerListOut(items=[CustomerOut.model_validate(c) for c in items], next_cursor=None)
+    has_more = len(items) > limit
+    page = items[:limit]
+    next_cursor = encode_cursor(offset=offset + limit) if has_more else None
+    return CustomerListOut(items=[CustomerOut.model_validate(c) for c in page], next_cursor=next_cursor)
 
 
 @router.post("/customers", response_model=CustomerOut)

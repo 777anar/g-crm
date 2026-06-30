@@ -290,7 +290,7 @@ export default function CustomerProfilePage() {
           <Card>
             <CardHeader title={t("notes")} />
             <TextAreaField
-              label=""
+              label={t("notes")}
               value={customerNotes}
               onChange={(e) => setCustomerNotes(e.target.value)}
               placeholder={t("addNotePlaceholder")}

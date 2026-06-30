@@ -15,8 +15,25 @@ from core.events.router import router as events_router
 from core.module_registry.registry import register_modules
 from core.storage.router import router as documents_router
 
+DEFAULT_JWT_SECRET = "dev-secret-change-me"
+
+
+def _guard_against_insecure_defaults() -> None:
+    """Refuses to boot outside development with the placeholder JWT secret
+    still in place -- shipping it would make every access/refresh token
+    forgeable by anyone who reads the (public) source."""
+    if settings.environment != "development" and settings.jwt_secret_key == DEFAULT_JWT_SECRET:
+        raise RuntimeError(
+            "Refusing to start: JWT_SECRET_KEY is still the default placeholder value "
+            f"('{DEFAULT_JWT_SECRET}') outside of a development environment "
+            f"(ENVIRONMENT={settings.environment!r}). Set a real secret via the JWT_SECRET_KEY "
+            "environment variable before deploying."
+        )
+
 
 def create_app() -> FastAPI:
+    _guard_against_insecure_defaults()
+
     app = FastAPI(
         title="G-STONE ERP API",
         version="1.0.0",

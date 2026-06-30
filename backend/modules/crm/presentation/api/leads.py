@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from core.api.errors import ConflictError, NotFoundError
+from core.api.pagination import decode_cursor, encode_cursor
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, require_permission
 from modules.crm.application.dtos import ConvertLeadInput, CreateLeadInput
@@ -21,14 +22,23 @@ def list_leads(
     status: Optional[str] = Query(default=None),
     source_channel: Optional[str] = Query(default=None),
     limit: int = Query(default=25, le=100),
+    cursor: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_permission("crm:leads:read")),
 ) -> LeadListOut:
     repo = LeadRepository(db)
+    offset = decode_cursor(cursor)
     items = repo.list(
-        company_id=current_user.active_company_id, status=status, source_channel=source_channel, limit=limit
+        company_id=current_user.active_company_id,
+        status=status,
+        source_channel=source_channel,
+        limit=limit + 1,
+        offset=offset,
     )
-    return LeadListOut(items=[LeadOut.model_validate(lead) for lead in items], next_cursor=None)
+    has_more = len(items) > limit
+    page = items[:limit]
+    next_cursor = encode_cursor(offset=offset + limit) if has_more else None
+    return LeadListOut(items=[LeadOut.model_validate(lead) for lead in page], next_cursor=next_cursor)
 
 
 @router.post("/leads", response_model=LeadOut)

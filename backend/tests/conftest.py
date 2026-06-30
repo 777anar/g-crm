@@ -42,6 +42,18 @@ def db_session(test_engine):
         session.close()
 
 
+@pytest.fixture(autouse=True)
+def _reset_login_rate_limiter():
+    """The login rate limiter is a module-level singleton (by design, so it
+    survives across requests within one process); reset it before every test
+    so tests that exercise /auth/login don't trip each other's counters."""
+    from core.rbac.rate_limit import login_rate_limiter
+
+    login_rate_limiter.reset()
+    yield
+    login_rate_limiter.reset()
+
+
 @pytest.fixture()
 def app_client(monkeypatch, test_engine, db_session):
     import core.db.session as session_module

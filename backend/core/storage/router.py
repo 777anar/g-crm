@@ -3,14 +3,16 @@ import uuid
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
-from core.api.errors import NotFoundError
+from core.api.errors import NotFoundError, ValidationAPIError
 from core.db.session import get_db
-from core.rbac.dependencies import CurrentUser, get_current_user
+from core.rbac.dependencies import CurrentUser, get_current_user, require_permission
 from core.storage.client import new_storage_key, storage_client
 from core.storage.models import Document
 from core.storage.schemas import DocumentOut, SignedUrlOut
 
 router = APIRouter(prefix="/api/v1/core/documents", tags=["core:documents"])
+
+MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
 @router.post("", response_model=DocumentOut)
@@ -20,9 +22,19 @@ async def upload_document(
     related_entity_id: uuid.UUID = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user),
+    # "write" actions require at least rep-tier per the generic action-suffix
+    # RBAC convention -- this is a core (not module-specific) permission name
+    # precisely because the core endpoint doesn't know which business module
+    # the upload is "for" until the form body is parsed.
+    current_user: CurrentUser = Depends(require_permission("core:documents:write")),
 ) -> DocumentOut:
     content = await file.read()
+    if len(content) > MAX_UPLOAD_SIZE_BYTES:
+        raise ValidationAPIError(
+            f"File exceeds the maximum upload size of {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MB",
+            details=[{"field": "file", "issue": "file too large"}],
+        )
+
     key = new_storage_key(current_user.active_company_id, module, file.filename)
     storage_client.upload(key=key, content=content, mime_type=file.content_type or "application/octet-stream")
 

@@ -1,10 +1,12 @@
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from core.api.errors import NotFoundError
+from core.api.errors import NotFoundError, ValidationAPIError
 from core.audit.service import record_audit
+from core.auth.models import UserCompanyRole
 from core.events.event_bus import event_bus
 from core.events.event_envelope import Event
 from modules.crm.application.dtos import (
@@ -25,6 +27,22 @@ from modules.crm.infrastructure.repositories.customer_repository import Customer
 MODULE_NAME = "crm"
 
 
+def _ensure_manager_belongs_to_company(db: Session, *, company_id: uuid.UUID, manager_id: uuid.UUID) -> None:
+    """Guards against assigning a customer to a UUID that doesn't correspond
+    to an actual member of the active company -- a typo'd or malicious
+    assigned_manager_id would otherwise be persisted silently."""
+    exists = db.scalar(
+        select(UserCompanyRole.id).where(
+            UserCompanyRole.company_id == company_id, UserCompanyRole.user_id == manager_id
+        )
+    )
+    if exists is None:
+        raise ValidationAPIError(
+            "assigned_manager_id does not refer to a member of this company",
+            details=[{"field": "assigned_manager_id", "issue": "no such user in this company"}],
+        )
+
+
 class CreateCustomerUseCase:
     def __init__(self, db: Session):
         self.db = db
@@ -33,6 +51,11 @@ class CreateCustomerUseCase:
         self.activities = ActivityRepository(db)
 
     def execute(self, data: CreateCustomerInput) -> Customer:
+        if data.assigned_manager_id is not None:
+            _ensure_manager_belongs_to_company(
+                self.db, company_id=data.company_id, manager_id=data.assigned_manager_id
+            )
+
         customer = Customer(
             company_id=data.company_id,
             name=data.name,
@@ -116,6 +139,9 @@ class UpdateCustomerUseCase:
             diff["name"] = {"old": customer.name, "new": data.name}
             customer.name = data.name
         if data.assigned_manager_id is not None and data.assigned_manager_id != customer.assigned_manager_id:
+            _ensure_manager_belongs_to_company(
+                self.db, company_id=data.company_id, manager_id=data.assigned_manager_id
+            )
             diff["assigned_manager_id"] = {
                 "old": str(customer.assigned_manager_id) if customer.assigned_manager_id else None,
                 "new": str(data.assigned_manager_id),

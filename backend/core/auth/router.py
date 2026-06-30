@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from core.auth import service
@@ -13,12 +13,15 @@ from core.auth.schemas import (
 )
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, get_current_user
+from core.rbac.rate_limit import login_rate_limiter
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=LoginResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse:
+def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)) -> LoginResponse:
+    client_ip = request.client.host if request.client else "unknown"
+    login_rate_limiter.check(client_ip)
     user = service.authenticate_user(db, email=payload.email, password=payload.password)
     access_token, refresh_token, memberships = service.issue_login_tokens(db, user=user)
     return LoginResponse(
