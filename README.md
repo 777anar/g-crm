@@ -1,4 +1,4 @@
-# G-ERP
+# G-STONE ERP
 
 Enterprise platform (ERP, CRM-first module) for:
 

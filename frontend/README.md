@@ -1,4 +1,4 @@
-# G-ERP Frontend — CRM Module Screens (Phase 2)
+# G-STONE ERP Frontend — CRM Module Screens (Phase 2)
 
 Next.js 15 + TypeScript. Implements the CRM screens against the backend's `/api/v1/crm/*` and `/api/v1/auth/*` APIs:
 

@@ -1,4 +1,4 @@
-# G-ERP Backend
+# G-STONE ERP Backend
 
 FastAPI plugin core + business modules, built per the frozen architecture in [`PROJECT_ANALYSIS.md`](../PROJECT_ANALYSIS.md), [`DATABASE_DESIGN.md`](../DATABASE_DESIGN.md), and [`API_SPECIFICATION.md`](../API_SPECIFICATION.md).
 

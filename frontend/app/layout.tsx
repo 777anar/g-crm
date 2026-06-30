@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "G-ERP",
-  description: "G-ERP — CRM, Sales, Inventory, Production, Installation, Finance, Reports, Marketing, AI",
+  title: "G-STONE ERP",
+  description: "G-STONE ERP — CRM for G-STONE GALLERY, KORONA PREMIUM, and NEOLITH BAKU",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

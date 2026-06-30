@@ -18,7 +18,7 @@ from core.storage.router import router as documents_router
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="G-ERP API",
+        title="G-STONE ERP API",
         version="1.0.0",
         openapi_url="/api/v1/openapi.json",
         docs_url="/api/v1/docs",

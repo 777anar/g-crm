@@ -50,7 +50,13 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg">
       <Card className="w-full max-w-sm">
-        <h1 className="mb-4 text-xl font-semibold text-text-primary">Sign in to G-ERP</h1>
+        <div className="mb-6 flex flex-col items-center gap-1 text-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-sm font-bold text-white">
+            GS
+          </div>
+          <h1 className="mt-2 text-xl font-semibold text-text-primary">G-STONE ERP</h1>
+          <p className="text-sm text-text-secondary">Sign in to continue</p>
+        </div>
 
         {!companies && (
           <form className="flex flex-col gap-4" onSubmit={handleLogin}>

@@ -27,7 +27,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex h-14 items-center justify-between border-b border-border bg-surface px-4">
-        <div className="font-semibold text-text-primary">G-ERP</div>
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-white">
+            GS
+          </div>
+          <span className="font-semibold text-text-primary">G-STONE ERP</span>
+        </div>
         <Button variant="secondary" onClick={handleLogout}>
           Log out
         </Button>

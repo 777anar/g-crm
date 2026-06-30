@@ -1,7 +1,7 @@
 [project]
 name = "g-erp-backend"
 version = "0.1.0"
-description = "G-ERP backend: FastAPI plugin core + business modules"
+description = "G-STONE ERP backend: FastAPI plugin core + business modules"
 requires-python = ">=3.9"
 
 [tool.pytest.ini_options]
