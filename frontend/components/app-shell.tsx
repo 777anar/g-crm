@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clearAccessToken } from "@/lib/session";
 import { Button } from "@/components/ui/button";
+import { CompanySwitcher } from "@/components/company-switcher";
 
 // Per UI_UX_GUIDELINES.md section 6.1: primary sidebar is rendered from each
 // enabled module's navigation contribution. Only the CRM module is installed
@@ -33,9 +34,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <span className="font-semibold text-text-primary">G-STONE ERP</span>
         </div>
-        <Button variant="secondary" onClick={handleLogout}>
-          Log out
-        </Button>
+        <div className="flex items-center gap-3">
+          <CompanySwitcher />
+          <Button variant="secondary" onClick={handleLogout}>
+            Log out
+          </Button>
+        </div>
       </header>
       <div className="flex flex-1">
         <nav className="w-56 shrink-0 border-r border-border bg-surface p-3">
