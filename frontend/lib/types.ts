@@ -238,3 +238,134 @@ export type MaterialDocumentAsset = {
   document_type: CatalogDocumentType;
   created_at: string;
 };
+
+// ── Sales module ──────────────────────────────────────────────────────────────
+
+export const PROJECT_STATUSES = ["active", "completed", "cancelled", "on_hold"] as const;
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+
+export type Project = {
+  id: string;
+  company_id: string;
+  customer_id: string;
+  name: string;
+  project_type: string | null;
+  address: string | null;
+  notes: string | null;
+  assigned_to: string | null;
+  status: ProjectStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const QUOTE_STATUSES = ["draft", "sent", "negotiation", "accepted", "rejected", "expired"] as const;
+export type QuoteStatus = (typeof QUOTE_STATUSES)[number];
+
+export type Quote = {
+  id: string;
+  company_id: string;
+  project_id: string;
+  quote_number: string;
+  version: number;
+  status: QuoteStatus;
+  currency: string;
+  price_list_id: string | null;
+  valid_until: string | null;
+  vat_rate: string;
+  discount_type: "none" | "percentage" | "fixed";
+  discount_value: string;
+  subtotal_gross: string;
+  discount_amount: string;
+  subtotal_after_discount: string;
+  vat_amount: string;
+  total_final: string;
+  total_cost: string;
+  profit: string;
+  internal_notes: string | null;
+  customer_notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type QuoteSection = {
+  id: string;
+  company_id: string;
+  quote_id: string;
+  name: string;
+  sort_order: number;
+  notes: string | null;
+  total_measured_area: string | null;
+  subtotal_sale: string;
+  subtotal_cost: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type QuoteSectionMeasurement = {
+  id: string;
+  company_id: string;
+  section_id: string;
+  quote_id: string;
+  sort_order: number;
+  label: string | null;
+  length_mm: string | null;
+  width_mm: string | null;
+  thickness_mm: string | null;
+  quantity: number;
+  area_m2: string | null;
+  waste_pct: string;
+  required_area_m2: string | null;
+  override_required_area: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const QUOTE_ITEM_TYPES = [
+  "material",
+  "wall_cladding",
+  "vanity",
+  "backsplash",
+  "edge_profile",
+  "sink_cutout",
+  "cooktop_cutout",
+  "faucet_hole",
+  "installation",
+  "transport",
+  "crane",
+  "other",
+] as const;
+export type QuoteItemType = (typeof QUOTE_ITEM_TYPES)[number];
+
+export type QuoteSectionItem = {
+  id: string;
+  company_id: string;
+  section_id: string;
+  quote_id: string;
+  item_type: QuoteItemType;
+  sort_order: number;
+  description: string;
+  material_id: string | null;
+  slab_id: string | null;
+  quantity: string;
+  unit: string;
+  unit_sale_price: string;
+  unit_cost_price: string;
+  line_total_sale: string;
+  line_total_cost: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ServicePrice = {
+  id: string;
+  company_id: string;
+  service_key: string;
+  sale_price: string;
+  cost_price: string;
+  created_at: string;
+  updated_at: string;
+};

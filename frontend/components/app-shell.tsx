@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { labelKey: "slabs", href: "/catalog/slabs" },
   { labelKey: "warehouses", href: "/catalog/warehouses" },
   { labelKey: "priceLists", href: "/catalog/price-lists" },
+  { labelKey: "projects", href: "/sales/projects" },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
