@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { createOrder } from "@/lib/api/orders";
 import {
   getQuote,
   listSections,
@@ -38,6 +39,7 @@ type SectionData = {
 export default function QuoteBuilderPage() {
   const { id, quoteId } = useParams<{ id: string; quoteId: string }>();
   const t = useTranslations("sales");
+  const tOrders = useTranslations("orders");
   const tCommon = useTranslations("common");
   const router = useRouter();
 
@@ -66,6 +68,11 @@ export default function QuoteBuilderPage() {
   useEffect(() => { reload(); }, [reload]);
 
   const isEditable = quote?.status === "draft";
+
+  async function handleCreateOrder() {
+    const order = await createOrder(quoteId);
+    router.push(`/orders/${order.id}`);
+  }
 
   async function handleAddSection() {
     if (!newSectionName.trim()) return;
@@ -168,6 +175,11 @@ export default function QuoteBuilderPage() {
               <Button variant="secondary" onClick={() => handleStatusChange("accepted")}>{t("markAccepted")}</Button>
               <Button variant="secondary" onClick={() => handleStatusChange("rejected")}>{t("markRejected")}</Button>
             </>
+          )}
+          {quote.status === "accepted" && (
+            <Button onClick={handleCreateOrder}>
+              {tOrders("createOrder")}
+            </Button>
           )}
           <a
             href={getQuotePdfUrl(quoteId)}

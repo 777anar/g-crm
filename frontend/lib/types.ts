@@ -369,3 +369,108 @@ export type ServicePrice = {
   created_at: string;
   updated_at: string;
 };
+
+// ── Orders module ─────────────────────────────────────────────────────────────
+
+export const ORDER_STATUSES = [
+  "waiting",
+  "measuring",
+  "approved_for_production",
+  "in_production",
+  "ready",
+  "delivered",
+  "installed",
+  "completed",
+  "cancelled",
+] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+export type Order = {
+  id: string;
+  company_id: string;
+  project_id: string;
+  customer_id: string;
+  quote_id: string;
+  order_number: string;
+  status: OrderStatus;
+  currency: string;
+  notes: string | null;
+  production_notes: string | null;
+  installation_notes: string | null;
+  delivery_address: string | null;
+  scheduled_production_date: string | null;
+  scheduled_installation_date: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  cancelled_reason: string | null;
+  created_by: string | null;
+  subtotal_gross: string;
+  discount_type: string;
+  discount_value: string;
+  discount_amount: string;
+  subtotal_after_discount: string;
+  vat_rate: string;
+  vat_amount: string;
+  total_final: string;
+  total_internal_cost: string;
+  total_profit: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrderSection = {
+  id: string;
+  company_id: string;
+  order_id: string;
+  name: string;
+  sort_order: number;
+  notes: string | null;
+  total_measured_area: string | null;
+  subtotal_sale: string;
+  subtotal_cost: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrderItem = {
+  id: string;
+  company_id: string;
+  order_id: string;
+  section_id: string;
+  item_type: string;
+  sort_order: number;
+  description: string;
+  material_id: string | null;
+  slab_id: string | null;
+  quantity: string;
+  unit: string;
+  unit_sale_price: string;
+  unit_cost_price: string;
+  line_total_sale: string;
+  line_total_cost: string;
+  notes: string | null;
+  production_status: string | null;
+  installation_status: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrderMeasurement = {
+  id: string;
+  company_id: string;
+  order_id: string;
+  section_id: string;
+  sort_order: number;
+  label: string | null;
+  length_mm: string | null;
+  width_mm: string | null;
+  thickness_mm: string | null;
+  quantity: number;
+  area_m2: string | null;
+  required_area_m2: string | null;
+  waste_pct: string;
+  override_required_area: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
