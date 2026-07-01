@@ -33,6 +33,7 @@ INSTALLED_MODULES: List[str] = [
     "modules.crm",
     "modules.catalog",
     "modules.sales",
+    "modules.orders",
 ]
 
 _loaded_manifests: List[ModuleManifest] = []
