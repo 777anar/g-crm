@@ -32,6 +32,7 @@ logger = logging.getLogger("core.module_registry")
 INSTALLED_MODULES: List[str] = [
     "modules.crm",
     "modules.catalog",
+    "modules.sales",
 ]
 
 _loaded_manifests: List[ModuleManifest] = []
