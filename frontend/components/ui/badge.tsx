@@ -145,3 +145,26 @@ export function WorkOrderStatusBadge({ status }: { status: string }) {
   const t = useTranslations("production");
   return <Badge tone={WORK_ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
 }
+
+const INSTALLATION_JOB_STATUS_TONE: Record<string, Tone> = {
+  scheduled: "neutral",
+  en_route: "info",
+  in_progress: "warning",
+  completed: "success",
+  cancelled: "danger",
+};
+
+export function InstallationJobStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("installation");
+  return <Badge tone={INSTALLATION_JOB_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+}
+
+const CREW_STATUS_TONE: Record<string, Tone> = {
+  active: "success",
+  inactive: "neutral",
+};
+
+export function CrewStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("installation");
+  return <Badge tone={CREW_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+}

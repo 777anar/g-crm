@@ -28,6 +28,7 @@ const NAV_ITEMS = [
   { labelKey: "projects", href: "/sales/projects" },
   { labelKey: "orders", href: "/orders" },
   { labelKey: "production", href: "/production" },
+  { labelKey: "installation", href: "/installation" },
   { labelKey: "reports", href: "/reports" },
 ] as const;
 

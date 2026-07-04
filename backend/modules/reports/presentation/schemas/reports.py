@@ -111,17 +111,33 @@ class ProductionAnalyticsOut(BaseModel):
 # ── Installation Analytics ───────────────────────────────────────────────────
 
 class InstallationKpis(BaseModel):
-    orders_awaiting_installation: int
-    orders_installed: int
-    avg_installation_cycle_days: Optional[float]
+    jobs_created: int
+    jobs_completed: int
+    jobs_awaiting: int
+    jobs_delayed: int
+    avg_delay_days: Optional[float]
+    avg_installation_hours: Optional[float]
+
+
+class DailyInstallationPoint(BaseModel):
+    date: str
+    count: int
+
+
+class CrewProductivity(BaseModel):
+    crew_id: str
+    crew_name: str
+    completed_count: int
+    avg_installation_hours: Optional[float]
 
 
 class InstallationAnalyticsOut(BaseModel):
     date_from: date
     date_to: date
     kpis: InstallationKpis
-    order_status_breakdown: List[StatusCount]
-    item_installation_status: List[StatusCount]
+    job_status_breakdown: List[StatusCount]
+    daily_installations: List[DailyInstallationPoint]
+    crew_productivity: List[CrewProductivity]
 
 
 # ── Finance Analytics ─────────────────────────────────────────────────────────

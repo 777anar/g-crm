@@ -14,10 +14,11 @@ import {
   updateOrderItem,
 } from "@/lib/api/orders";
 import { createWorkOrder, getWorkOrderForOrder } from "@/lib/api/production";
-import type { Order, OrderItem, OrderMeasurement, OrderSection, WorkOrder } from "@/lib/types";
+import { createInstallationJob, getInstallationJobForOrder } from "@/lib/api/installation";
+import type { Order, OrderItem, OrderMeasurement, OrderSection, WorkOrder, InstallationJob } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { OrderStatusBadge, WorkOrderStatusBadge } from "@/components/ui/badge";
+import { OrderStatusBadge, WorkOrderStatusBadge, InstallationJobStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiRequestError } from "@/lib/api-client";
 
@@ -43,7 +44,10 @@ const NEXT_STATUS: Record<string, string | null> = {
 // the Production module's work order lifecycle (see modules/production)
 // show a real label here too, not just items edited from this dropdown.
 const PROD_STATUSES = ["pending", "queued", "cutting", "polishing", "quality_check", "done"];
-const INST_STATUSES = ["pending", "scheduled", "done"];
+// Mirrors the Installation module's own job status vocabulary (see
+// modules/installation), which is what actually writes this field once a
+// job exists -- kept here so an item's current value always has a label.
+const INST_STATUSES = ["pending", "scheduled", "en_route", "in_progress", "done"];
 
 const inputClasses =
   "rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary";
@@ -56,9 +60,11 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [sectionData, setSectionData] = useState<SectionData[] | null>(null);
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
+  const [installationJob, setInstallationJob] = useState<InstallationJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [transitioning, setTransitioning] = useState(false);
   const [creatingWorkOrder, setCreatingWorkOrder] = useState(false);
+  const [creatingInstallationJob, setCreatingInstallationJob] = useState(false);
   const [cancelMode, setCancelMode] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [editMode, setEditMode] = useState(false);
@@ -104,6 +110,16 @@ export default function OrderDetailPage() {
       }
     }
 
+    try {
+      setInstallationJob(await getInstallationJobForOrder(id));
+    } catch (err) {
+      if (err instanceof ApiRequestError && err.status === 404) {
+        setInstallationJob(null);
+      } else {
+        throw err;
+      }
+    }
+
     setLoading(false);
   }, [id]);
 
@@ -116,6 +132,16 @@ export default function OrderDetailPage() {
       await reload();
     } finally {
       setCreatingWorkOrder(false);
+    }
+  }
+
+  async function handleCreateInstallationJob() {
+    setCreatingInstallationJob(true);
+    try {
+      await createInstallationJob(id);
+      await reload();
+    } finally {
+      setCreatingInstallationJob(false);
     }
   }
 
@@ -231,6 +257,27 @@ export default function OrderDetailPage() {
           <p className="text-sm text-text-secondary">{t("noWorkOrderYet")}</p>
           <Button onClick={handleCreateWorkOrder} disabled={creatingWorkOrder}>
             {creatingWorkOrder ? t("saving") : t("createWorkOrder")}
+          </Button>
+        </Card>
+      ) : null}
+
+      {/* Installation job */}
+      {installationJob ? (
+        <Card className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-text-secondary">{t("installationJob")}:</span>
+            <span className="font-mono text-sm font-medium text-text-primary">{installationJob.job_number}</span>
+            <InstallationJobStatusBadge status={installationJob.status} />
+          </div>
+          <Link href={`/installation/jobs/${installationJob.id}`} className="text-sm text-primary hover:underline">
+            {t("viewInstallationJob")} →
+          </Link>
+        </Card>
+      ) : order.status === "ready" || order.status === "delivered" ? (
+        <Card className="flex items-center justify-between">
+          <p className="text-sm text-text-secondary">{t("noInstallationJobYet")}</p>
+          <Button onClick={handleCreateInstallationJob} disabled={creatingInstallationJob}>
+            {creatingInstallationJob ? t("saving") : t("createInstallationJob")}
           </Button>
         </Card>
       ) : null}
@@ -373,7 +420,7 @@ export default function OrderDetailPage() {
                           className={inputClasses}
                           value={item.installation_status ?? ""}
                           onChange={(e) => handleItemStatusChange(item.id, "installation_status", e.target.value)}
-                          disabled={isTerminal}
+                          disabled={isTerminal || installationJob !== null}
                         >
                           <option value="">—</option>
                           {INST_STATUSES.map((s) => (

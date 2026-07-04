@@ -23,3 +23,10 @@ class CompanyCreate(BaseModel):
     locale: str = "en"
     logo_url: Optional[str] = None
     enabled_modules: List[str] = []
+
+
+class CompanyUserOut(BaseModel):
+    id: uuid.UUID
+    full_name: str
+    email: str
+    role: str

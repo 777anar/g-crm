@@ -19,6 +19,8 @@ from sqlalchemy.orm import Session
 from core.audit.models import AuditLog
 from modules.crm.infrastructure.models.customer import Customer
 from modules.crm.infrastructure.models.lead import Lead
+from modules.installation.infrastructure.models.crew import Crew
+from modules.installation.infrastructure.models.installation_job import InstallationJob
 from modules.orders.infrastructure.models.order import Order
 from modules.orders.infrastructure.models.order_item import OrderItem
 from modules.reports.domain.value_objects import DateRange
@@ -218,3 +220,26 @@ class ReportsRepository:
             {"month": month, "count": counts[month], **buckets[month]}
             for month in sorted(buckets.keys())
         ]
+
+    # ── Installation (real module data, not an Orders proxy) ─────────────────
+
+    def installation_jobs_created_in_range(
+        self, *, company_id: uuid.UUID, date_range: DateRange
+    ) -> List[InstallationJob]:
+        start, end = _day_bounds(date_range)
+        stmt = select(InstallationJob).where(
+            InstallationJob.company_id == company_id, InstallationJob.created_at.between(start, end)
+        )
+        return list(self.db.scalars(stmt).all())
+
+    def installation_job_status_snapshot(self, *, company_id: uuid.UUID) -> List[Tuple[str, int]]:
+        stmt = (
+            select(InstallationJob.status, func.count(InstallationJob.id))
+            .where(InstallationJob.company_id == company_id)
+            .group_by(InstallationJob.status)
+        )
+        return list(self.db.execute(stmt).all())
+
+    def crew_names_by_id(self, *, company_id: uuid.UUID) -> Dict[str, str]:
+        stmt = select(Crew.id, Crew.name).where(Crew.company_id == company_id)
+        return {str(crew_id): name for crew_id, name in self.db.execute(stmt).all()}

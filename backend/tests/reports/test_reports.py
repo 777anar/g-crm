@@ -51,11 +51,17 @@ def test_production_analytics_cycle_time_for_completed_order(app_client, owner_h
     assert body["kpis"]["avg_production_cycle_days"] is not None
 
 
-def test_installation_analytics_reflects_installed_order(app_client, owner_headers, completed_order):
+def test_installation_analytics_reflects_completed_job(app_client, owner_headers, completed_installation_job):
     resp = app_client.get("/api/v1/reports/installation", headers=owner_headers, params={"period": "90d"})
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert body["kpis"]["orders_installed"] == 1
+    assert body["kpis"]["jobs_created"] == 1
+    assert body["kpis"]["jobs_completed"] == 1
+    assert body["kpis"]["avg_installation_hours"] is not None
+    assert any(r["count"] == 1 for r in body["daily_installations"])
+    assert len(body["crew_productivity"]) == 1
+    assert body["crew_productivity"][0]["crew_name"] == "Test Crew"
+    assert body["crew_productivity"][0]["completed_count"] == 1
 
 
 def test_finance_analytics_revenue_and_margin(app_client, owner_headers, completed_order):

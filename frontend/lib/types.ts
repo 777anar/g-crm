@@ -27,6 +27,13 @@ export type Company = {
   enabled_modules: string[];
 };
 
+export type CompanyUser = {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+};
+
 export const CUSTOMER_STATUSES = [
   "new_inquiry",
   "contacted",
@@ -516,6 +523,84 @@ export type WorkOrderItem = {
   area_m2: string | null;
 };
 
+// ── Installation module ───────────────────────────────────────────────────────
+
+export const CREW_STATUSES = ["active", "inactive"] as const;
+export type CrewStatus = (typeof CREW_STATUSES)[number];
+
+export type Crew = {
+  id: string;
+  company_id: string;
+  name: string;
+  status: CrewStatus;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CrewMember = {
+  id: string;
+  crew_id: string;
+  user_id: string;
+  is_lead: boolean;
+  full_name: string;
+  email: string;
+};
+
+export const INSTALLATION_JOB_STATUSES = [
+  "scheduled",
+  "en_route",
+  "in_progress",
+  "completed",
+  "cancelled",
+] as const;
+export type InstallationJobStatus = (typeof INSTALLATION_JOB_STATUSES)[number];
+
+export type InstallationJob = {
+  id: string;
+  company_id: string;
+  order_id: string;
+  job_number: string;
+  status: InstallationJobStatus;
+  crew_id: string | null;
+  scheduled_date: string | null;
+  scheduled_time_slot: string | null;
+  route_sequence: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  cancelled_reason: string | null;
+  notes: string | null;
+  completion_notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const PHOTO_TYPES = ["before", "after", "damage", "signature", "other"] as const;
+export type PhotoType = (typeof PHOTO_TYPES)[number];
+
+export type InstallationPhoto = {
+  id: string;
+  installation_job_id: string;
+  document_id: string;
+  photo_type: PhotoType;
+  caption: string | null;
+  sort_order: number;
+  created_at: string;
+};
+
+export type InstallationNotification = {
+  id: string;
+  notification_type: string;
+  title: string;
+  message: string;
+  installation_job_id: string | null;
+  read_at: string | null;
+  created_at: string;
+};
+
 // ── Reports module ────────────────────────────────────────────────────────────
 
 export const REPORT_PERIODS = ["7d", "30d", "90d", "12m", "custom"] as const;
@@ -588,12 +673,21 @@ export type InstallationAnalytics = {
   date_from: string;
   date_to: string;
   kpis: {
-    orders_awaiting_installation: number;
-    orders_installed: number;
-    avg_installation_cycle_days: number | null;
+    jobs_created: number;
+    jobs_completed: number;
+    jobs_awaiting: number;
+    jobs_delayed: number;
+    avg_delay_days: number | null;
+    avg_installation_hours: number | null;
   };
-  order_status_breakdown: StatusCount[];
-  item_installation_status: StatusCount[];
+  job_status_breakdown: StatusCount[];
+  daily_installations: { date: string; count: number }[];
+  crew_productivity: {
+    crew_id: string;
+    crew_name: string;
+    completed_count: number;
+    avg_installation_hours: number | null;
+  }[];
 };
 
 export type FinanceAnalytics = {

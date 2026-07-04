@@ -8,13 +8,13 @@ import { ApiRequestError } from "@/lib/api-client";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatCardSkeleton, TableSkeleton } from "@/components/ui/skeleton";
-import { StatusBarList } from "@/components/ui/charts";
+import { CategoryBarChart, StatusBarList, TrendChart, TREND_COLORS } from "@/components/ui/charts";
 import { DateRangeFilter, defaultDateRangeValue, toReportFilterParams } from "@/components/date-range-filter";
 import { ReportExportButtons } from "@/components/report-export-buttons";
 
 export default function InstallationAnalyticsPage() {
   const t = useTranslations("reports");
-  const tOrders = useTranslations("orders");
+  const tInstallation = useTranslations("installation");
 
   const [range, setRange] = useState(defaultDateRangeValue());
   const [data, setData] = useState<InstallationAnalytics | null>(null);
@@ -41,8 +41,8 @@ export default function InstallationAnalyticsPage() {
 
       {!data && !error && (
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+            {Array.from({ length: 6 }).map((_, i) => (
               <StatCardSkeleton key={i} />
             ))}
           </div>
@@ -52,32 +52,50 @@ export default function InstallationAnalyticsPage() {
 
       {data && (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard label={t("kpiOrdersAwaitingInstallation")} value={data.kpis.orders_awaiting_installation} tone="warning" />
-            <StatCard label={t("kpiOrdersInstalled")} value={data.kpis.orders_installed} tone="success" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+            <StatCard label={t("kpiJobsCreated")} value={data.kpis.jobs_created} tone="neutral" />
+            <StatCard label={t("kpiJobsCompleted")} value={data.kpis.jobs_completed} tone="success" />
+            <StatCard label={t("kpiJobsAwaiting")} value={data.kpis.jobs_awaiting} tone="warning" />
+            <StatCard label={t("kpiJobsDelayed")} value={data.kpis.jobs_delayed} tone="danger" />
             <StatCard
-              label={t("kpiAvgInstallationCycle")}
-              value={data.kpis.avg_installation_cycle_days !== null ? t("daysValue", { days: data.kpis.avg_installation_cycle_days }) : "—"}
+              label={t("kpiAvgDelay")}
+              value={data.kpis.avg_delay_days !== null ? t("daysValue", { days: data.kpis.avg_delay_days }) : "—"}
+              tone="warning"
+            />
+            <StatCard
+              label={t("kpiAvgInstallTime")}
+              value={data.kpis.avg_installation_hours !== null ? t("hoursValue", { hours: data.kpis.avg_installation_hours }) : "—"}
               tone="primary"
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader title={t("orderStatusBreakdown")} />
-              <StatusBarList
-                data={data.order_status_breakdown.map((r) => ({ label: tOrders(r.status as any), count: r.count }))}
-                emptyLabel={t("noDataPeriod")}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <CardHeader title={t("dailyInstallations")} />
+              <TrendChart
+                data={data.daily_installations.map((r) => ({ month: r.date, count: r.count }))}
+                series={[{ key: "count", label: t("dailyInstallations"), ...TREND_COLORS.revenue }]}
               />
             </Card>
             <Card>
-              <CardHeader title={t("itemInstallationStatus")} />
+              <CardHeader title={t("jobStatusBreakdown")} />
               <StatusBarList
-                data={data.item_installation_status.map((r) => ({ label: tOrders(`instStatus_${r.status}` as any), count: r.count }))}
+                data={data.job_status_breakdown.map((r) => ({ label: tInstallation(r.status as any), count: r.count }))}
                 emptyLabel={t("noDataPeriod")}
               />
             </Card>
           </div>
+
+          <Card>
+            <CardHeader title={t("crewProductivity")} />
+            {data.crew_productivity.length === 0 ? (
+              <p className="text-sm text-text-secondary">{t("noDataPeriod")}</p>
+            ) : (
+              <CategoryBarChart
+                data={data.crew_productivity.map((r) => ({ label: r.crew_name, value: r.completed_count }))}
+              />
+            )}
+          </Card>
         </>
       )}
     </div>

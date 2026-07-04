@@ -16,7 +16,7 @@ def company(db_session):
     company = Company(
         name="G-STONE REPORTS TEST",
         slug="g-stone-reports-test",
-        enabled_modules=["crm", "catalog", "sales", "orders", "reports"],
+        enabled_modules=["crm", "catalog", "sales", "orders", "installation", "reports"],
     )
     db_session.add(company)
     db_session.commit()
@@ -153,6 +153,48 @@ def completed_order(app_client, owner_headers, order_in_production):
     for status in ("ready", "delivered", "installed", "completed"):
         resp = app_client.post(
             f"/api/v1/orders/{order_id}/status",
+            headers=owner_headers,
+            json={"status": status},
+        )
+        assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+@pytest.fixture()
+def ready_order(app_client, owner_headers, order_in_production):
+    resp = app_client.post(
+        f"/api/v1/orders/{order_in_production['id']}/status",
+        headers=owner_headers,
+        json={"status": "ready"},
+    )
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+@pytest.fixture()
+def completed_installation_job(app_client, owner_headers, owner_user, ready_order):
+    """A real InstallationJob, assigned to a crew and driven to completion
+    through the Installation module's own API -- so it advances the Order to
+    'installed' itself (and populates crew productivity data) exactly like
+    production traffic would."""
+    crew = app_client.post(
+        "/api/v1/installation/crews", headers=owner_headers, json={"name": "Test Crew"}
+    ).json()
+    app_client.post(
+        f"/api/v1/installation/crews/{crew['id']}/members",
+        headers=owner_headers,
+        json={"user_id": str(owner_user.id), "is_lead": True},
+    )
+
+    job = app_client.post(
+        "/api/v1/installation/jobs", headers=owner_headers, json={"order_id": ready_order["id"]}
+    ).json()
+    app_client.patch(
+        f"/api/v1/installation/jobs/{job['id']}", headers=owner_headers, json={"crew_id": crew["id"]}
+    )
+    for status in ("en_route", "in_progress", "completed"):
+        resp = app_client.post(
+            f"/api/v1/installation/jobs/{job['id']}/status",
             headers=owner_headers,
             json={"status": status},
         )

@@ -40,8 +40,12 @@ _KPI_LABELS = {
     "orders_completed_production": "Orders completed production",
     "avg_production_cycle_days": "Avg. production cycle (days)",
     # Installation
-    "orders_installed": "Orders installed",
-    "avg_installation_cycle_days": "Avg. installation cycle (days)",
+    "jobs_created": "Jobs created",
+    "jobs_completed": "Jobs completed",
+    "jobs_awaiting": "Jobs awaiting installation",
+    "jobs_delayed": "Jobs delayed",
+    "avg_delay_days": "Avg. delay (days)",
+    "avg_installation_hours": "Avg. installation time (hours)",
     # Finance
     "cost": "Cost",
     "recognized_revenue": "Recognized revenue (completed orders)",
@@ -101,12 +105,19 @@ def build_export_sections(report_type: str, data: dict) -> ExportSections:
                                    [[r["project_type"], _fmt(r["revenue"])] for r in data["revenue_by_project_type"]]))
         tables.append(ExportTable("Top customers", ["Customer", "Revenue"],
                                    [[r["customer_name"], _fmt(r["revenue"])] for r in data["top_customers"]]))
-    elif report_type in ("production", "installation"):
+    elif report_type == "production":
         tables.append(ExportTable("Order status breakdown", ["Status", "Count"],
                                    [[r["status"], str(r["count"])] for r in data["order_status_breakdown"]]))
-        item_key = "item_production_status" if report_type == "production" else "item_installation_status"
         tables.append(ExportTable("Item status", ["Status", "Count"],
-                                   [[r["status"], str(r["count"])] for r in data[item_key]]))
+                                   [[r["status"], str(r["count"])] for r in data["item_production_status"]]))
+    elif report_type == "installation":
+        tables.append(ExportTable("Job status breakdown", ["Status", "Count"],
+                                   [[r["status"], str(r["count"])] for r in data["job_status_breakdown"]]))
+        tables.append(ExportTable("Daily installations", ["Date", "Count"],
+                                   [[r["date"], str(r["count"])] for r in data["daily_installations"]]))
+        tables.append(ExportTable("Crew productivity", ["Crew", "Completed", "Avg. hours"],
+                                   [[r["crew_name"], str(r["completed_count"]), _fmt(r["avg_installation_hours"])]
+                                    for r in data["crew_productivity"]]))
     elif report_type == "finance":
         tables.append(ExportTable("Monthly trend", ["Month", "Revenue", "Cost", "Profit", "Orders"],
                                    [[r["month"], _fmt(r["revenue"]), _fmt(r["cost"]), _fmt(r["profit"]), str(r["count"])]
