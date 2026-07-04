@@ -31,7 +31,8 @@
     "projects": "Layihələr",
     "quotes": "KT",
     "orders": "Sifarişlər",
-    "reports": "Hesabatlar"
+    "reports": "Hesabatlar",
+    "production": "İstehsal"
   },
   "language": {
     "switchLanguage": "Dil",
@@ -528,7 +529,13 @@
     "unit": "Vahid",
     "unitPrice": "Qiymət",
     "lengthMm": "Uzunluq (mm)",
-    "widthMm": "En (mm)"
+    "widthMm": "En (mm)",
+    "workOrder": "İş Sifarişi",
+    "viewWorkOrder": "İş Sifarişinə bax",
+    "noWorkOrderYet": "Bu sifariş üçün hələ iş sifarişi yoxdur.",
+    "createWorkOrder": "İş Sifarişi yarat",
+    "prodStatus_queued": "Növbədə",
+    "prodStatus_quality_check": "Keyfiyyətə nəzarət"
   },
   "reports": {
     "title": "Hesabatlar",
@@ -587,5 +594,34 @@
     "kpiCancelledValue": "Ləğv edilmiş dəyər",
     "financeTrend": "Gəlir, xərc və mənfəət tendensiyası",
     "revenueByCurrency": "Valyutaya görə gəlir"
+  },
+  "production": {
+    "title": "İstehsal",
+    "subtitle": "Sex səviyyəli iş sifarişləri: Kataloq plitələrini istehlak edən emal və kəsim işləri.",
+    "noWorkOrdersYet": "Hələ iş sifarişi yoxdur",
+    "noWorkOrdersDesc": "İş sifarişləri \"İstehsal üçün təsdiqləndi\" mərhələsinə çatan sifarişlərdən yaradılır.",
+    "backToWorkOrders": "İstehsala qayıt",
+    "forOrder": "Sifariş üçün",
+    "saving": "Yadda saxlanılır...",
+    "loadFailed": "Yüklənmədi",
+    "markCancelled": "İş Sifarişini ləğv et",
+    "cancelWorkOrder": "İş Sifarişini ləğv et",
+    "cancelReason": "Ləğv səbəbi",
+    "slabsConsumed": "İstifadə olunan plitələr",
+    "slabNumber": "Plitə №",
+    "description": "Təsvir",
+    "quantity": "Miqdar",
+    "slabArea": "Plitə sahəsi",
+    "created": "Yaradıldı",
+    "completed": "Tamamlandı",
+    "tableWorkOrder": "İş Sifarişi №",
+    "tableStatus": "Status",
+    "tableOrder": "Sifariş",
+    "tableCreated": "Yaradıldı",
+    "queued": "Növbədə",
+    "cutting": "Kəsilir",
+    "polishing": "Cilalanır",
+    "quality_check": "Keyfiyyətə nəzarət",
+    "cancelled": "Ləğv edildi"
   }
 }

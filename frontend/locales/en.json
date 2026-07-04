@@ -31,7 +31,8 @@
     "projects": "Projects",
     "quotes": "Quotes",
     "orders": "Orders",
-    "reports": "Reports"
+    "reports": "Reports",
+    "production": "Production"
   },
   "language": {
     "switchLanguage": "Language",
@@ -528,7 +529,13 @@
     "unit": "Unit",
     "unitPrice": "Price",
     "lengthMm": "Length (mm)",
-    "widthMm": "Width (mm)"
+    "widthMm": "Width (mm)",
+    "workOrder": "Work Order",
+    "viewWorkOrder": "View Work Order",
+    "noWorkOrderYet": "No work order yet for this order.",
+    "createWorkOrder": "Create Work Order",
+    "prodStatus_queued": "Queued",
+    "prodStatus_quality_check": "Quality Check"
   },
   "reports": {
     "title": "Reports",
@@ -587,5 +594,34 @@
     "kpiCancelledValue": "Cancelled value",
     "financeTrend": "Revenue, cost & profit trend",
     "revenueByCurrency": "Revenue by currency"
+  },
+  "production": {
+    "title": "Production",
+    "subtitle": "Shop-floor work orders: fabrication and cutting jobs consuming Catalog slabs.",
+    "noWorkOrdersYet": "No work orders yet",
+    "noWorkOrdersDesc": "Work orders are created from orders that reach \"Approved for Production\".",
+    "backToWorkOrders": "Back to Production",
+    "forOrder": "For order",
+    "saving": "Saving...",
+    "loadFailed": "Failed to load",
+    "markCancelled": "Cancel Work Order",
+    "cancelWorkOrder": "Cancel Work Order",
+    "cancelReason": "Cancellation Reason",
+    "slabsConsumed": "Slabs consumed",
+    "slabNumber": "Slab #",
+    "description": "Description",
+    "quantity": "Quantity",
+    "slabArea": "Slab area",
+    "created": "Created",
+    "completed": "Completed",
+    "tableWorkOrder": "Work Order #",
+    "tableStatus": "Status",
+    "tableOrder": "Order",
+    "tableCreated": "Created",
+    "queued": "Queued",
+    "cutting": "Cutting",
+    "polishing": "Polishing",
+    "quality_check": "Quality Check",
+    "cancelled": "Cancelled"
   }
 }

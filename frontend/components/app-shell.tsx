@@ -27,6 +27,7 @@ const NAV_ITEMS = [
   { labelKey: "priceLists", href: "/catalog/price-lists" },
   { labelKey: "projects", href: "/sales/projects" },
   { labelKey: "orders", href: "/orders" },
+  { labelKey: "production", href: "/production" },
   { labelKey: "reports", href: "/reports" },
 ] as const;
 

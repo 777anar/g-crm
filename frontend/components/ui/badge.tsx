@@ -131,3 +131,17 @@ export function OrderStatusBadge({ status }: { status: string }) {
   const t = useTranslations("orders");
   return <Badge tone={ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
 }
+
+const WORK_ORDER_STATUS_TONE: Record<string, Tone> = {
+  queued: "neutral",
+  cutting: "warning",
+  polishing: "warning",
+  quality_check: "info",
+  completed: "success",
+  cancelled: "danger",
+};
+
+export function WorkOrderStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("production");
+  return <Badge tone={WORK_ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+}

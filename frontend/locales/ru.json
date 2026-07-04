@@ -31,7 +31,8 @@
     "projects": "Проекты",
     "quotes": "КП",
     "orders": "Заказы",
-    "reports": "Отчёты"
+    "reports": "Отчёты",
+    "production": "Производство"
   },
   "language": {
     "switchLanguage": "Язык",
@@ -528,7 +529,13 @@
     "unit": "Ед.",
     "unitPrice": "Цена",
     "lengthMm": "Длина (мм)",
-    "widthMm": "Ширина (мм)"
+    "widthMm": "Ширина (мм)",
+    "workOrder": "Производственный заказ",
+    "viewWorkOrder": "Открыть производственный заказ",
+    "noWorkOrderYet": "Для этого заказа пока нет производственного заказа.",
+    "createWorkOrder": "Создать производственный заказ",
+    "prodStatus_queued": "В очереди",
+    "prodStatus_quality_check": "Контроль качества"
   },
   "reports": {
     "title": "Отчёты",
@@ -587,5 +594,34 @@
     "kpiCancelledValue": "Отменённая стоимость",
     "financeTrend": "Динамика выручки, себестоимости и прибыли",
     "revenueByCurrency": "Выручка по валюте"
+  },
+  "production": {
+    "title": "Производство",
+    "subtitle": "Цеховые производственные заказы: работы по резке и обработке плит из каталога.",
+    "noWorkOrdersYet": "Пока нет производственных заказов",
+    "noWorkOrdersDesc": "Производственные заказы создаются из заказов со статусом «Утверждено к производству».",
+    "backToWorkOrders": "Назад к производству",
+    "forOrder": "Для заказа",
+    "saving": "Сохранение...",
+    "loadFailed": "Не удалось загрузить",
+    "markCancelled": "Отменить производственный заказ",
+    "cancelWorkOrder": "Отменить производственный заказ",
+    "cancelReason": "Причина отмены",
+    "slabsConsumed": "Использованные плиты",
+    "slabNumber": "№ плиты",
+    "description": "Описание",
+    "quantity": "Количество",
+    "slabArea": "Площадь плиты",
+    "created": "Создано",
+    "completed": "Завершено",
+    "tableWorkOrder": "№ производственного заказа",
+    "tableStatus": "Статус",
+    "tableOrder": "Заказ",
+    "tableCreated": "Создано",
+    "queued": "В очереди",
+    "cutting": "Резка",
+    "polishing": "Полировка",
+    "quality_check": "Контроль качества",
+    "cancelled": "Отменено"
   }
 }

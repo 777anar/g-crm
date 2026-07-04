@@ -475,6 +475,47 @@ export type OrderMeasurement = {
   updated_at: string;
 };
 
+// ── Production module ─────────────────────────────────────────────────────────
+
+export const WORK_ORDER_STATUSES = [
+  "queued",
+  "cutting",
+  "polishing",
+  "quality_check",
+  "completed",
+  "cancelled",
+] as const;
+export type WorkOrderStatus = (typeof WORK_ORDER_STATUSES)[number];
+
+export type WorkOrder = {
+  id: string;
+  company_id: string;
+  order_id: string;
+  work_order_number: string;
+  status: WorkOrderStatus;
+  assigned_to: string | null;
+  scheduled_start_date: string | null;
+  scheduled_completion_date: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  cancelled_reason: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WorkOrderItem = {
+  id: string;
+  order_item_id: string;
+  slab_id: string;
+  slab_number: string;
+  description: string;
+  quantity: string;
+  unit: string;
+  area_m2: string | null;
+};
+
 // ── Reports module ────────────────────────────────────────────────────────────
 
 export const REPORT_PERIODS = ["7d", "30d", "90d", "12m", "custom"] as const;

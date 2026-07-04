@@ -13,11 +13,13 @@ import {
   updateOrderStatus,
   updateOrderItem,
 } from "@/lib/api/orders";
-import type { Order, OrderItem, OrderMeasurement, OrderSection } from "@/lib/types";
+import { createWorkOrder, getWorkOrderForOrder } from "@/lib/api/production";
+import type { Order, OrderItem, OrderMeasurement, OrderSection, WorkOrder } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { OrderStatusBadge } from "@/components/ui/badge";
+import { OrderStatusBadge, WorkOrderStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { ApiRequestError } from "@/lib/api-client";
 
 type SectionData = {
   section: OrderSection;
@@ -37,7 +39,10 @@ const NEXT_STATUS: Record<string, string | null> = {
   cancelled: null,
 };
 
-const PROD_STATUSES = ["pending", "cutting", "polishing", "done"];
+// Includes "queued"/"quality_check" so items already carrying a value set by
+// the Production module's work order lifecycle (see modules/production)
+// show a real label here too, not just items edited from this dropdown.
+const PROD_STATUSES = ["pending", "queued", "cutting", "polishing", "quality_check", "done"];
 const INST_STATUSES = ["pending", "scheduled", "done"];
 
 const inputClasses =
@@ -50,8 +55,10 @@ export default function OrderDetailPage() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [sectionData, setSectionData] = useState<SectionData[] | null>(null);
+  const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [transitioning, setTransitioning] = useState(false);
+  const [creatingWorkOrder, setCreatingWorkOrder] = useState(false);
   const [cancelMode, setCancelMode] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [editMode, setEditMode] = useState(false);
@@ -86,10 +93,31 @@ export default function OrderDetailPage() {
       })
     );
     setSectionData(enriched);
+
+    try {
+      setWorkOrder(await getWorkOrderForOrder(id));
+    } catch (err) {
+      if (err instanceof ApiRequestError && err.status === 404) {
+        setWorkOrder(null);
+      } else {
+        throw err;
+      }
+    }
+
     setLoading(false);
   }, [id]);
 
   useEffect(() => { reload(); }, [reload]);
+
+  async function handleCreateWorkOrder() {
+    setCreatingWorkOrder(true);
+    try {
+      await createWorkOrder(id);
+      await reload();
+    } finally {
+      setCreatingWorkOrder(false);
+    }
+  }
 
   async function handleAdvance() {
     if (!order) return;
@@ -185,6 +213,27 @@ export default function OrderDetailPage() {
           </div>
         </Card>
       )}
+
+      {/* Work order */}
+      {workOrder ? (
+        <Card className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-text-secondary">{t("workOrder")}:</span>
+            <span className="font-mono text-sm font-medium text-text-primary">{workOrder.work_order_number}</span>
+            <WorkOrderStatusBadge status={workOrder.status} />
+          </div>
+          <Link href={`/production/${workOrder.id}`} className="text-sm text-primary hover:underline">
+            {t("viewWorkOrder")} →
+          </Link>
+        </Card>
+      ) : order.status === "approved_for_production" ? (
+        <Card className="flex items-center justify-between">
+          <p className="text-sm text-text-secondary">{t("noWorkOrderYet")}</p>
+          <Button onClick={handleCreateWorkOrder} disabled={creatingWorkOrder}>
+            {creatingWorkOrder ? t("saving") : t("createWorkOrder")}
+          </Button>
+        </Card>
+      ) : null}
 
       {/* Totals bar */}
       <Card className="flex flex-wrap gap-6 text-sm">
@@ -311,7 +360,7 @@ export default function OrderDetailPage() {
                           className={inputClasses}
                           value={item.production_status ?? ""}
                           onChange={(e) => handleItemStatusChange(item.id, "production_status", e.target.value)}
-                          disabled={isTerminal}
+                          disabled={isTerminal || workOrder !== null}
                         >
                           <option value="">—</option>
                           {PROD_STATUSES.map((s) => (

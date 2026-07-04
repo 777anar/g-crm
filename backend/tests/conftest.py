@@ -20,6 +20,7 @@ from modules.crm.infrastructure import models as crm_models  # noqa: F401
 from modules.catalog.infrastructure import models as catalog_models  # noqa: F401
 from modules.sales.infrastructure import models as sales_models  # noqa: F401
 from modules.orders.infrastructure import models as orders_models  # noqa: F401
+from modules.production.infrastructure import models as production_models  # noqa: F401
 
 
 @pytest.fixture()
