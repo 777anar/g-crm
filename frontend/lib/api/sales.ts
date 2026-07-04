@@ -1,4 +1,4 @@
-import { apiRequest } from "../api-client";
+import { apiDownload, apiRequest } from "../api-client";
 import type {
   Paginated,
   Project,
@@ -112,8 +112,8 @@ export function updateQuoteStatus(id: string, status: string) {
   return apiRequest<Quote>(`${BASE}/quotes/${id}/status`, { method: "POST", body: { status } });
 }
 
-export function getQuotePdfUrl(id: string) {
-  return `${BASE}/quotes/${id}/pdf`;
+export function downloadQuotePdf(id: string, quoteNumber: string) {
+  return apiDownload(`${BASE}/quotes/${id}/pdf`, { filename: `${quoteNumber}.pdf` });
 }
 
 // ── Sections ──────────────────────────────────────────────────────────────────

@@ -9,6 +9,7 @@ import { CUSTOMER_STATUSES, type Customer, type Lead } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
+import { StatusBarList } from "@/components/ui/charts";
 import { Badge, CustomerStatusBadge, LeadStatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -139,28 +140,10 @@ export default function DashboardPage() {
 
             <Card>
               <CardHeader title={t("customersByStatus")} />
-              <ul className="flex flex-col gap-3">
-                {customersByStatus
-                  .filter(({ count }) => count > 0)
-                  .map(({ status, count }) => {
-                    const max = Math.max(...customersByStatus.map((c) => c.count), 1);
-                    const pct = Math.round((count / max) * 100);
-                    return (
-                      <li key={status}>
-                        <div className="mb-1 flex items-center justify-between text-sm">
-                          <span className="text-text-primary">{statusLabel(status)}</span>
-                          <span className="text-text-secondary">{count}</span>
-                        </div>
-                        <div className="h-1.5 w-full rounded-full bg-bg">
-                          <div className="h-1.5 rounded-full bg-primary" style={{ width: `${pct}%` }} />
-                        </div>
-                      </li>
-                    );
-                  })}
-                {customersByStatus.every(({ count }) => count === 0) && (
-                  <p className="text-sm text-text-secondary">{t("noCustomersYet")}</p>
-                )}
-              </ul>
+              <StatusBarList
+                data={customersByStatus.map(({ status, count }) => ({ label: statusLabel(status), count }))}
+                emptyLabel={t("noCustomersYet")}
+              />
             </Card>
           </div>
 

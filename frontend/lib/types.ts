@@ -241,7 +241,7 @@ export type MaterialDocumentAsset = {
 
 // ── Sales module ──────────────────────────────────────────────────────────────
 
-export const PROJECT_STATUSES = ["active", "completed", "cancelled", "on_hold"] as const;
+export const PROJECT_STATUSES = ["active", "completed", "cancelled"] as const;
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 
 export type Project = {
@@ -473,4 +473,101 @@ export type OrderMeasurement = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// ── Reports module ────────────────────────────────────────────────────────────
+
+export const REPORT_PERIODS = ["7d", "30d", "90d", "12m", "custom"] as const;
+export type ReportPeriod = (typeof REPORT_PERIODS)[number];
+
+export type StatusCount = { status: string; count: number };
+
+export type ExecutiveDashboard = {
+  date_from: string;
+  date_to: string;
+  kpis: {
+    active_customers: number;
+    new_customers: number;
+    lost_customers: number;
+    leads_captured: number;
+    leads_converted: number;
+    lead_conversion_rate: number;
+    quote_win_rate: number;
+    orders_created: number;
+    revenue: string;
+    profit: string;
+    profit_margin_pct: number;
+    orders_in_production: number;
+    orders_awaiting_installation: number;
+  };
+  customers_by_status: StatusCount[];
+  orders_by_status: StatusCount[];
+  revenue_trend: { month: string; revenue: string; profit: string; count: number }[];
+};
+
+export type SalesAnalytics = {
+  date_from: string;
+  date_to: string;
+  kpis: {
+    total_quotes: number;
+    accepted_quotes: number;
+    win_rate: number;
+    accepted_revenue: string;
+    avg_quote_value: string;
+  };
+  quotes_by_status: StatusCount[];
+  revenue_by_project_type: { project_type: string; revenue: string }[];
+  top_customers: { customer_id: string; customer_name: string; revenue: string }[];
+  monthly_trend: {
+    month: string;
+    draft: number;
+    sent: number;
+    negotiation: number;
+    accepted: number;
+    rejected: number;
+    expired: number;
+  }[];
+};
+
+export type ProductionAnalytics = {
+  date_from: string;
+  date_to: string;
+  kpis: {
+    orders_in_production: number;
+    orders_ready: number;
+    orders_entered_production: number;
+    orders_completed_production: number;
+    avg_production_cycle_days: number | null;
+  };
+  order_status_breakdown: StatusCount[];
+  item_production_status: StatusCount[];
+};
+
+export type InstallationAnalytics = {
+  date_from: string;
+  date_to: string;
+  kpis: {
+    orders_awaiting_installation: number;
+    orders_installed: number;
+    avg_installation_cycle_days: number | null;
+  };
+  order_status_breakdown: StatusCount[];
+  item_installation_status: StatusCount[];
+};
+
+export type FinanceAnalytics = {
+  date_from: string;
+  date_to: string;
+  kpis: {
+    revenue: string;
+    cost: string;
+    profit: string;
+    profit_margin_pct: number;
+    recognized_revenue: string;
+    pipeline_value: string;
+    cancelled_value: string;
+    orders_count: number;
+  };
+  monthly_trend: { month: string; revenue: string; cost: string; profit: string; count: number }[];
+  revenue_by_currency: { currency: string; revenue: string }[];
 };

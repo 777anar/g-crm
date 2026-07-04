@@ -4,23 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { listOrders } from "@/lib/api/orders";
-import type { Order, OrderStatus } from "@/lib/types";
+import { ORDER_STATUSES, type Order } from "@/lib/types";
+import { OrderStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiRequestError } from "@/lib/api-client";
+import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
-
-const STATUS_COLORS: Record<string, string> = {
-  waiting: "bg-gray-100 text-gray-700",
-  measuring: "bg-yellow-100 text-yellow-700",
-  approved_for_production: "bg-blue-100 text-blue-700",
-  in_production: "bg-indigo-100 text-indigo-700",
-  ready: "bg-purple-100 text-purple-700",
-  delivered: "bg-teal-100 text-teal-700",
-  installed: "bg-green-100 text-green-700",
-  completed: "bg-green-200 text-green-800",
-  cancelled: "bg-red-100 text-red-700",
-};
 
 export default function OrdersPage() {
   const t = useTranslations("orders");
@@ -36,9 +26,7 @@ export default function OrdersPage() {
   const load = useCallback(() => {
     listOrders({ status: statusFilter || undefined, search: search || undefined })
       .then((r) => setOrders(r.items))
-      .catch((err) =>
-        setError(err instanceof ApiRequestError ? err.message : t("loadFailed"))
-      );
+      .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
   }, [statusFilter, search, t]);
 
   useEffect(() => {
@@ -46,83 +34,69 @@ export default function OrdersPage() {
     load();
   }, [load]);
 
-  const ORDER_STATUS_LIST = [
-    "waiting", "measuring", "approved_for_production", "in_production",
-    "ready", "delivered", "installed", "completed", "cancelled",
-  ] as const;
-
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">{t("title")}</h1>
-          <p className="page-subtitle">{t("subtitle")}</p>
-        </div>
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-xl font-semibold text-text-primary">{t("title")}</h1>
+        <p className="text-sm text-text-secondary">{t("subtitle")}</p>
       </div>
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-3">
         <input
-          className="input flex-1"
-          placeholder={tCommon("search")}
+          type="search"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
+          placeholder={tCommon("search")}
+          className="w-full max-w-xs rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
         />
         <select
-          className="input w-56"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
         >
-          <option value="">{tCommon("allStatuses") ?? "All statuses"}</option>
-          {ORDER_STATUS_LIST.map((s) => (
+          <option value="">{tCommon("allStatuses")}</option>
+          {ORDER_STATUSES.map((s) => (
             <option key={s} value={s}>{t(s as any)}</option>
           ))}
         </select>
       </div>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
-      {orders === null ? (
-        <TableSkeleton />
-      ) : orders.length === 0 ? (
+      {orders === null && !error && <TableSkeleton rows={5} columns={5} />}
+
+      {orders && orders.length === 0 && (
         <EmptyState title={t("noOrdersYet")} description={t("noOrdersDesc")} />
-      ) : (
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
+      )}
+
+      {orders && orders.length > 0 && (
+        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-border bg-bg text-text-secondary">
               <tr>
-                <th>{t("tableOrder")}</th>
-                <th>{t("tableStatus")}</th>
-                <th>{t("tableProject")}</th>
-                <th>{t("tableTotal")}</th>
-                <th>{t("scheduledProduction")}</th>
-                <th>{t("tableCreated")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableOrder")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableProject")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableTotal")}</th>
+                <th className="px-4 py-2 font-medium">{t("scheduledProduction")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableCreated")}</th>
               </tr>
             </thead>
             <tbody>
               {orders.map((o) => (
                 <tr
                   key={o.id}
-                  className="clickable-row"
                   onClick={() => router.push(`/orders/${o.id}`)}
+                  className="cursor-pointer border-b border-border last:border-0 hover:bg-bg"
                 >
-                  <td className="font-medium font-mono">{o.order_number}</td>
-                  <td>
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[o.status] ?? ""}`}
-                    >
-                      {t(o.status as any)}
-                    </span>
+                  <td className="px-4 py-2 font-mono font-medium text-text-primary">{o.order_number}</td>
+                  <td className="px-4 py-2"><OrderStatusBadge status={o.status} /></td>
+                  <td className="px-4 py-2 text-text-secondary">{o.project_id}</td>
+                  <td className="px-4 py-2 text-text-primary">{o.currency} {parseFloat(o.total_final).toFixed(2)}</td>
+                  <td className="px-4 py-2 text-text-secondary">
+                    {o.scheduled_production_date ? formatDate(o.scheduled_production_date) : tCommon("dash")}
                   </td>
-                  <td>{o.project_id}</td>
-                  <td>
-                    {o.currency} {parseFloat(o.total_final).toFixed(2)}
-                  </td>
-                  <td>
-                    {o.scheduled_production_date
-                      ? new Date(o.scheduled_production_date).toLocaleDateString()
-                      : tCommon("dash")}
-                  </td>
-                  <td>{new Date(o.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-2 text-text-secondary">{formatDate(o.created_at)}</td>
                 </tr>
               ))}
             </tbody>

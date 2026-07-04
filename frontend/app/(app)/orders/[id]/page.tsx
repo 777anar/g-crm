@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -15,24 +15,14 @@ import {
 } from "@/lib/api/orders";
 import type { Order, OrderItem, OrderMeasurement, OrderSection } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { OrderStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
 
 type SectionData = {
   section: OrderSection;
   items: OrderItem[];
   measurements: OrderMeasurement[];
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  waiting: "bg-gray-100 text-gray-700",
-  measuring: "bg-yellow-100 text-yellow-700",
-  approved_for_production: "bg-blue-100 text-blue-700",
-  in_production: "bg-indigo-100 text-indigo-700",
-  ready: "bg-purple-100 text-purple-700",
-  delivered: "bg-teal-100 text-teal-700",
-  installed: "bg-green-100 text-green-700",
-  completed: "bg-green-200 text-green-800",
-  cancelled: "bg-red-100 text-red-700",
 };
 
 const NEXT_STATUS: Record<string, string | null> = {
@@ -50,11 +40,13 @@ const NEXT_STATUS: Record<string, string | null> = {
 const PROD_STATUSES = ["pending", "cutting", "polishing", "done"];
 const INST_STATUSES = ["pending", "scheduled", "done"];
 
+const inputClasses =
+  "rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary";
+
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("orders");
   const tCommon = useTranslations("common");
-  const router = useRouter();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [sectionData, setSectionData] = useState<SectionData[] | null>(null);
@@ -145,29 +137,24 @@ export default function OrderDetailPage() {
     await reload();
   }
 
-  if (loading || !order) return <div className="page-container"><TableSkeleton /></div>;
+  if (loading || !order) return <TableSkeleton rows={5} columns={5} />;
 
   const isTerminal = order.status === "completed" || order.status === "cancelled";
   const nextStatus = NEXT_STATUS[order.status];
 
   return (
-    <div className="page-container">
-      <div className="mb-4">
-        <Link href="/orders" className="back-link">← {t("backToOrders")}</Link>
-      </div>
+    <div className="flex flex-col gap-4">
+      <Link href="/orders" className="text-sm text-primary hover:underline">
+        ← {t("backToOrders")}
+      </Link>
 
-      {/* Header */}
-      <div className="page-header mb-6">
+      <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="page-title font-mono">{order.order_number}</h1>
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[order.status] ?? ""}`}>
-              {t(order.status as any)}
-            </span>
+            <h1 className="font-mono text-xl font-semibold text-text-primary">{order.order_number}</h1>
+            <OrderStatusBadge status={order.status} />
           </div>
-          <p className="page-subtitle text-xs text-muted-foreground mt-1">
-            {t("fromQuote")}: {order.quote_id}
-          </p>
+          <p className="mt-1 text-xs text-text-secondary">{t("fromQuote")}: {order.quote_id}</p>
         </div>
         {!isTerminal && (
           <div className="flex gap-2">
@@ -176,55 +163,46 @@ export default function OrderDetailPage() {
                 {transitioning ? t("saving") : `→ ${t(nextStatus as any)}`}
               </Button>
             )}
-            <Button
-              variant="secondary"
-              onClick={() => setCancelMode(!cancelMode)}
-            >
+            <Button variant="secondary" onClick={() => setCancelMode(!cancelMode)}>
               {t("markCancelled")}
             </Button>
           </div>
         )}
       </div>
 
-      {/* Cancel panel */}
       {cancelMode && (
-        <div className="card mb-4 p-4 border-red-200 bg-red-50">
-          <p className="text-sm font-medium text-red-700 mb-2">{t("cancelReason")}</p>
+        <Card className="border-danger/30 bg-danger/5">
+          <p className="mb-2 text-sm font-medium text-danger">{t("cancelReason")}</p>
           <textarea
-            className="input w-full mb-2"
+            className={`${inputClasses} mb-2 w-full`}
             rows={2}
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
-            placeholder="Optional reason…"
           />
           <div className="flex gap-2">
-            <Button onClick={handleCancel} disabled={transitioning}>
-              {t("cancelOrder")}
-            </Button>
-            <Button variant="secondary" onClick={() => setCancelMode(false)}>
-              {tCommon("cancel")}
-            </Button>
+            <Button onClick={handleCancel} disabled={transitioning}>{t("cancelOrder")}</Button>
+            <Button variant="secondary" onClick={() => setCancelMode(false)}>{tCommon("cancel")}</Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Totals bar */}
-      <div className="card mb-6 p-4 bg-slate-50 flex flex-wrap gap-6 text-sm">
-        <div><span className="text-muted-foreground">{t("subtotal")}:</span> <strong>{order.currency} {parseFloat(order.subtotal_gross).toFixed(2)}</strong></div>
+      <Card className="flex flex-wrap gap-6 text-sm">
+        <div><span className="text-text-secondary">{t("subtotal")}:</span> <strong className="text-text-primary">{order.currency} {parseFloat(order.subtotal_gross).toFixed(2)}</strong></div>
         {parseFloat(order.discount_amount) > 0 && (
-          <div><span className="text-muted-foreground">{t("discount")}:</span> <strong>- {order.currency} {parseFloat(order.discount_amount).toFixed(2)}</strong></div>
+          <div><span className="text-text-secondary">{t("discount")}:</span> <strong className="text-text-primary">− {order.currency} {parseFloat(order.discount_amount).toFixed(2)}</strong></div>
         )}
-        <div><span className="text-muted-foreground">{t("vat")} {order.vat_rate}%:</span> <strong>{order.currency} {parseFloat(order.vat_amount).toFixed(2)}</strong></div>
-        <div className="ml-auto text-base"><span className="text-muted-foreground">{t("totalFinal")}:</span> <strong className="text-lg">{order.currency} {parseFloat(order.total_final).toFixed(2)}</strong></div>
-      </div>
+        <div><span className="text-text-secondary">{t("vat")} {order.vat_rate}%:</span> <strong className="text-text-primary">{order.currency} {parseFloat(order.vat_amount).toFixed(2)}</strong></div>
+        <div className="ml-auto text-base"><span className="text-text-secondary">{t("totalFinal")}:</span> <strong className="text-lg text-primary">{order.currency} {parseFloat(order.total_final).toFixed(2)}</strong></div>
+      </Card>
 
       {/* Details card */}
-      <div className="card mb-6 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-sm">{t("notes")}</h2>
+      <Card>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-text-primary">{t("notes")}</h2>
           {!isTerminal && (
             <button
-              className="text-xs text-blue-600 hover:underline"
+              className="text-xs text-primary hover:underline"
               onClick={() => (editMode ? handleSaveDetails() : setEditMode(true))}
             >
               {editMode ? tCommon("save") : tCommon("edit")}
@@ -232,7 +210,7 @@ export default function OrderDetailPage() {
           )}
         </div>
         {editMode ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
             {(
               [
                 ["notes", t("notes")],
@@ -244,9 +222,9 @@ export default function OrderDetailPage() {
               ] as [keyof typeof form, string][]
             ).map(([key, label]) => (
               <div key={key}>
-                <label className="text-xs text-muted-foreground">{label}</label>
+                <label className="text-xs text-text-secondary">{label}</label>
                 <input
-                  className="input mt-0.5"
+                  className={`${inputClasses} mt-0.5 w-full`}
                   value={form[key]}
                   onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                 />
@@ -264,41 +242,45 @@ export default function OrderDetailPage() {
               [t("scheduledInstallation"), order.scheduled_installation_date],
             ].map(([label, val]) => (
               <div key={label as string}>
-                <dt className="text-xs text-muted-foreground">{label}</dt>
-                <dd>{val ?? tCommon("dash")}</dd>
+                <dt className="text-xs text-text-secondary">{label}</dt>
+                <dd className="text-text-primary">{val ?? tCommon("dash")}</dd>
               </div>
             ))}
           </dl>
         )}
-      </div>
+      </Card>
 
       {/* Sections */}
       {sectionData?.map(({ section, items, measurements }) => (
-        <div key={section.id} className="card mb-4">
-          <div className="flex items-center justify-between p-4 border-b bg-slate-800 text-white rounded-t-lg">
+        <Card key={section.id} className="p-0 overflow-hidden">
+          <div className="flex items-center justify-between bg-text-primary px-4 py-3 text-white">
             <h2 className="font-semibold">{section.name}</h2>
             <span className="text-sm">{order.currency} {parseFloat(section.subtotal_sale).toFixed(2)}</span>
           </div>
 
-          {/* Measurements */}
           {measurements.length > 0 && (
-            <div className="p-3 bg-slate-50 border-b text-sm">
-              <p className="text-xs font-medium text-muted-foreground mb-2">{t("measurements")}</p>
-              <table className="data-table">
-                <thead>
+            <div className="border-b border-border bg-bg p-3 text-sm">
+              <p className="mb-2 text-xs font-medium text-text-secondary">{t("measurements")}</p>
+              <table className="w-full text-left">
+                <thead className="text-text-secondary">
                   <tr>
-                    <th>Label</th><th>L (mm)</th><th>W (mm)</th><th>Qty</th><th>Area m²</th><th>Required m²</th>
+                    <th className="px-2 py-1 font-medium">{t("label")}</th>
+                    <th className="px-2 py-1 font-medium">{t("lengthMm")}</th>
+                    <th className="px-2 py-1 font-medium">{t("widthMm")}</th>
+                    <th className="px-2 py-1 font-medium">{t("quantity")}</th>
+                    <th className="px-2 py-1 font-medium">{t("areaSqm")}</th>
+                    <th className="px-2 py-1 font-medium">{t("requiredArea")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {measurements.map((m) => (
-                    <tr key={m.id}>
-                      <td>{m.label ?? "—"}</td>
-                      <td>{m.length_mm ?? "—"}</td>
-                      <td>{m.width_mm ?? "—"}</td>
-                      <td>{m.quantity}</td>
-                      <td>{m.area_m2 ? parseFloat(m.area_m2).toFixed(3) : "—"}</td>
-                      <td>{m.required_area_m2 ? parseFloat(m.required_area_m2).toFixed(3) : "—"}</td>
+                    <tr key={m.id} className="border-t border-border">
+                      <td className="px-2 py-1">{m.label ?? "—"}</td>
+                      <td className="px-2 py-1">{m.length_mm ?? "—"}</td>
+                      <td className="px-2 py-1">{m.width_mm ?? "—"}</td>
+                      <td className="px-2 py-1">{m.quantity}</td>
+                      <td className="px-2 py-1">{m.area_m2 ? parseFloat(m.area_m2).toFixed(3) : "—"}</td>
+                      <td className="px-2 py-1">{m.required_area_m2 ? parseFloat(m.required_area_m2).toFixed(3) : "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -306,32 +288,29 @@ export default function OrderDetailPage() {
             </div>
           )}
 
-          {/* Items */}
           {items.length > 0 && (
             <div className="p-3">
-              <table className="data-table text-sm">
-                <thead>
+              <table className="w-full text-left text-sm">
+                <thead className="text-text-secondary">
                   <tr>
-                    <th>{t("productionStatus")}</th>
-                    <th>{t("installationStatus")}</th>
-                    <th>Type</th>
-                    <th>Description</th>
-                    <th>Qty</th>
-                    <th>Unit</th>
-                    <th>Price</th>
-                    <th>Total</th>
+                    <th className="px-2 py-1 font-medium">{t("productionStatus")}</th>
+                    <th className="px-2 py-1 font-medium">{t("installationStatus")}</th>
+                    <th className="px-2 py-1 font-medium">{t("itemType")}</th>
+                    <th className="px-2 py-1 font-medium">{t("description")}</th>
+                    <th className="px-2 py-1 font-medium">{t("quantity")}</th>
+                    <th className="px-2 py-1 font-medium">{t("unit")}</th>
+                    <th className="px-2 py-1 font-medium">{t("unitPrice")}</th>
+                    <th className="px-2 py-1 font-medium">{t("total")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item) => (
-                    <tr key={item.id}>
-                      <td>
+                    <tr key={item.id} className="border-t border-border">
+                      <td className="px-2 py-1">
                         <select
-                          className="input input-sm"
+                          className={inputClasses}
                           value={item.production_status ?? ""}
-                          onChange={(e) =>
-                            handleItemStatusChange(item.id, "production_status", e.target.value)
-                          }
+                          onChange={(e) => handleItemStatusChange(item.id, "production_status", e.target.value)}
                           disabled={isTerminal}
                         >
                           <option value="">—</option>
@@ -340,13 +319,11 @@ export default function OrderDetailPage() {
                           ))}
                         </select>
                       </td>
-                      <td>
+                      <td className="px-2 py-1">
                         <select
-                          className="input input-sm"
+                          className={inputClasses}
                           value={item.installation_status ?? ""}
-                          onChange={(e) =>
-                            handleItemStatusChange(item.id, "installation_status", e.target.value)
-                          }
+                          onChange={(e) => handleItemStatusChange(item.id, "installation_status", e.target.value)}
                           disabled={isTerminal}
                         >
                           <option value="">—</option>
@@ -355,19 +332,19 @@ export default function OrderDetailPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="text-xs">{item.item_type}</td>
-                      <td>{item.description || "—"}</td>
-                      <td>{item.quantity}</td>
-                      <td>{item.unit}</td>
-                      <td>{parseFloat(item.unit_sale_price).toFixed(2)}</td>
-                      <td className="font-medium">{parseFloat(item.line_total_sale).toFixed(2)}</td>
+                      <td className="px-2 py-1 text-xs text-text-secondary">{item.item_type}</td>
+                      <td className="px-2 py-1">{item.description || "—"}</td>
+                      <td className="px-2 py-1">{item.quantity}</td>
+                      <td className="px-2 py-1">{item.unit}</td>
+                      <td className="px-2 py-1">{parseFloat(item.unit_sale_price).toFixed(2)}</td>
+                      <td className="px-2 py-1 font-medium text-text-primary">{parseFloat(item.line_total_sale).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </div>
+        </Card>
       ))}
     </div>
   );

@@ -53,3 +53,40 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
+
+/** Downloads a binary response (PDF/Excel export) as a file. A plain
+ * `<a href>` can't carry the Bearer token (it's stored in localStorage, not
+ * a cookie -- see lib/session.ts), so exports must go through an
+ * authenticated fetch and save the resulting blob client-side. */
+export async function apiDownload(
+  path: string,
+  options: { searchParams?: Record<string, string | number | boolean | undefined>; filename: string }
+): Promise<void> {
+  const url = new URL(path.startsWith("http") ? path : `${API_BASE_URL}${path}`);
+  if (options.searchParams) {
+    for (const [key, value] of Object.entries(options.searchParams)) {
+      if (value !== undefined) url.searchParams.set(key, String(value));
+    }
+  }
+
+  const token = getAccessToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const response = await fetch(url.toString(), { headers });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as ApiError | null;
+    if (body) throw new ApiRequestError(response.status, body);
+    throw new Error(`Request to ${path} failed with status ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = options.filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+}

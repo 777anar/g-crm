@@ -1,16 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { listProjects, createProject } from "@/lib/api/sales";
 import { listCustomers } from "@/lib/api/crm";
 import type { Customer, Project } from "@/lib/types";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SelectField, TextField } from "@/components/ui/field";
+import { ProjectStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiRequestError } from "@/lib/api-client";
+import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+
+const PROJECT_TYPES = ["kitchen", "bathroom", "commercial", "stairs", "fireplace", "other"];
 
 export default function ProjectsPage() {
   const t = useTranslations("sales");
@@ -53,7 +59,8 @@ export default function ProjectsPage() {
         address: form.address || undefined,
       });
       router.push(`/sales/projects/${proj.id}`);
-    } catch {
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
       setSubmitting(false);
     }
   }
@@ -62,65 +69,51 @@ export default function ProjectsPage() {
     return customers.find((c) => c.id === id)?.name ?? id;
   }
 
-  const PROJECT_TYPES = ["kitchen", "bathroom", "stairs", "floor", "cladding", "outdoor", "other"];
-
   return (
-    <div className="page-container">
-      <div className="page-header">
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="page-title">{t("projectsTitle")}</h1>
-          <p className="page-subtitle">{t("projectsSubtitle")}</p>
+          <h1 className="text-xl font-semibold text-text-primary">{t("projectsTitle")}</h1>
+          <p className="text-sm text-text-secondary">{t("projectsSubtitle")}</p>
         </div>
         <Button onClick={() => setShowNewForm(!showNewForm)}>{t("createProject")}</Button>
       </div>
 
       {showNewForm && (
-        <div className="card mb-6">
-          <form onSubmit={handleCreate} className="form-grid">
-            <div className="form-field">
-              <label>{t("customer")}</label>
-              <select
-                className="input"
-                value={form.customer_id}
-                onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
-                required
-              >
-                <option value="">{tCommon("select")}…</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-field">
-              <label>{t("projectName")}</label>
-              <input
-                className="input"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-field">
-              <label>{t("projectType")}</label>
-              <select
-                className="input"
-                value={form.project_type}
-                onChange={(e) => setForm({ ...form, project_type: e.target.value })}
-              >
-                {PROJECT_TYPES.map((pt) => (
-                  <option key={pt} value={pt}>{t(`projectType_${pt}` as any)}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-field">
-              <label>{t("address")}</label>
-              <input
-                className="input"
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-              />
-            </div>
-            <div className="flex gap-2">
+        <Card>
+          <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <SelectField
+              label={t("customer")}
+              value={form.customer_id}
+              onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
+              required
+            >
+              <option value="">{tCommon("select")}…</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </SelectField>
+            <TextField
+              label={t("projectName")}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
+            <SelectField
+              label={t("projectType")}
+              value={form.project_type}
+              onChange={(e) => setForm({ ...form, project_type: e.target.value })}
+            >
+              {PROJECT_TYPES.map((pt) => (
+                <option key={pt} value={pt}>{t(`projectType_${pt}` as any)}</option>
+              ))}
+            </SelectField>
+            <TextField
+              label={t("address")}
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+            />
+            <div className="flex gap-2 sm:col-span-2">
               <Button type="submit" disabled={submitting}>
                 {submitting ? t("creating") : tCommon("create")}
               </Button>
@@ -129,52 +122,53 @@ export default function ProjectsPage() {
               </Button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
-      <div className="search-bar mb-4">
-        <input
-          className="input"
-          placeholder={t("searchProjectsPlaceholder")}
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
-      </div>
+      <input
+        type="search"
+        value={searchInput}
+        onChange={(e) => setSearchInput(e.target.value)}
+        placeholder={t("searchProjectsPlaceholder")}
+        className="w-full max-w-xs rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+      />
 
-      {error && <div className="error-message">{error}</div>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
-      {projects === null ? (
-        <TableSkeleton />
-      ) : projects.length === 0 ? (
+      {projects === null && !error && <TableSkeleton rows={5} columns={5} />}
+
+      {projects && projects.length === 0 && (
         <EmptyState title={t("noProjectsYet")} description={t("noProjectsDesc")} />
-      ) : (
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
+      )}
+
+      {projects && projects.length > 0 && (
+        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-border bg-bg text-text-secondary">
               <tr>
-                <th>{t("tableProject")}</th>
-                <th>{t("projectType")}</th>
-                <th>{t("tableCustomer")}</th>
-                <th>{t("address")}</th>
-                <th>{t("tableStatus")}</th>
-                <th>{t("tableCreated")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableProject")}</th>
+                <th className="px-4 py-2 font-medium">{t("projectType")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableCustomer")}</th>
+                <th className="px-4 py-2 font-medium">{t("address")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
+                <th className="px-4 py-2 font-medium">{t("tableCreated")}</th>
               </tr>
             </thead>
             <tbody>
               {projects.map((p) => (
                 <tr
                   key={p.id}
-                  className="clickable-row"
                   onClick={() => router.push(`/sales/projects/${p.id}`)}
+                  className="cursor-pointer border-b border-border last:border-0 hover:bg-bg"
                 >
-                  <td className="font-medium">{p.name}</td>
-                  <td>{t(`projectType_${p.project_type || "other"}` as any)}</td>
-                  <td>{customerName(p.customer_id)}</td>
-                  <td>{p.address ?? tCommon("dash")}</td>
-                  <td>
-                    <span className={`status-badge status-${p.status}`}>{p.status}</span>
+                  <td className="px-4 py-2 font-medium text-text-primary">{p.name}</td>
+                  <td className="px-4 py-2">{t(`projectType_${p.project_type || "other"}` as any)}</td>
+                  <td className="px-4 py-2 text-text-secondary">{customerName(p.customer_id)}</td>
+                  <td className="px-4 py-2 text-text-secondary">{p.address ?? tCommon("dash")}</td>
+                  <td className="px-4 py-2">
+                    <ProjectStatusBadge status={p.status} />
                   </td>
-                  <td>{new Date(p.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-2 text-text-secondary">{formatDate(p.created_at)}</td>
                 </tr>
               ))}
             </tbody>

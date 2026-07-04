@@ -85,3 +85,49 @@ export function SlabStatusBadge({ status }: { status: string }) {
   const t = useTranslations("catalog.slabStatus");
   return <Badge tone={SLAB_STATUS_TONE[status] ?? "neutral"}>{t(status)}</Badge>;
 }
+
+const PROJECT_STATUS_TONE: Record<string, Tone> = {
+  active: "info",
+  completed: "success",
+  cancelled: "danger",
+};
+
+export function ProjectStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("sales");
+  return <Badge tone={PROJECT_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+}
+
+const QUOTE_STATUS_TONE: Record<string, Tone> = {
+  draft: "neutral",
+  sent: "info",
+  negotiation: "warning",
+  accepted: "success",
+  rejected: "danger",
+  expired: "neutral",
+};
+
+export function QuoteStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("sales");
+  return <Badge tone={QUOTE_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+}
+
+// Order lifecycle: cool grey while queued, warm while shop-floor work is
+// active, info while in transit/measuring, green once installed/complete,
+// red for the one terminal failure state -- same rationale as
+// CUSTOMER_STATUS_TONE above.
+const ORDER_STATUS_TONE: Record<string, Tone> = {
+  waiting: "neutral",
+  measuring: "info",
+  approved_for_production: "info",
+  in_production: "warning",
+  ready: "warning",
+  delivered: "info",
+  installed: "success",
+  completed: "success",
+  cancelled: "danger",
+};
+
+export function OrderStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("orders");
+  return <Badge tone={ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+}
