@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from core.auth.models import ROLE_MANAGER, ROLE_OWNER, ROLE_VIEWER, User, UserCompanyRole
+from core.auth.models import ROLE_MANAGER, ROLE_OWNER, ROLE_REP, ROLE_VIEWER, User, UserCompanyRole
 from core.auth.security import create_access_token, hash_password
 from core.companies.models import Company
 
@@ -35,6 +35,16 @@ def viewer_user(db_session, company):
     return user
 
 
+@pytest.fixture()
+def rep_user(db_session, company):
+    user = User(email="rep@test.example", password_hash=hash_password("Password123!"), full_name="Rep User")
+    db_session.add(user)
+    db_session.flush()
+    db_session.add(UserCompanyRole(user_id=user.id, company_id=company.id, role=ROLE_REP))
+    db_session.commit()
+    return user
+
+
 def _auth_headers(user, company, role):
     token = create_access_token(user_id=user.id, active_company_id=company.id, role=role)
     return {"Authorization": f"Bearer {token}"}
@@ -48,3 +58,8 @@ def owner_headers(owner_user, company):
 @pytest.fixture()
 def viewer_headers(viewer_user, company):
     return _auth_headers(viewer_user, company, ROLE_VIEWER)
+
+
+@pytest.fixture()
+def rep_headers(rep_user, company):
+    return _auth_headers(rep_user, company, ROLE_REP)

@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { labelKey: "dashboard", href: "/dashboard" },
   { labelKey: "customers", href: "/crm/customers" },
   { labelKey: "leads", href: "/crm/leads" },
+  { labelKey: "tasks", href: "/crm/tasks" },
   { labelKey: "catalog", href: "/catalog/materials" },
   { labelKey: "brands", href: "/catalog/brands" },
   { labelKey: "slabs", href: "/catalog/slabs" },

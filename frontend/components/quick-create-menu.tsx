@@ -53,6 +53,16 @@ export function QuickCreateMenu() {
           >
             {t("newLead")}
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              router.push("/crm/tasks/new");
+            }}
+            className="flex w-full items-center px-3 py-2 text-left text-sm text-text-primary hover:bg-bg"
+          >
+            {t("newTask")}
+          </button>
         </div>
       )}
     </div>

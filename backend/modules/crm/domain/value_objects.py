@@ -93,3 +93,70 @@ VALID_ACTIVITY_TYPES = {
     ACTIVITY_TYPE_MEETING,
     ACTIVITY_TYPE_SYSTEM,
 }
+
+# ── Tasks & Reminders (Version 1.2) ─────────────────────────────────────────────
+
+TASK_STATUS_PENDING = "pending"
+TASK_STATUS_IN_PROGRESS = "in_progress"
+TASK_STATUS_DONE = "done"
+TASK_STATUS_CANCELLED = "cancelled"
+VALID_TASK_STATUSES = {
+    TASK_STATUS_PENDING,
+    TASK_STATUS_IN_PROGRESS,
+    TASK_STATUS_DONE,
+    TASK_STATUS_CANCELLED,
+}
+TERMINAL_TASK_STATUSES = {TASK_STATUS_DONE, TASK_STATUS_CANCELLED}
+DEFAULT_TASK_STATUS = TASK_STATUS_PENDING
+
+# A task bounces freely between pending/in_progress right up until it's
+# closed out -- unlike a shop-floor or invoice lifecycle, there's no reason
+# to forbid a rep moving a task back to "pending" (got interrupted, picking
+# it back up later).
+_VALID_TASK_TRANSITIONS = {
+    TASK_STATUS_PENDING: {TASK_STATUS_IN_PROGRESS, TASK_STATUS_DONE, TASK_STATUS_CANCELLED},
+    TASK_STATUS_IN_PROGRESS: {TASK_STATUS_PENDING, TASK_STATUS_DONE, TASK_STATUS_CANCELLED},
+    TASK_STATUS_DONE: set(),
+    TASK_STATUS_CANCELLED: set(),
+}
+
+
+def is_valid_task_transition(*, current: str, target: str) -> bool:
+    if current == target:
+        return True
+    return target in _VALID_TASK_TRANSITIONS.get(current, set())
+
+
+TASK_PRIORITY_LOW = "low"
+TASK_PRIORITY_MEDIUM = "medium"
+TASK_PRIORITY_HIGH = "high"
+TASK_PRIORITY_URGENT = "urgent"
+VALID_TASK_PRIORITIES = {TASK_PRIORITY_LOW, TASK_PRIORITY_MEDIUM, TASK_PRIORITY_HIGH, TASK_PRIORITY_URGENT}
+DEFAULT_TASK_PRIORITY = TASK_PRIORITY_MEDIUM
+
+# A task's related_entity_type is intentionally an unvalidated free string
+# (like core.audit_log's entity_type) rather than a fixed CHECK-style enum --
+# it needs to reference whatever kind of record exists in this deployment
+# (customer, lead, order, quote, project, ...) without Tasks' domain layer
+# having to know the full set of every other module's entity names.
+TASK_RECURRENCE_DAILY = "daily"
+TASK_RECURRENCE_WEEKLY = "weekly"
+TASK_RECURRENCE_MONTHLY = "monthly"
+TASK_RECURRENCE_YEARLY = "yearly"
+VALID_TASK_RECURRENCE_RULES = {
+    TASK_RECURRENCE_DAILY,
+    TASK_RECURRENCE_WEEKLY,
+    TASK_RECURRENCE_MONTHLY,
+    TASK_RECURRENCE_YEARLY,
+}
+
+NOTIFICATION_TYPE_TASK_ASSIGNED = "task_assigned"
+NOTIFICATION_TYPE_TASK_REASSIGNED = "task_reassigned"
+NOTIFICATION_TYPE_TASK_REMINDER = "task_reminder"
+NOTIFICATION_TYPE_TASK_OVERDUE = "task_overdue"
+VALID_TASK_NOTIFICATION_TYPES = {
+    NOTIFICATION_TYPE_TASK_ASSIGNED,
+    NOTIFICATION_TYPE_TASK_REASSIGNED,
+    NOTIFICATION_TYPE_TASK_REMINDER,
+    NOTIFICATION_TYPE_TASK_OVERDUE,
+}

@@ -3,18 +3,18 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { listCustomers, listLeads } from "@/lib/api/crm";
+import { checkTaskReminders, listCustomers, listLeads, listTaskNotifications, listTasks } from "@/lib/api/crm";
 import { me } from "@/lib/api/auth";
-import { CUSTOMER_STATUSES, type Customer, type Lead } from "@/lib/types";
+import { CUSTOMER_STATUSES, type Customer, type Lead, type Task, type TaskNotification } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBarList } from "@/components/ui/charts";
-import { Badge, CustomerStatusBadge, LeadStatusBadge } from "@/components/ui/badge";
+import { Badge, CustomerStatusBadge, LeadStatusBadge, TaskPriorityBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCardSkeleton, TableSkeleton } from "@/components/ui/skeleton";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { useCustomerStatusLabel, useLeadChannelLabel } from "@/lib/i18n/hooks";
 
 export default function DashboardPage() {
@@ -26,6 +26,8 @@ export default function DashboardPage() {
   const [role, setRole] = useState<string | null>(null);
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [leads, setLeads] = useState<Lead[] | null>(null);
+  const [myTasks, setMyTasks] = useState<Task[] | null>(null);
+  const [notifications, setNotifications] = useState<TaskNotification[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,11 +41,49 @@ export default function DashboardPage() {
         setRole(profile.role);
         setCustomers(customerRes.items);
         setLeads(leadRes.items);
+
+        // Surfaces newly-due reminders/overdue tasks the moment the
+        // Dashboard loads -- see checkTaskReminders' doc comment for why
+        // this is a pull rather than a scheduled push.
+        checkTaskReminders()
+          .catch(() => {})
+          .then(() =>
+            Promise.all([
+              listTasks({ assignedTo: profile.id, excludeTerminal: true, sort: "due_date", limit: 100 }),
+              listTaskNotifications({ unreadOnly: true }),
+            ])
+          )
+          .then((result) => {
+            if (!result) return;
+            const [taskRes, notificationRes] = result;
+            setMyTasks(taskRes.items);
+            setNotifications(notificationRes.items);
+          })
+          .catch(() => {
+            setMyTasks([]);
+            setNotifications([]);
+          });
       })
       .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
   }, [t]);
 
   const loading = customers === null || leads === null;
+
+  const now = Date.now();
+  const overdueTasks = (myTasks ?? []).filter((task) => task.due_date && new Date(task.due_date).getTime() < now);
+  const dueTodayTasks = (myTasks ?? []).filter((task) => {
+    if (!task.due_date) return false;
+    const due = new Date(task.due_date);
+    const today = new Date();
+    return due.toDateString() === today.toDateString();
+  });
+  const upcomingTasks = [...(myTasks ?? [])]
+    .sort((a, b) => {
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    })
+    .slice(0, 5);
 
   const activeCustomers = customers?.filter((c) => c.deleted_at === null) ?? [];
 
@@ -105,6 +145,62 @@ export default function DashboardPage() {
             <StatCard label={statusLabel("new_inquiry")} value={newInquiries} tone="info" />
             <StatCard label={t("statInProduction")} value={inProduction} tone="warning" />
             <StatCard label={statusLabel("lost")} value={lostCustomers} tone="danger" />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <StatCard label={t("statMyOpenTasks")} value={(myTasks ?? []).length} tone="primary" />
+            <StatCard label={t("statOverdueTasks")} value={overdueTasks.length} tone="danger" />
+            <StatCard label={t("statDueToday")} value={dueTodayTasks.length} tone="warning" />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <CardHeader
+                title={t("myTasks")}
+                action={
+                  <Link href="/crm/tasks" className="text-sm text-primary hover:underline">
+                    {tCommon("viewAll")}
+                  </Link>
+                }
+              />
+              {upcomingTasks.length === 0 ? (
+                <EmptyState title={t("noTasksYet")} description={t("noTasksDesc")} />
+              ) : (
+                <ul className="flex flex-col divide-y divide-border">
+                  {upcomingTasks.map((task) => (
+                    <li key={task.id} className="flex items-center justify-between py-2">
+                      <div>
+                        <Link href={`/crm/tasks/${task.id}`} className="font-medium text-primary hover:underline">
+                          {task.title}
+                        </Link>
+                        <p className="text-xs text-text-secondary">
+                          {task.due_date ? formatDateTime(task.due_date) : t("noDueDate")}
+                        </p>
+                      </div>
+                      <TaskPriorityBadge priority={task.priority} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+
+            <Card>
+              <CardHeader title={t("notifications")} />
+              {(notifications ?? []).length === 0 ? (
+                <EmptyState title={t("noNotifications")} />
+              ) : (
+                <ul className="flex flex-col divide-y divide-border">
+                  {(notifications ?? []).map((notification) => (
+                    <li key={notification.id} className="py-2">
+                      <Link href={`/crm/tasks/${notification.task_id}`} className="text-sm font-medium text-primary hover:underline">
+                        {notification.title}
+                      </Link>
+                      <p className="text-xs text-text-secondary">{notification.message}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

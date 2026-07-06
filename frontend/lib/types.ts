@@ -121,6 +121,56 @@ export type Lead = {
 
 export type Paginated<T> = { items: T[]; next_cursor: string | null };
 
+// ── Tasks & Reminders (Version 1.2) ──────────────────────────────────────────
+
+export const TASK_STATUSES = ["pending", "in_progress", "done", "cancelled"] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+export const TASK_PRIORITIES = ["low", "medium", "high", "urgent"] as const;
+export type TaskPriority = (typeof TASK_PRIORITIES)[number];
+
+export const TASK_RECURRENCE_RULES = ["daily", "weekly", "monthly", "yearly"] as const;
+export type TaskRecurrenceRule = (typeof TASK_RECURRENCE_RULES)[number];
+
+export type Task = {
+  id: string;
+  company_id: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  tags: string[];
+  due_date: string | null;
+  remind_at: string | null;
+  assigned_to: string | null;
+  related_entity_type: string | null;
+  related_entity_id: string | null;
+  is_recurring: boolean;
+  recurrence_rule: TaskRecurrenceRule | null;
+  recurrence_interval: number;
+  recurrence_end_date: string | null;
+  series_id: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  cancelled_reason: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const TASK_NOTIFICATION_TYPES = ["task_assigned", "task_reassigned", "task_reminder", "task_overdue"] as const;
+export type TaskNotificationType = (typeof TASK_NOTIFICATION_TYPES)[number];
+
+export type TaskNotification = {
+  id: string;
+  notification_type: TaskNotificationType;
+  title: string;
+  message: string;
+  task_id: string;
+  read_at: string | null;
+  created_at: string;
+};
+
 // --- Stone Catalog (Version 2.0) -------------------------------------------
 
 export const ENTITY_STATUSES = ["active", "hidden"] as const;

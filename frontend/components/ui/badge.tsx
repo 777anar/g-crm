@@ -182,3 +182,29 @@ export function InvoiceStatusBadge({ status }: { status: string }) {
   const t = useTranslations("finance");
   return <Badge tone={INVOICE_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
 }
+
+const TASK_STATUS_TONE: Record<string, Tone> = {
+  pending: "neutral",
+  in_progress: "warning",
+  done: "success",
+  cancelled: "danger",
+};
+
+export function TaskStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("tasks");
+  return <Badge tone={TASK_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+}
+
+// Cool-to-warm as urgency rises, matching the same "warning = needs
+// attention" mental model UI_UX_GUIDELINES.md applies platform-wide.
+const TASK_PRIORITY_TONE: Record<string, Tone> = {
+  low: "neutral",
+  medium: "info",
+  high: "warning",
+  urgent: "danger",
+};
+
+export function TaskPriorityBadge({ priority }: { priority: string }) {
+  const t = useTranslations("tasks");
+  return <Badge tone={TASK_PRIORITY_TONE[priority] ?? "neutral"}>{t(`priority_${priority}` as any)}</Badge>;
+}
