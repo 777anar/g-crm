@@ -1,0 +1,11 @@
+"""Domain events published by the Communication Center module."""
+
+CHANNEL_CREATED = "ChannelCreated"
+CONVERSATION_CREATED = "ConversationCreated"
+CONVERSATION_ASSIGNED = "ConversationAssigned"
+CONVERSATION_STATUS_CHANGED = "ConversationStatusChanged"
+CONVERSATION_LINKED = "ConversationLinked"
+CONVERSATION_NOTE_ADDED = "ConversationNoteAdded"
+MESSAGE_RECEIVED = "MessageReceived"
+MESSAGE_SENT = "MessageSent"
+MESSAGE_TEMPLATE_CREATED = "MessageTemplateCreated"

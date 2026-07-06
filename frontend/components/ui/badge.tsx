@@ -208,3 +208,19 @@ export function TaskPriorityBadge({ priority }: { priority: string }) {
   const t = useTranslations("tasks");
   return <Badge tone={TASK_PRIORITY_TONE[priority] ?? "neutral"}>{t(`priority_${priority}` as any)}</Badge>;
 }
+
+const CONVERSATION_STATUS_TONE: Record<string, Tone> = {
+  open: "success",
+  pending: "warning",
+  closed: "neutral",
+};
+
+export function ConversationStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("communication");
+  return <Badge tone={CONVERSATION_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+}
+
+export function ChannelTypeBadge({ channelType }: { channelType: string }) {
+  const t = useTranslations("communication");
+  return <Badge tone="info">{t(`channel_${channelType}` as any)}</Badge>;
+}

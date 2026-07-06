@@ -251,3 +251,29 @@ Events themselves are never published via a public API endpoint — they are an 
 
 - No endpoint in this specification — present or future — may have a web-only equivalent that bypasses it. Any feature exposed in the Next.js frontend must be backed by one of these documented API endpoints, callable identically by a future mobile client with the same bearer token mechanism.
 - Long-running operations (AI jobs, reports generation) follow an async pattern: `POST` returns `202 Accepted` with a `{job_id, status_url}`; client polls `GET status_url` or (future) receives a push notification — this pattern is mobile-friendly by design (no long-held HTTP connections).
+
+## 13. Communication Center Module Endpoints (`/api/v1/communication/...`, Version 2.7, as actually implemented)
+
+Unified omnichannel inbox (WhatsApp Business, Instagram Direct, Facebook Messenger, Email, SMS) integrated with CRM. All endpoints are company-scoped via the authenticated user's active company, same as every other module. Permission suffix convention matches `core/rbac/permissions.py` (`:read` viewer tier, `:write` rep tier).
+
+**No real WhatsApp/Instagram/Messenger/email/SMS provider is integrated yet, by explicit design.** Every channel resolves to `NullChannelProvider` (see `modules/communication/infrastructure/providers/`), which simulates a successful send instead of calling a real API. `POST /communication/inbound` stands in for where a future real webhook would land — it is an authenticated endpoint an agent (or a test harness) calls today, not a public signature-verified webhook. Swapping a channel type onto a real integration later is an addition to the provider registry only; no endpoint below changes shape.
+
+| Method | Path | Permission | Description |
+|---|---|---|---|
+| GET | `/communication/channels?channel_type=&include_inactive=` | `communication:channels:read` | List channels (a company may have several of the same `channel_type`, e.g. multiple WhatsApp numbers) |
+| POST | `/communication/channels` | `communication:channels:write` | Create a channel — publishes `ChannelCreated` |
+| GET | `/communication/channels/{id}` | `communication:channels:read` | Get channel |
+| PATCH | `/communication/channels/{id}` | `communication:channels:write` | Update display name/identifier/`is_active` (channels are deactivated, never deleted) |
+| GET | `/communication/conversations?channel_id=&status=&assigned_to=&customer_id=&lead_id=&search=&sort=&limit=&cursor=` | `communication:conversations:read` | List conversations, cursor-paginated |
+| POST | `/communication/conversations` | `communication:conversations:write` | Agent-initiated get-or-create for a `{channel_id, external_contact_id}` pair — identifies an existing CRM Customer by the channel's mapped field, or **auto-creates a Lead** if the sender is unknown (reuses `crm:leads:write`'s own `CreateLeadUseCase`) — publishes `ConversationCreated` |
+| GET | `/communication/conversations/{id}` | `communication:conversations:read` | Get conversation |
+| PATCH | `/communication/conversations/{id}` | `communication:conversations:write` | Update status/assignment/tags, and link to a Customer/Lead/Project/Quote/Order — publishes `ConversationStatusChanged`/`ConversationAssigned`/`ConversationLinked` as applicable |
+| POST | `/communication/conversations/{id}/read` | `communication:conversations:write` | Resets the unread counter |
+| GET | `/communication/conversations/{id}/messages` | `communication:conversations:read` | List messages, oldest first |
+| POST | `/communication/conversations/{id}/messages` | `communication:conversations:write` | Send an outbound message through the channel's provider — publishes `MessageSent`; `422` if the channel is deactivated |
+| GET\|POST | `/communication/conversations/{id}/messages/{message_id}/attachments` | `communication:conversations:read\|write` | List/link attachments (`document_id` must already exist via core document upload, same pattern as CRM/Installation attachments) |
+| GET\|POST | `/communication/conversations/{id}/notes` | `communication:notes:read\|write` | Internal, customer-invisible notes on a conversation |
+| POST | `/communication/inbound` | `communication:conversations:write` | Receives one inbound message for a `{channel_id, external_contact_id}` — get-or-creates the conversation (with the same identification/auto-Lead logic as above), reopens it if closed, increments `unread_count` — publishes `MessageReceived` |
+| GET | `/communication/templates?channel_type=&include_inactive=` | `communication:templates:read` | List message templates / quick replies (`channel_type=null` means usable on any channel) |
+| POST | `/communication/templates` | `communication:templates:write` | Create — publishes `MessageTemplateCreated` |
+| GET\|PATCH | `/communication/templates/{id}` | `communication:templates:read\|write` | Get / update |

@@ -837,3 +837,96 @@ export type FinanceAnalytics = {
   monthly_trend: { month: string; revenue: string; cost: string; profit: string; count: number }[];
   revenue_by_currency: { currency: string; revenue: string }[];
 };
+
+// ── Communication Center (Version 2.7) ───────────────────────────────────────
+
+export const CHANNEL_TYPES = ["whatsapp", "instagram", "messenger", "email", "sms"] as const;
+export type ChannelType = (typeof CHANNEL_TYPES)[number];
+
+export type Channel = {
+  id: string;
+  company_id: string;
+  channel_type: ChannelType;
+  display_name: string;
+  identifier: string | null;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const CONVERSATION_STATUSES = ["open", "pending", "closed"] as const;
+export type ConversationStatus = (typeof CONVERSATION_STATUSES)[number];
+
+export type Conversation = {
+  id: string;
+  company_id: string;
+  channel_id: string;
+  customer_id: string | null;
+  lead_id: string | null;
+  project_id: string | null;
+  quote_id: string | null;
+  order_id: string | null;
+  external_contact_id: string;
+  external_contact_name: string | null;
+  status: ConversationStatus;
+  assigned_to: string | null;
+  tags: string[];
+  unread_count: number;
+  last_message_at: string | null;
+  last_message_preview: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const MESSAGE_DIRECTIONS = ["inbound", "outbound"] as const;
+export type MessageDirection = (typeof MESSAGE_DIRECTIONS)[number];
+
+export const MESSAGE_TYPES = ["text", "image", "document", "audio", "video", "template"] as const;
+export type MessageType = (typeof MESSAGE_TYPES)[number];
+
+export type Message = {
+  id: string;
+  company_id: string;
+  conversation_id: string;
+  direction: MessageDirection;
+  sender_type: "customer" | "agent" | "system";
+  sender_user_id: string | null;
+  message_type: MessageType;
+  body: string | null;
+  template_id: string | null;
+  external_message_id: string | null;
+  status: "received" | "sent" | "delivered" | "read" | "failed";
+  created_at: string;
+  updated_at: string;
+};
+
+export type MessageAttachment = {
+  id: string;
+  message_id: string;
+  document_id: string;
+  file_name: string | null;
+  created_at: string;
+};
+
+export type ConversationNote = {
+  id: string;
+  conversation_id: string;
+  body: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type MessageTemplate = {
+  id: string;
+  company_id: string;
+  name: string;
+  channel_type: ChannelType | null;
+  shortcut: string | null;
+  body: string;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};

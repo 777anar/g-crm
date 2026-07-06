@@ -406,6 +406,81 @@ Company-specific pricing is modeled as a named header (`catalog_price_lists`: `n
 ### 5.5.7 `catalog_material_images` / `catalog_material_documents`
 Thin join tables linking a `catalog_materials` row to a core `documents` row (the same shared upload/storage pipeline CRM attachments use — no separate file-handling code). `catalog_material_images.image_type` is one of `gallery`\|`thumbnail`\|`bookmatch_left`\|`bookmatch_right`; `catalog_material_documents.document_type` is one of `technical_pdf`\|`installation_guide`\|`cleaning_guide`.
 
+## 5.6 Communication Center Module Tables (Version 2.7 — as actually implemented)
+
+_Note: a unified omnichannel inbox (WhatsApp Business, Instagram Direct, Facebook Messenger, Email, SMS) integrated with CRM. No real WhatsApp/Instagram/Messenger/email/SMS provider is wired up yet, by explicit design — see `modules/communication/infrastructure/providers/` for the provider abstraction every real integration will later implement without any schema or endpoint change._
+
+### 5.6.1 `communication_channels`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, REFERENCES companies(id), indexed |
+| channel_type | TEXT | NOT NULL, indexed. One of `whatsapp`\|`instagram`\|`messenger`\|`email`\|`sms` |
+| display_name | TEXT | NOT NULL |
+| identifier | TEXT | nullable — the channel's own address (phone number, email address, ...) |
+| is_active | BOOLEAN | NOT NULL, default `true` |
+| created_by | UUID | nullable, REFERENCES users(id) |
+
+A company may have several rows of the same `channel_type` (e.g. multiple WhatsApp Business numbers) — there is no one-per-type uniqueness constraint.
+
+### 5.6.2 `communication_conversations`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| channel_id | UUID | NOT NULL, REFERENCES communication_channels(id), indexed |
+| customer_id | UUID | nullable, REFERENCES crm_customers(id), indexed |
+| lead_id | UUID | nullable, REFERENCES crm_leads(id), indexed |
+| project_id | UUID | nullable, REFERENCES sales_projects(id), indexed |
+| quote_id | UUID | nullable, REFERENCES sales_quotes(id), indexed |
+| order_id | UUID | nullable, REFERENCES orders(id), indexed |
+| external_contact_id | TEXT | NOT NULL, indexed — the counterpart's address on the channel (phone/handle/PSID/email) |
+| external_contact_name | TEXT | nullable |
+| status | TEXT | NOT NULL, default `open` (`open`\|`pending`\|`closed`), indexed — freely reachable from one another, no terminal state |
+| assigned_to | UUID | nullable, REFERENCES users(id), indexed |
+| tags | JSON | NOT NULL, default `[]` |
+| unread_count | INTEGER | NOT NULL, default `0` |
+| last_message_at | TIMESTAMPTZ | nullable, indexed |
+| last_message_preview | TEXT(300) | nullable |
+| created_by | UUID | nullable, REFERENCES users(id) |
+
+One conversation per `(company_id, channel_id, external_contact_id)` — a returning sender's messages all land in the same thread. `customer_id`/`lead_id` are populated by `GetOrCreateConversationUseCase`: it matches the sender against an existing CRM Customer using the field the channel naturally maps onto (`whatsapp`→`Customer.whatsapp`, `instagram`→`Customer.instagram`, `messenger`→`Customer.facebook`, `email`→`Customer.email`, `sms`→`Customer.phone`), and **auto-creates a Lead** (reusing CRM's own `CreateLeadUseCase`) if no match is found.
+
+### 5.6.3 `communication_messages`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| conversation_id | UUID | NOT NULL, REFERENCES communication_conversations(id), indexed |
+| direction | TEXT | NOT NULL, indexed (`inbound`\|`outbound`) |
+| sender_type | TEXT | NOT NULL (`customer`\|`agent`\|`system`) |
+| sender_user_id | UUID | nullable, REFERENCES users(id) — set for outbound agent messages |
+| message_type | TEXT | NOT NULL, default `text` (`text`\|`image`\|`document`\|`audio`\|`video`\|`template`) |
+| body | TEXT | nullable |
+| template_id | UUID | nullable, REFERENCES communication_message_templates(id) |
+| external_message_id | TEXT | nullable — the provider-assigned id (a local placeholder id today; see 5.6 note above) |
+| status | TEXT | NOT NULL, default `sent` (`received`\|`sent`\|`delivered`\|`read`\|`failed`) |
+
+### 5.6.4 `communication_message_attachments`
+Thin join table linking a `communication_messages` row to a core `documents` row — the same shared upload/storage pipeline CRM attachments and Catalog material images use. Columns: `message_id`, `document_id`, `file_name` (nullable).
+
+### 5.6.5 `communication_conversation_notes`
+Internal, customer-invisible notes on a conversation: `conversation_id`, `body` (TEXT, NOT NULL), `created_by`.
+
+### 5.6.6 `communication_message_templates`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| name | TEXT | NOT NULL |
+| channel_type | TEXT | nullable, indexed — `null` means usable on any channel |
+| shortcut | TEXT | nullable, indexed — a quick-reply trigger (e.g. `thanks`) |
+| body | TEXT | NOT NULL |
+| is_active | BOOLEAN | NOT NULL, default `true` |
+| created_by | UUID | nullable |
+
+Covers both "message templates" and "quick replies" as one entity distinguished only by whether `shortcut` is set, rather than two near-identical tables.
+
 ## 6. Future-Phase Module Schemas (conceptual — not migrated in Phase 1)
 
 Kept here only so foreign-key shapes are pre-considered and won't surprise later modules.
