@@ -481,6 +481,34 @@ Internal, customer-invisible notes on a conversation: `conversation_id`, `body` 
 
 Covers both "message templates" and "quick replies" as one entity distinguished only by whether `shortcut` is set, rather than two near-identical tables.
 
+## 5.7 AI Sales Assistant Module Tables (Version 2.8 — as actually implemented)
+
+_Note: provider-agnostic AI recommendations layered on CRM, Communication, Sales, and Tasks. No real LLM provider is wired up yet, by explicit design — every provider name resolves to `MockAIProvider`, a deterministic heuristic engine, so the rest of the platform can be built and tested against a stable contract; see `modules/ai/infrastructure/providers/` for the abstraction a real provider will later implement without any schema or endpoint change._
+
+### 5.7.1 `ai_recommendations`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, REFERENCES companies(id), indexed |
+| analysis_kind | TEXT | NOT NULL, indexed. One of `lead`\|`conversation`\|`quote`\|`task` — the analysis entry point that produced this row |
+| recommendation_type | TEXT | NOT NULL, indexed. One of 27 values across CRM/Communication/Sales/Task Intelligence (e.g. `lead_score`, `conversation_sentiment`, `upsell_suggestion`, `overdue_risk`) |
+| related_entity_type | TEXT | nullable, indexed — e.g. `lead`\|`customer`\|`conversation`\|`quote`\|`task` |
+| related_entity_id | UUID | nullable, indexed |
+| provider | TEXT | NOT NULL, default `mock`, indexed |
+| model | TEXT | NOT NULL, default `""` |
+| prompt | TEXT | NOT NULL — the exact prompt string sent to the provider |
+| response | JSON | NOT NULL — the provider's full structured output |
+| confidence_score | NUMERIC(4,3) | nullable — provider-reported, 0.000–1.000 |
+| execution_time_ms | INTEGER | nullable — measured by the calling use case around the provider call, not self-reported, so it stays comparable across every future provider |
+| summary | TEXT(500) | nullable — short human-readable one-liner for list/dashboard display |
+| status | TEXT | NOT NULL, default `pending`, indexed (`pending`\|`accepted`\|`rejected`\|`edited`) |
+| edited_response | JSON | nullable — the user-edited payload, set only when `status = edited` |
+| requested_by | UUID | nullable, REFERENCES users(id) |
+| reviewed_by | UUID | nullable, REFERENCES users(id) |
+| reviewed_at | TIMESTAMPTZ | nullable |
+
+One table covers all 27 recommendation types, discriminated by `recommendation_type`, rather than one table per type — the same pattern as `communication_message_templates` covering both templates and quick replies. **Nothing in this module ever writes to another module's tables** as a side effect of analysis or of a review decision — accepting/rejecting/editing a recommendation only ever updates this table's own `status`/`reviewed_by`/`reviewed_at`/`edited_response` columns, which is what makes "AI never performs business actions automatically" a structural property rather than a UI convention.
+
 ## 6. Future-Phase Module Schemas (conceptual — not migrated in Phase 1)
 
 Kept here only so foreign-key shapes are pre-considered and won't surprise later modules.

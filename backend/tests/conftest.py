@@ -24,6 +24,7 @@ from modules.production.infrastructure import models as production_models  # noq
 from modules.installation.infrastructure import models as installation_models  # noqa: F401
 from modules.finance.infrastructure import models as finance_models  # noqa: F401
 from modules.communication.infrastructure import models as communication_models  # noqa: F401
+from modules.ai.infrastructure import models as ai_models  # noqa: F401
 
 
 @pytest.fixture()

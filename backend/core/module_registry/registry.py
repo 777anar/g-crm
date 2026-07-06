@@ -39,6 +39,7 @@ INSTALLED_MODULES: List[str] = [
     "modules.finance",
     "modules.communication",
     "modules.reports",
+    "modules.ai",
 ]
 
 _loaded_manifests: List[ModuleManifest] = []

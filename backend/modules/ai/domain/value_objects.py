@@ -1,0 +1,142 @@
+"""Pure value objects for the AI Sales Assistant module. No framework or DB
+imports."""
+
+# ── Providers ────────────────────────────────────────────────────────────────
+#
+# Only `mock` is actually registered today (see
+# infrastructure/providers/registry.py) -- the rest are named here so every
+# other layer (schemas, tests, the frontend provider filter) already has a
+# stable vocabulary to validate against/display once a real provider is
+# plugged in, without a later migration to widen an enum.
+
+AI_PROVIDER_MOCK = "mock"
+AI_PROVIDER_OPENAI = "openai"
+AI_PROVIDER_ANTHROPIC = "anthropic"
+AI_PROVIDER_GEMINI = "gemini"
+AI_PROVIDER_OLLAMA = "ollama"
+AI_PROVIDER_AZURE_OPENAI = "azure_openai"
+VALID_AI_PROVIDERS = {
+    AI_PROVIDER_MOCK,
+    AI_PROVIDER_OPENAI,
+    AI_PROVIDER_ANTHROPIC,
+    AI_PROVIDER_GEMINI,
+    AI_PROVIDER_OLLAMA,
+    AI_PROVIDER_AZURE_OPENAI,
+}
+DEFAULT_AI_PROVIDER = AI_PROVIDER_MOCK
+
+# ── Recommendation types ─────────────────────────────────────────────────────
+#
+# One AIRecommendation row per reviewable suggestion -- a single analysis
+# call (e.g. AnalyzeLeadUseCase) produces several of these at once (score,
+# priority, next action, ...) so a user can accept one and reject another
+# from the same run independently, rather than an all-or-nothing bundle.
+
+# CRM Intelligence
+RECOMMENDATION_TYPE_LEAD_SCORE = "lead_score"
+RECOMMENDATION_TYPE_WIN_PROBABILITY = "win_probability"
+RECOMMENDATION_TYPE_PRIORITY = "priority_recommendation"
+RECOMMENDATION_TYPE_NEXT_BEST_ACTION = "next_best_action"
+RECOMMENDATION_TYPE_FOLLOW_UP = "follow_up_recommendation"
+RECOMMENDATION_TYPE_DUPLICATE_LEAD = "duplicate_lead"
+RECOMMENDATION_TYPE_SIMILAR_CUSTOMER = "similar_customer"
+RECOMMENDATION_TYPE_MISSING_INFO = "missing_info"
+RECOMMENDATION_TYPE_LEAD_QUALITY_EXPLANATION = "lead_quality_explanation"
+
+# Communication Intelligence
+RECOMMENDATION_TYPE_CONVERSATION_LANGUAGE = "conversation_language"
+RECOMMENDATION_TYPE_CONVERSATION_INTENT = "conversation_intent"
+RECOMMENDATION_TYPE_CONVERSATION_SENTIMENT = "conversation_sentiment"
+RECOMMENDATION_TYPE_CONVERSATION_URGENCY = "conversation_urgency"
+RECOMMENDATION_TYPE_CONVERSATION_SUMMARY = "conversation_summary"
+RECOMMENDATION_TYPE_CONVERSATION_EXTRACTION = "conversation_extraction"
+RECOMMENDATION_TYPE_CONVERSATION_LINK = "conversation_link_suggestion"
+
+# Sales Intelligence
+RECOMMENDATION_TYPE_PRODUCT_RECOMMENDATION = "product_recommendation"
+RECOMMENDATION_TYPE_CROSS_SELL = "cross_sell_suggestion"
+RECOMMENDATION_TYPE_UPSELL = "upsell_suggestion"
+RECOMMENDATION_TYPE_DISCOUNT_RECOMMENDATION = "discount_recommendation"
+RECOMMENDATION_TYPE_MARGIN_RISK = "margin_risk_detection"
+RECOMMENDATION_TYPE_PRICE_ANOMALY = "price_anomaly_detection"
+RECOMMENDATION_TYPE_DELIVERY_COMPLEXITY = "delivery_complexity_estimate"
+
+# Task Intelligence
+RECOMMENDATION_TYPE_TASK_SUGGESTION = "task_suggestion"
+RECOMMENDATION_TYPE_REMINDER_SUGGESTION = "reminder_suggestion"
+RECOMMENDATION_TYPE_ASSIGNEE_SUGGESTION = "assignee_suggestion"
+RECOMMENDATION_TYPE_TASK_PRIORITY_SUGGESTION = "task_priority_suggestion"
+RECOMMENDATION_TYPE_OVERDUE_RISK = "overdue_risk"
+
+VALID_RECOMMENDATION_TYPES = {
+    RECOMMENDATION_TYPE_LEAD_SCORE,
+    RECOMMENDATION_TYPE_WIN_PROBABILITY,
+    RECOMMENDATION_TYPE_PRIORITY,
+    RECOMMENDATION_TYPE_NEXT_BEST_ACTION,
+    RECOMMENDATION_TYPE_FOLLOW_UP,
+    RECOMMENDATION_TYPE_DUPLICATE_LEAD,
+    RECOMMENDATION_TYPE_SIMILAR_CUSTOMER,
+    RECOMMENDATION_TYPE_MISSING_INFO,
+    RECOMMENDATION_TYPE_LEAD_QUALITY_EXPLANATION,
+    RECOMMENDATION_TYPE_CONVERSATION_LANGUAGE,
+    RECOMMENDATION_TYPE_CONVERSATION_INTENT,
+    RECOMMENDATION_TYPE_CONVERSATION_SENTIMENT,
+    RECOMMENDATION_TYPE_CONVERSATION_URGENCY,
+    RECOMMENDATION_TYPE_CONVERSATION_SUMMARY,
+    RECOMMENDATION_TYPE_CONVERSATION_EXTRACTION,
+    RECOMMENDATION_TYPE_CONVERSATION_LINK,
+    RECOMMENDATION_TYPE_PRODUCT_RECOMMENDATION,
+    RECOMMENDATION_TYPE_CROSS_SELL,
+    RECOMMENDATION_TYPE_UPSELL,
+    RECOMMENDATION_TYPE_DISCOUNT_RECOMMENDATION,
+    RECOMMENDATION_TYPE_MARGIN_RISK,
+    RECOMMENDATION_TYPE_PRICE_ANOMALY,
+    RECOMMENDATION_TYPE_DELIVERY_COMPLEXITY,
+    RECOMMENDATION_TYPE_TASK_SUGGESTION,
+    RECOMMENDATION_TYPE_REMINDER_SUGGESTION,
+    RECOMMENDATION_TYPE_ASSIGNEE_SUGGESTION,
+    RECOMMENDATION_TYPE_TASK_PRIORITY_SUGGESTION,
+    RECOMMENDATION_TYPE_OVERDUE_RISK,
+}
+
+# The four analysis entry points a recommendation type is produced by --
+# used to route dashboard/list filters and to label the "source" of a
+# recommendation without repeating the mapping ad hoc in every use case.
+ANALYSIS_KIND_LEAD = "lead"
+ANALYSIS_KIND_CONVERSATION = "conversation"
+ANALYSIS_KIND_QUOTE = "quote"
+ANALYSIS_KIND_TASK = "task"
+VALID_ANALYSIS_KINDS = {ANALYSIS_KIND_LEAD, ANALYSIS_KIND_CONVERSATION, ANALYSIS_KIND_QUOTE, ANALYSIS_KIND_TASK}
+
+# ── Recommendation review lifecycle ─────────────────────────────────────────
+
+RECOMMENDATION_STATUS_PENDING = "pending"
+RECOMMENDATION_STATUS_ACCEPTED = "accepted"
+RECOMMENDATION_STATUS_REJECTED = "rejected"
+RECOMMENDATION_STATUS_EDITED = "edited"
+VALID_RECOMMENDATION_STATUSES = {
+    RECOMMENDATION_STATUS_PENDING,
+    RECOMMENDATION_STATUS_ACCEPTED,
+    RECOMMENDATION_STATUS_REJECTED,
+    RECOMMENDATION_STATUS_EDITED,
+}
+TERMINAL_RECOMMENDATION_STATUSES = {
+    RECOMMENDATION_STATUS_ACCEPTED,
+    RECOMMENDATION_STATUS_REJECTED,
+    RECOMMENDATION_STATUS_EDITED,
+}
+
+REVIEW_DECISION_ACCEPT = "accept"
+REVIEW_DECISION_REJECT = "reject"
+REVIEW_DECISION_EDIT = "edit"
+VALID_REVIEW_DECISIONS = {REVIEW_DECISION_ACCEPT, REVIEW_DECISION_REJECT, REVIEW_DECISION_EDIT}
+
+_DECISION_TO_STATUS = {
+    REVIEW_DECISION_ACCEPT: RECOMMENDATION_STATUS_ACCEPTED,
+    REVIEW_DECISION_REJECT: RECOMMENDATION_STATUS_REJECTED,
+    REVIEW_DECISION_EDIT: RECOMMENDATION_STATUS_EDITED,
+}
+
+
+def status_for_decision(decision: str) -> str:
+    return _DECISION_TO_STATUS[decision]

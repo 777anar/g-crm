@@ -35,6 +35,7 @@ const NAV_ITEMS = [
   { labelKey: "invoices", href: "/finance/invoices" },
   { labelKey: "expenses", href: "/finance/expenses" },
   { labelKey: "reports", href: "/reports" },
+  { labelKey: "aiAssistant", href: "/ai/dashboard" },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {

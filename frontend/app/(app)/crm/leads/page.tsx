@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { convertLead, createLead, listLeads } from "@/lib/api/crm";
-import { LEAD_SOURCE_CHANNELS, type Lead } from "@/lib/types";
+import { analyzeLead } from "@/lib/api/ai";
+import { LEAD_SOURCE_CHANNELS, type AIRecommendation, type Lead } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SelectField, TextField } from "@/components/ui/field";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { RecommendationCard } from "@/components/recommendation-card";
 import { formatDate } from "@/lib/format";
 import { useLeadChannelLabel } from "@/lib/i18n/hooks";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
@@ -33,6 +35,11 @@ export default function LeadsPage() {
   const [convertingId, setConvertingId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const search = useDebouncedValue(searchInput, 250);
+  const tAi = useTranslations("ai");
+
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+  const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
+  const [recsByLead, setRecsByLead] = useState<Record<string, AIRecommendation[]>>({});
 
   const [fullName, setFullName] = useState("");
   const [sourceChannel, setSourceChannel] = useState<string>(LEAD_SOURCE_CHANNELS[0]);
@@ -82,6 +89,27 @@ export default function LeadsPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleAnalyze(leadId: string) {
+    setAnalyzingId(leadId);
+    setError(null);
+    try {
+      const result = await analyzeLead(leadId);
+      setRecsByLead((prev) => ({ ...prev, [leadId]: result.items }));
+      setExpandedLeadId(leadId);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : tAi("loadFailed"));
+    } finally {
+      setAnalyzingId(null);
+    }
+  }
+
+  function handleRecommendationReviewed(leadId: string, updated: AIRecommendation) {
+    setRecsByLead((prev) => ({
+      ...prev,
+      [leadId]: (prev[leadId] ?? []).map((r) => (r.id === updated.id ? updated : r)),
+    }));
   }
 
   async function handleConvert(leadId: string) {
@@ -181,28 +209,63 @@ export default function LeadsPage() {
             </thead>
             <tbody>
               {leads.map((lead) => (
-                <tr key={lead.id} className="border-b border-border last:border-0 hover:bg-bg">
-                  <td className="px-4 py-2 font-medium text-text-primary">{lead.full_name}</td>
-                  <td className="px-4 py-2">
-                    <Badge tone="info">{channelLabel(lead.source_channel)}</Badge>
-                  </td>
-                  <td className="px-4 py-2 text-text-secondary">{lead.campaign ?? tCommon("dash")}</td>
-                  <td className="px-4 py-2">
-                    <LeadStatusBadge status={lead.status} />
-                  </td>
-                  <td className="px-4 py-2 text-text-secondary">{formatDate(lead.created_at)}</td>
-                  <td className="px-4 py-2 text-right">
-                    {lead.status !== "converted" && (
-                      <Button
-                        variant="secondary"
-                        onClick={() => handleConvert(lead.id)}
-                        disabled={convertingId === lead.id}
-                      >
-                        {convertingId === lead.id ? t("converting") : t("convertToCustomer")}
-                      </Button>
-                    )}
-                  </td>
-                </tr>
+                <Fragment key={lead.id}>
+                  <tr className="border-b border-border last:border-0 hover:bg-bg">
+                    <td className="px-4 py-2 font-medium text-text-primary">{lead.full_name}</td>
+                    <td className="px-4 py-2">
+                      <Badge tone="info">{channelLabel(lead.source_channel)}</Badge>
+                    </td>
+                    <td className="px-4 py-2 text-text-secondary">{lead.campaign ?? tCommon("dash")}</td>
+                    <td className="px-4 py-2">
+                      <LeadStatusBadge status={lead.status} />
+                    </td>
+                    <td className="px-4 py-2 text-text-secondary">{formatDate(lead.created_at)}</td>
+                    <td className="px-4 py-2 text-right">
+                      <div className="flex justify-end gap-2">
+                        {recsByLead[lead.id] ? (
+                          <Button
+                            variant="secondary"
+                            onClick={() => setExpandedLeadId(expandedLeadId === lead.id ? null : lead.id)}
+                          >
+                            {expandedLeadId === lead.id ? tAi("hideDetails") : tAi("showDetails")}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="secondary"
+                            onClick={() => handleAnalyze(lead.id)}
+                            disabled={analyzingId === lead.id}
+                          >
+                            {analyzingId === lead.id ? tAi("runAnalysis") : tAi("analyzeLead")}
+                          </Button>
+                        )}
+                        {lead.status !== "converted" && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => handleConvert(lead.id)}
+                            disabled={convertingId === lead.id}
+                          >
+                            {convertingId === lead.id ? t("converting") : t("convertToCustomer")}
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                  {expandedLeadId === lead.id && recsByLead[lead.id] && (
+                    <tr key={`${lead.id}-ai`} className="border-b border-border bg-bg">
+                      <td colSpan={6} className="px-4 py-3">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          {recsByLead[lead.id].map((rec) => (
+                            <RecommendationCard
+                              key={rec.id}
+                              recommendation={rec}
+                              onReviewed={(updated) => handleRecommendationReviewed(lead.id, updated)}
+                            />
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>

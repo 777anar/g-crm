@@ -18,8 +18,10 @@ import {
 } from "@/lib/api/communication";
 import { listCompanyUsers } from "@/lib/api/companies";
 import { me } from "@/lib/api/auth";
+import { analyzeConversation } from "@/lib/api/ai";
 import {
   CONVERSATION_STATUSES,
+  type AIRecommendation,
   type Channel,
   type CompanyUser,
   type Conversation,
@@ -31,6 +33,7 @@ import { ChannelTypeBadge, ConversationStatusBadge } from "@/components/ui/badge
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { RecommendationCard } from "@/components/recommendation-card";
 import { formatDateTime } from "@/lib/format";
 import { ApiRequestError } from "@/lib/api-client";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
@@ -65,6 +68,10 @@ export default function InboxPage() {
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [newConvForm, setNewConvForm] = useState({ channel_id: "", external_contact_id: "", external_contact_name: "" });
   const [startingConversation, setStartingConversation] = useState(false);
+  const tAi = useTranslations("ai");
+  const [analyzingConversation, setAnalyzingConversation] = useState(false);
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [conversationRecs, setConversationRecs] = useState<Record<string, AIRecommendation[]>>({});
 
   const loadConversations = useCallback(() => {
     listConversations({
@@ -142,6 +149,26 @@ export default function InboxPage() {
     } finally {
       setSending(false);
     }
+  }
+
+  async function handleAnalyzeConversation() {
+    if (!selectedId) return;
+    setAnalyzingConversation(true);
+    try {
+      const result = await analyzeConversation(selectedId);
+      setConversationRecs((prev) => ({ ...prev, [selectedId]: result.items }));
+      setShowAiPanel(true);
+    } finally {
+      setAnalyzingConversation(false);
+    }
+  }
+
+  function handleConversationRecommendationReviewed(updated: AIRecommendation) {
+    if (!selectedId) return;
+    setConversationRecs((prev) => ({
+      ...prev,
+      [selectedId]: (prev[selectedId] ?? []).map((r) => (r.id === updated.id ? updated : r)),
+    }));
   }
 
   async function handleAddNote() {
@@ -297,10 +324,29 @@ export default function InboxPage() {
                 </span>
                 <ConversationStatusBadge status={selected.status} />
               </div>
-              <button className="text-sm text-primary hover:underline lg:hidden" onClick={() => setMobilePane("profile")}>
-                {t("profile")} →
-              </button>
+              <div className="flex items-center gap-2">
+                {conversationRecs[selected.id] ? (
+                  <Button variant="secondary" onClick={() => setShowAiPanel((v) => !v)}>
+                    {showAiPanel ? tAi("hideDetails") : tAi("showDetails")}
+                  </Button>
+                ) : (
+                  <Button variant="secondary" onClick={handleAnalyzeConversation} disabled={analyzingConversation}>
+                    {tAi("runAnalysis")}
+                  </Button>
+                )}
+                <button className="text-sm text-primary hover:underline lg:hidden" onClick={() => setMobilePane("profile")}>
+                  {t("profile")} →
+                </button>
+              </div>
             </div>
+
+            {showAiPanel && conversationRecs[selected.id] && (
+              <div className="grid grid-cols-1 gap-2 border-b border-border pb-3 sm:grid-cols-2">
+                {conversationRecs[selected.id].map((rec) => (
+                  <RecommendationCard key={rec.id} recommendation={rec} onReviewed={handleConversationRecommendationReviewed} />
+                ))}
+              </div>
+            )}
 
             <div className="flex-1 overflow-y-auto">
               {messages === null && <TableSkeleton rows={3} columns={1} />}

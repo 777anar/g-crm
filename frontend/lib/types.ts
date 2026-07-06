@@ -930,3 +930,116 @@ export type MessageTemplate = {
   created_at: string;
   updated_at: string;
 };
+
+// ── AI Sales Assistant (Version 2.8) ─────────────────────────────────────────
+
+export const AI_PROVIDERS = ["mock", "openai", "anthropic", "gemini", "ollama", "azure_openai"] as const;
+export type AIProviderName = (typeof AI_PROVIDERS)[number];
+
+export const AI_ANALYSIS_KINDS = ["lead", "conversation", "quote", "task"] as const;
+export type AIAnalysisKind = (typeof AI_ANALYSIS_KINDS)[number];
+
+export const AI_RECOMMENDATION_STATUSES = ["pending", "accepted", "rejected", "edited"] as const;
+export type AIRecommendationStatus = (typeof AI_RECOMMENDATION_STATUSES)[number];
+
+export const AI_RECOMMENDATION_TYPES = [
+  "lead_score",
+  "win_probability",
+  "priority_recommendation",
+  "next_best_action",
+  "follow_up_recommendation",
+  "duplicate_lead",
+  "similar_customer",
+  "missing_info",
+  "lead_quality_explanation",
+  "conversation_language",
+  "conversation_intent",
+  "conversation_sentiment",
+  "conversation_urgency",
+  "conversation_summary",
+  "conversation_extraction",
+  "conversation_link_suggestion",
+  "product_recommendation",
+  "cross_sell_suggestion",
+  "upsell_suggestion",
+  "discount_recommendation",
+  "margin_risk_detection",
+  "price_anomaly_detection",
+  "delivery_complexity_estimate",
+  "task_suggestion",
+  "reminder_suggestion",
+  "assignee_suggestion",
+  "task_priority_suggestion",
+  "overdue_risk",
+] as const;
+export type AIRecommendationType = (typeof AI_RECOMMENDATION_TYPES)[number];
+
+export type AIRecommendation = {
+  id: string;
+  company_id: string;
+  analysis_kind: AIAnalysisKind;
+  recommendation_type: AIRecommendationType;
+  related_entity_type: string | null;
+  related_entity_id: string | null;
+  provider: string;
+  model: string;
+  prompt: string;
+  response: Record<string, any>;
+  confidence_score: number | null;
+  execution_time_ms: number | null;
+  summary: string | null;
+  status: AIRecommendationStatus;
+  edited_response: Record<string, any> | null;
+  requested_by: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AIDashboard = {
+  lead_score_distribution: Record<string, number>;
+  avg_win_probability: number | null;
+  pipeline_health: {
+    active_pipeline_count: number;
+    stalled_count: number;
+    stalled_pct: number;
+  };
+  at_risk_customers: Array<{
+    recommendation_id: string;
+    related_entity_type: string | null;
+    related_entity_id: string | null;
+    recommendation_type: string;
+    summary: string | null;
+  }>;
+  follow_up_recommendations: Array<{
+    recommendation_id: string;
+    related_entity_type: string | null;
+    related_entity_id: string | null;
+    summary: string | null;
+    due_in_days: number | null;
+  }>;
+  daily_recommendations: Array<{
+    recommendation_id: string;
+    recommendation_type: string;
+    summary: string | null;
+    created_at: string;
+  }>;
+  recent_activity: Array<{
+    recommendation_id: string;
+    recommendation_type: string;
+    analysis_kind: string;
+    status: string;
+    provider: string;
+    summary: string | null;
+    created_at: string;
+    reviewed_at: string | null;
+  }>;
+  usage_stats: {
+    total_recommendations: number;
+    status_counts: Record<string, number>;
+    provider_counts: Record<string, number>;
+    acceptance_rate: number | null;
+    avg_execution_time_ms: number | null;
+  };
+};
