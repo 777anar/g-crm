@@ -21,7 +21,17 @@
     "remove": "Sil",
     "delete": "Sil",
     "activate": "Aktivləşdir",
-    "deactivate": "Deaktiv et"
+    "deactivate": "Deaktiv et",
+    "switchToLightMode": "İşıqlı rejimə keç",
+    "switchToDarkMode": "Qaranlıq rejimə keç",
+    "openNavigation": "Naviqasiyanı aç",
+    "closeNavigation": "Naviqasiyanı bağla",
+    "mainNavigation": "Əsas naviqasiya",
+    "columns": "Sütunlar",
+    "resetColumns": "Sütunları sıfırla",
+    "deleteSavedFilter": "\"{name}\" saxlanmış filtrini sil",
+    "filterNamePlaceholder": "Filtrin adı",
+    "saveCurrentFilters": "Cari filtrləri saxla"
   },
   "nav": {
     "dashboard": "İdarə paneli",
@@ -222,7 +232,9 @@
     "convertToCustomer": "Müştəriyə çevir",
     "converting": "Çevrilir...",
     "convertFailed": "Lead çevrilmədi.",
-    "searchPlaceholder": "Ad, telefon, e-poçt, kampaniya üzrə axtar..."
+    "searchPlaceholder": "Ad, telefon, e-poçt, kampaniya üzrə axtar...",
+    "leadCreated": "Lead qeydə alındı.",
+    "leadConverted": "Lead müştəriyə çevrildi."
   },
   "leadStatus": {
     "new": "Yeni",
@@ -805,7 +817,8 @@
     "partially_paid": "Qismən ödənilib",
     "paid": "Ödənildi",
     "overdue": "Gecikmiş",
-    "cancelled": "Ləğv edildi"
+    "cancelled": "Ləğv edildi",
+    "printInvoice": "Çap et"
   },
   "tasks": {
     "title": "Tapşırıqlar",

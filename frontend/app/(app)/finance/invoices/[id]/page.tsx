@@ -113,7 +113,7 @@ export default function InvoiceDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/finance/invoices" className="text-sm text-primary hover:underline">
+      <Link href="/finance/invoices" className="print-hidden text-sm text-primary hover:underline">
         ← {t("backToInvoices")}
       </Link>
 
@@ -127,17 +127,20 @@ export default function InvoiceDetailPage() {
             {t("forOrder")}: <Link href={`/orders/${invoice.order_id}`} className="text-primary hover:underline">{invoice.order_id}</Link>
           </p>
         </div>
-        {!isTerminal && (
-          <div className="flex gap-2">
-            {invoice.status === "draft" && (
-              <Button onClick={handleSend} disabled={busy}>{busy ? t("saving") : t("sendInvoice")}</Button>
-            )}
-            {invoice.status === "sent" && (
-              <Button variant="secondary" onClick={handleMarkOverdue} disabled={busy}>{t("markOverdue")}</Button>
-            )}
-            <Button variant="destructive" onClick={() => setCancelMode(!cancelMode)}>{t("cancelInvoice")}</Button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => window.print()}>{t("printInvoice")}</Button>
+          {!isTerminal && (
+            <>
+              {invoice.status === "draft" && (
+                <Button onClick={handleSend} disabled={busy}>{busy ? t("saving") : t("sendInvoice")}</Button>
+              )}
+              {invoice.status === "sent" && (
+                <Button variant="secondary" onClick={handleMarkOverdue} disabled={busy}>{t("markOverdue")}</Button>
+              )}
+              <Button variant="destructive" onClick={() => setCancelMode(!cancelMode)}>{t("cancelInvoice")}</Button>
+            </>
+          )}
+        </div>
       </div>
 
       {cancelMode && (
@@ -268,7 +271,7 @@ export default function InvoiceDetailPage() {
         )}
 
         {canRecordPayment && (
-          <div className="flex flex-wrap items-end gap-2 border-t border-border pt-3">
+          <div className="print-hidden flex flex-wrap items-end gap-2 border-t border-border pt-3">
             <div>
               <label className="text-xs text-text-secondary">{t("amount")}</label>
               <input

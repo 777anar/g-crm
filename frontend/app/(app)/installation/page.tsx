@@ -98,9 +98,9 @@ export default function InstallationDashboardPage() {
               {upcoming.length === 0 ? (
                 <EmptyState title={t("noUpcomingJobs")} />
               ) : (
-                <div className="overflow-hidden rounded-lg border border-border">
+                <div className="overflow-x-auto rounded-lg border border-border">
                   <table className="w-full text-left text-sm">
-                    <thead className="border-b border-border bg-bg text-text-secondary">
+                    <thead className="sticky top-0 z-10 border-b border-border bg-bg text-text-secondary">
                       <tr>
                         <th className="px-3 py-2 font-medium">{t("tableJob")}</th>
                         <th className="px-3 py-2 font-medium">{t("tableStatus")}</th>

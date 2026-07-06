@@ -11,11 +11,30 @@ import { CustomerArchivedBadge, LeadChannelBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { SortableHeader } from "@/components/ui/sortable-header";
+import {
+  ColumnResizeHandle,
+  ColumnVisibilityMenu,
+  SavedFiltersBar,
+  stickyTheadClass,
+  tableScrollShellClass,
+  useColumnVisibility,
+  useResizableColumns,
+  useSavedFilters,
+} from "@/components/ui/data-table";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import { useCustomerStatusLabel } from "@/lib/i18n/hooks";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useListShortcuts } from "@/lib/use-list-shortcuts";
+
+const TABLE_ID = "crm-customers";
+
+type CustomersFilters = {
+  includeArchived: boolean;
+  statusFilter: CustomerStatus | "";
+  search: string;
+  sort: string;
+};
 
 export default function CustomersListPage() {
   const t = useTranslations("customers");
@@ -33,6 +52,25 @@ export default function CustomersListPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const search = useDebouncedValue(searchInput, 250);
 
+  const columnDefs = [
+    { id: "name", label: t("tableName") },
+    { id: "phone", label: t("tablePhone") },
+    { id: "leadSource", label: t("tableLeadSource") },
+    { id: "pipelineStatus", label: t("tablePipelineStatus") },
+    { id: "created", label: t("tableCreated") },
+    { id: "archived", label: t("tableStatus") },
+  ];
+  const { isVisible, toggle, reset } = useColumnVisibility(TABLE_ID, columnDefs);
+  const { widthOf, startResize } = useResizableColumns(TABLE_ID, {
+    name: 200,
+    phone: 140,
+    leadSource: 140,
+    pipelineStatus: 180,
+    created: 140,
+    archived: 120,
+  });
+  const savedFilters = useSavedFilters<CustomersFilters>(TABLE_ID);
+
   const reload = useCallback(() => {
     listCustomers({ includeArchived, status: statusFilter || undefined, search, sort })
       .then((res) => setCustomers(res.items))
@@ -45,6 +83,13 @@ export default function CustomersListPage() {
   }, [reload]);
 
   useListShortcuts({ searchInputRef, onCreate: () => router.push("/crm/customers/new") });
+
+  function applyFilters(filters: CustomersFilters) {
+    setIncludeArchived(filters.includeArchived);
+    setStatusFilter(filters.statusFilter);
+    setSearchInput(filters.search);
+    setSort(filters.sort);
+  }
 
   async function handleQuickStatusChange(customerId: string, status: CustomerStatus) {
     setSavingStatusId(customerId);
@@ -70,44 +115,54 @@ export default function CustomersListPage() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          ref={searchInputRef}
-          type="search"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder={t("searchPlaceholder")}
-          className="w-full max-w-xs rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
-        />
-
-        <label className="flex w-fit items-center gap-2 text-sm text-text-secondary">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <input
-            type="checkbox"
-            checked={includeArchived}
-            onChange={(e) => setIncludeArchived(e.target.checked)}
+            ref={searchInputRef}
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className="w-full max-w-xs rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
           />
-          {t("showArchived")}
-        </label>
 
-        <div className="flex items-center gap-2">
-          <label htmlFor="customer-status-filter" className="text-sm text-text-secondary">
-            {t("filterByStatus")}
+          <label className="flex w-fit items-center gap-2 text-sm text-text-secondary">
+            <input
+              type="checkbox"
+              checked={includeArchived}
+              onChange={(e) => setIncludeArchived(e.target.checked)}
+            />
+            {t("showArchived")}
           </label>
-          <select
-            id="customer-status-filter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as CustomerStatus | "")}
-            className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
-          >
-            <option value="">{t("allStatuses")}</option>
-            {CUSTOMER_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {statusLabel(s)}
-              </option>
-            ))}
-          </select>
+
+          <div className="flex items-center gap-2">
+            <label htmlFor="customer-status-filter" className="text-sm text-text-secondary">
+              {t("filterByStatus")}
+            </label>
+            <select
+              id="customer-status-filter"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as CustomerStatus | "")}
+              className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+            >
+              <option value="">{t("allStatuses")}</option>
+              {CUSTOMER_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {statusLabel(s)}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+        <ColumnVisibilityMenu columns={columnDefs} isVisible={isVisible} toggle={toggle} reset={reset} />
       </div>
+
+      <SavedFiltersBar
+        presets={savedFilters.presets}
+        onApply={applyFilters}
+        onSave={(name) => savedFilters.save(name, { includeArchived, statusFilter, search: searchInput, sort })}
+        onRemove={savedFilters.remove}
+      />
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
@@ -126,16 +181,57 @@ export default function CustomersListPage() {
       )}
 
       {customers && customers.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+        <div className={tableScrollShellClass}>
           <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 border-b border-border bg-bg text-text-secondary">
+            <thead className={stickyTheadClass}>
               <tr>
-                <SortableHeader field="name" label={t("tableName")} sort={sort} onSortChange={setSort} />
-                <th className="px-4 py-2 font-medium">{t("tablePhone")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableLeadSource")}</th>
-                <SortableHeader field="status" label={t("tablePipelineStatus")} sort={sort} onSortChange={setSort} />
-                <SortableHeader field="created_at" label={t("tableCreated")} sort={sort} onSortChange={setSort} />
-                <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
+                {isVisible("name") && (
+                  <SortableHeader
+                    field="name"
+                    label={t("tableName")}
+                    sort={sort}
+                    onSortChange={setSort}
+                    width={widthOf("name")}
+                    resizeHandle={<ColumnResizeHandle onMouseDown={startResize("name")} />}
+                  />
+                )}
+                {isVisible("phone") && (
+                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("phone") }}>
+                    {t("tablePhone")}
+                    <ColumnResizeHandle onMouseDown={startResize("phone")} />
+                  </th>
+                )}
+                {isVisible("leadSource") && (
+                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("leadSource") }}>
+                    {t("tableLeadSource")}
+                    <ColumnResizeHandle onMouseDown={startResize("leadSource")} />
+                  </th>
+                )}
+                {isVisible("pipelineStatus") && (
+                  <SortableHeader
+                    field="status"
+                    label={t("tablePipelineStatus")}
+                    sort={sort}
+                    onSortChange={setSort}
+                    width={widthOf("pipelineStatus")}
+                    resizeHandle={<ColumnResizeHandle onMouseDown={startResize("pipelineStatus")} />}
+                  />
+                )}
+                {isVisible("created") && (
+                  <SortableHeader
+                    field="created_at"
+                    label={t("tableCreated")}
+                    sort={sort}
+                    onSortChange={setSort}
+                    width={widthOf("created")}
+                    resizeHandle={<ColumnResizeHandle onMouseDown={startResize("created")} />}
+                  />
+                )}
+                {isVisible("archived") && (
+                  <th className="px-4 py-2 font-medium" style={{ width: widthOf("archived") }}>
+                    {t("tableStatus")}
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -145,37 +241,49 @@ export default function CustomersListPage() {
                   onClick={() => router.push(`/crm/customers/${customer.id}`)}
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-bg"
                 >
-                  <td className="px-4 py-2">
-                    <Link
-                      href={`/crm/customers/${customer.id}`}
-                      className="font-medium text-primary hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {customer.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2 text-text-secondary">{customer.phone ?? tCommon("dash")}</td>
-                  <td className="px-4 py-2">
-                    {customer.lead_source ? <LeadChannelBadge channel={customer.lead_source} /> : tCommon("dash")}
-                  </td>
-                  <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
-                    <select
-                      value={customer.status}
-                      disabled={savingStatusId === customer.id}
-                      onChange={(e) => handleQuickStatusChange(customer.id, e.target.value as CustomerStatus)}
-                      className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary disabled:opacity-50"
-                    >
-                      {CUSTOMER_STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {statusLabel(s)}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-4 py-2 text-text-secondary">{formatDate(customer.created_at)}</td>
-                  <td className="px-4 py-2">
-                    <CustomerArchivedBadge archived={customer.deleted_at !== null} />
-                  </td>
+                  {isVisible("name") && (
+                    <td className="px-4 py-2">
+                      <Link
+                        href={`/crm/customers/${customer.id}`}
+                        className="font-medium text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {customer.name}
+                      </Link>
+                    </td>
+                  )}
+                  {isVisible("phone") && (
+                    <td className="px-4 py-2 text-text-secondary">{customer.phone ?? tCommon("dash")}</td>
+                  )}
+                  {isVisible("leadSource") && (
+                    <td className="px-4 py-2">
+                      {customer.lead_source ? <LeadChannelBadge channel={customer.lead_source} /> : tCommon("dash")}
+                    </td>
+                  )}
+                  {isVisible("pipelineStatus") && (
+                    <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={customer.status}
+                        disabled={savingStatusId === customer.id}
+                        onChange={(e) => handleQuickStatusChange(customer.id, e.target.value as CustomerStatus)}
+                        className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary disabled:opacity-50"
+                      >
+                        {CUSTOMER_STATUSES.map((s) => (
+                          <option key={s} value={s}>
+                            {statusLabel(s)}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  )}
+                  {isVisible("created") && (
+                    <td className="px-4 py-2 text-text-secondary">{formatDate(customer.created_at)}</td>
+                  )}
+                  {isVisible("archived") && (
+                    <td className="px-4 py-2">
+                      <CustomerArchivedBadge archived={customer.deleted_at !== null} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

@@ -214,7 +214,7 @@ export default function AIDashboardPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-border text-text-secondary">
+              <thead className="sticky top-0 z-10 border-b border-border bg-surface text-text-secondary">
                 <tr>
                   <th className="px-2 py-1 font-medium">{t("tableType")}</th>
                   <th className="px-2 py-1 font-medium">{t("tableSummary")}</th>

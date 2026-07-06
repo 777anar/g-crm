@@ -184,9 +184,9 @@ export default function MaterialsListPage() {
 
       {materials && materials.length > 0 && (
         <>
-          <div className="overflow-hidden rounded-lg border border-border bg-surface">
+          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
             <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 border-b border-border bg-bg text-text-secondary">
+              <thead className="sticky top-0 z-10 border-b border-border bg-bg text-text-secondary">
                 <tr>
                   <SortableHeader field="name" label={t("tableName")} sort={sort} onSortChange={setSort} />
                   <th className="px-4 py-2 font-medium">{t("tableBrand")}</th>

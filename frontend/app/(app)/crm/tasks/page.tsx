@@ -11,9 +11,31 @@ import { TaskPriorityBadge, TaskStatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import {
+  ColumnResizeHandle,
+  ColumnVisibilityMenu,
+  SavedFiltersBar,
+  stickyTheadClass,
+  tableScrollShellClass,
+  useColumnVisibility,
+  useResizableColumns,
+  useSavedFilters,
+} from "@/components/ui/data-table";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+
+const TABLE_ID = "crm-tasks";
+
+type TasksFilters = {
+  statusFilter: string;
+  priorityFilter: string;
+  assigneeFilter: string;
+  tagFilter: string;
+  excludeTerminal: boolean;
+  search: string;
+  sort: string;
+};
 
 export default function TasksPage() {
   const t = useTranslations("tasks");
@@ -31,6 +53,25 @@ export default function TasksPage() {
   const [sort, setSort] = useState("due_date");
   const [error, setError] = useState<string | null>(null);
   const search = useDebouncedValue(searchInput, 250);
+
+  const columnDefs = [
+    { id: "title", label: t("tableTitle") },
+    { id: "status", label: t("tableStatus") },
+    { id: "priority", label: t("tablePriority") },
+    { id: "assignee", label: t("tableAssignee") },
+    { id: "dueDate", label: t("tableDueDate") },
+    { id: "tags", label: t("tableTags") },
+  ];
+  const { isVisible, toggle, reset } = useColumnVisibility(TABLE_ID, columnDefs);
+  const { widthOf, startResize } = useResizableColumns(TABLE_ID, {
+    title: 220,
+    status: 130,
+    priority: 130,
+    assignee: 160,
+    dueDate: 160,
+    tags: 160,
+  });
+  const savedFilters = useSavedFilters<TasksFilters>(TABLE_ID);
 
   const load = useCallback(() => {
     listTasks({
@@ -65,6 +106,16 @@ export default function TasksPage() {
     ? tasks?.filter((task) => task.tags.some((tag) => tag.toLowerCase().includes(tagFilter.toLowerCase())))
     : tasks;
 
+  function applyFilters(filters: TasksFilters) {
+    setStatusFilter(filters.statusFilter);
+    setPriorityFilter(filters.priorityFilter);
+    setAssigneeFilter(filters.assigneeFilter);
+    setTagFilter(filters.tagFilter);
+    setExcludeTerminal(filters.excludeTerminal);
+    setSearchInput(filters.search);
+    setSort(filters.sort);
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -77,66 +128,86 @@ export default function TasksPage() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="search"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder={tCommon("search")}
-          className="w-full max-w-xs rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
-        />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
-        >
-          <option value="">{tCommon("allStatuses")}</option>
-          {TASK_STATUSES.map((s) => (
-            <option key={s} value={s}>{t(s as any)}</option>
-          ))}
-        </select>
-        <select
-          value={priorityFilter}
-          onChange={(e) => setPriorityFilter(e.target.value)}
-          className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
-        >
-          <option value="">{t("allPriorities")}</option>
-          {TASK_PRIORITIES.map((p) => (
-            <option key={p} value={p}>{t(`priority_${p}` as any)}</option>
-          ))}
-        </select>
-        <select
-          value={assigneeFilter}
-          onChange={(e) => setAssigneeFilter(e.target.value)}
-          className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
-        >
-          <option value="">{t("allAssignees")}</option>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>{u.full_name}</option>
-          ))}
-        </select>
-        <input
-          type="text"
-          value={tagFilter}
-          onChange={(e) => setTagFilter(e.target.value)}
-          placeholder={t("filterByTag")}
-          className="w-32 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
-        />
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value)}
-          className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
-        >
-          <option value="due_date">{t("sortDueDate")}</option>
-          <option value="-created_at">{t("sortNewest")}</option>
-          <option value="priority">{t("sortPriority")}</option>
-          <option value="title">{t("sortTitle")}</option>
-        </select>
-        <label className="flex items-center gap-1.5 text-sm text-text-secondary">
-          <input type="checkbox" checked={excludeTerminal} onChange={(e) => setExcludeTerminal(e.target.checked)} />
-          {t("hideClosed")}
-        </label>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={tCommon("search")}
+            className="w-full max-w-xs rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+          >
+            <option value="">{tCommon("allStatuses")}</option>
+            {TASK_STATUSES.map((s) => (
+              <option key={s} value={s}>{t(s as any)}</option>
+            ))}
+          </select>
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+          >
+            <option value="">{t("allPriorities")}</option>
+            {TASK_PRIORITIES.map((p) => (
+              <option key={p} value={p}>{t(`priority_${p}` as any)}</option>
+            ))}
+          </select>
+          <select
+            value={assigneeFilter}
+            onChange={(e) => setAssigneeFilter(e.target.value)}
+            className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+          >
+            <option value="">{t("allAssignees")}</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>{u.full_name}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value)}
+            placeholder={t("filterByTag")}
+            className="w-32 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+          />
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+          >
+            <option value="due_date">{t("sortDueDate")}</option>
+            <option value="-created_at">{t("sortNewest")}</option>
+            <option value="priority">{t("sortPriority")}</option>
+            <option value="title">{t("sortTitle")}</option>
+          </select>
+          <label className="flex items-center gap-1.5 text-sm text-text-secondary">
+            <input type="checkbox" checked={excludeTerminal} onChange={(e) => setExcludeTerminal(e.target.checked)} />
+            {t("hideClosed")}
+          </label>
+        </div>
+        <ColumnVisibilityMenu columns={columnDefs} isVisible={isVisible} toggle={toggle} reset={reset} />
       </div>
+
+      <SavedFiltersBar
+        presets={savedFilters.presets}
+        onApply={applyFilters}
+        onSave={(name) =>
+          savedFilters.save(name, {
+            statusFilter,
+            priorityFilter,
+            assigneeFilter,
+            tagFilter,
+            excludeTerminal,
+            search: searchInput,
+            sort,
+          })
+        }
+        onRemove={savedFilters.remove}
+      />
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
@@ -147,16 +218,45 @@ export default function TasksPage() {
       )}
 
       {visibleTasks && visibleTasks.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+        <div className={tableScrollShellClass}>
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-border bg-bg text-text-secondary">
+            <thead className={stickyTheadClass}>
               <tr>
-                <th className="px-4 py-2 font-medium">{t("tableTitle")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
-                <th className="px-4 py-2 font-medium">{t("tablePriority")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableAssignee")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableDueDate")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableTags")}</th>
+                {isVisible("title") && (
+                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("title") }}>
+                    {t("tableTitle")}
+                    <ColumnResizeHandle onMouseDown={startResize("title")} />
+                  </th>
+                )}
+                {isVisible("status") && (
+                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("status") }}>
+                    {t("tableStatus")}
+                    <ColumnResizeHandle onMouseDown={startResize("status")} />
+                  </th>
+                )}
+                {isVisible("priority") && (
+                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("priority") }}>
+                    {t("tablePriority")}
+                    <ColumnResizeHandle onMouseDown={startResize("priority")} />
+                  </th>
+                )}
+                {isVisible("assignee") && (
+                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("assignee") }}>
+                    {t("tableAssignee")}
+                    <ColumnResizeHandle onMouseDown={startResize("assignee")} />
+                  </th>
+                )}
+                {isVisible("dueDate") && (
+                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("dueDate") }}>
+                    {t("tableDueDate")}
+                    <ColumnResizeHandle onMouseDown={startResize("dueDate")} />
+                  </th>
+                )}
+                {isVisible("tags") && (
+                  <th className="px-4 py-2 font-medium" style={{ width: widthOf("tags") }}>
+                    {t("tableTags")}
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -166,19 +266,31 @@ export default function TasksPage() {
                   onClick={() => router.push(`/crm/tasks/${task.id}`)}
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-bg"
                 >
-                  <td className="px-4 py-2 font-medium text-text-primary">
-                    {task.title}
-                    {task.is_recurring && <span className="ml-1 text-xs text-text-secondary">↻</span>}
-                  </td>
-                  <td className="px-4 py-2"><TaskStatusBadge status={task.status} /></td>
-                  <td className="px-4 py-2"><TaskPriorityBadge priority={task.priority} /></td>
-                  <td className="px-4 py-2 text-text-secondary">{userName(task.assigned_to)}</td>
-                  <td className="px-4 py-2 text-text-secondary">
-                    {task.due_date ? formatDateTime(task.due_date) : tCommon("dash")}
-                  </td>
-                  <td className="px-4 py-2 text-text-secondary">
-                    {task.tags.length > 0 ? task.tags.join(", ") : tCommon("dash")}
-                  </td>
+                  {isVisible("title") && (
+                    <td className="px-4 py-2 font-medium text-text-primary">
+                      {task.title}
+                      {task.is_recurring && <span className="ml-1 text-xs text-text-secondary">↻</span>}
+                    </td>
+                  )}
+                  {isVisible("status") && (
+                    <td className="px-4 py-2"><TaskStatusBadge status={task.status} /></td>
+                  )}
+                  {isVisible("priority") && (
+                    <td className="px-4 py-2"><TaskPriorityBadge priority={task.priority} /></td>
+                  )}
+                  {isVisible("assignee") && (
+                    <td className="px-4 py-2 text-text-secondary">{userName(task.assigned_to)}</td>
+                  )}
+                  {isVisible("dueDate") && (
+                    <td className="px-4 py-2 text-text-secondary">
+                      {task.due_date ? formatDateTime(task.due_date) : tCommon("dash")}
+                    </td>
+                  )}
+                  {isVisible("tags") && (
+                    <td className="px-4 py-2 text-text-secondary">
+                      {task.tags.length > 0 ? task.tags.join(", ") : tCommon("dash")}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

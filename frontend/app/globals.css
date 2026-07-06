@@ -2,9 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light theme (default) -- values match UI_UX_GUIDELINES.md section 3. */
 :root {
   --color-bg: #f8f9fb;
   --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
   --color-border: #e2e5ea;
   --color-text-primary: #16181d;
   --color-text-secondary: #5b6270;
@@ -14,10 +16,104 @@
   --color-warning: #b8860b;
   --color-danger: #c0392b;
   --color-info: #0e7c9d;
+  --shadow-elevated: 0 8px 24px -8px rgb(16 18 29 / 0.16);
+  color-scheme: light;
+}
+
+/* Dark theme -- same semantic roles, WCAG-AA-checked contrast against
+   text-primary/text-secondary, applied by toggling `.dark` on <html> (see
+   lib/theme/theme-context.tsx). No component changes needed: every existing
+   bg-bg/text-text-primary/border-border/etc. class already resolves through
+   these variables via tailwind.config.ts. */
+.dark {
+  --color-bg: #14161c;
+  --color-surface: #1c1f27;
+  --color-surface-raised: #242832;
+  --color-border: #343a47;
+  --color-text-primary: #eceef2;
+  --color-text-secondary: #a3aab8;
+  --color-primary: #5b8dff;
+  --color-primary-hover: #7ea2ff;
+  --color-success: #3ec888;
+  --color-warning: #e0ac2b;
+  --color-danger: #e06a5c;
+  --color-info: #3fb8de;
+  --shadow-elevated: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
 }
 
 body {
   background-color: var(--color-bg);
   color: var(--color-text-primary);
   font-feature-settings: "tnum" 1;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+/* Accessibility baseline (UI_UX_GUIDELINES.md section 8): focus states must
+   always be visible. This is a single global rule instead of every
+   component re-declaring its own focus-visible ring. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 0 0 0.375rem 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+/* Print layout (UI/PDF polish): navigation chrome, controls, and anything
+   explicitly opted out via .print-hidden disappear; content expands to full
+   width; colors are forced to a light, high-contrast palette regardless of
+   the active on-screen theme, since printed pages have no backlight to
+   rely on for a dark background to stay legible. */
+@media print {
+  .print-hidden,
+  header,
+  nav,
+  button,
+  .skip-link {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  body,
+  .dark {
+    background-color: #ffffff !important;
+    color: #16181d !important;
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-border: #cccccc;
+    --color-text-primary: #16181d;
+    --color-text-secondary: #444a55;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
 }

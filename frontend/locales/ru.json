@@ -21,7 +21,17 @@
     "remove": "Удалить",
     "delete": "Удалить",
     "activate": "Активировать",
-    "deactivate": "Деактивировать"
+    "deactivate": "Деактивировать",
+    "switchToLightMode": "Включить светлую тему",
+    "switchToDarkMode": "Включить тёмную тему",
+    "openNavigation": "Открыть навигацию",
+    "closeNavigation": "Закрыть навигацию",
+    "mainNavigation": "Основная навигация",
+    "columns": "Столбцы",
+    "resetColumns": "Сбросить столбцы",
+    "deleteSavedFilter": "Удалить сохранённый фильтр «{name}»",
+    "filterNamePlaceholder": "Название фильтра",
+    "saveCurrentFilters": "Сохранить текущие фильтры"
   },
   "nav": {
     "dashboard": "Панель управления",
@@ -222,7 +232,9 @@
     "convertToCustomer": "Конвертировать в клиента",
     "converting": "Конвертация...",
     "convertFailed": "Не удалось конвертировать лид.",
-    "searchPlaceholder": "Поиск по имени, телефону, эл. почте, кампании..."
+    "searchPlaceholder": "Поиск по имени, телефону, эл. почте, кампании...",
+    "leadCreated": "Лид создан.",
+    "leadConverted": "Лид преобразован в клиента."
   },
   "leadStatus": {
     "new": "Новый",
@@ -805,7 +817,8 @@
     "partially_paid": "Частично оплачен",
     "paid": "Оплачен",
     "overdue": "Просрочен",
-    "cancelled": "Отменён"
+    "cancelled": "Отменён",
+    "printInvoice": "Печать"
   },
   "tasks": {
     "title": "Задачи",

@@ -142,9 +142,9 @@ export default function ProjectsPage() {
       )}
 
       {projects && projects.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-border bg-bg text-text-secondary">
+            <thead className="sticky top-0 z-10 border-b border-border bg-bg text-text-secondary">
               <tr>
                 <th className="px-4 py-2 font-medium">{t("tableProject")}</th>
                 <th className="px-4 py-2 font-medium">{t("projectType")}</th>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { checkTaskReminders, listCustomers, listLeads, listTaskNotifications, listTasks } from "@/lib/api/crm";
@@ -69,42 +69,52 @@ export default function DashboardPage() {
 
   const loading = customers === null || leads === null;
 
-  const now = Date.now();
-  const overdueTasks = (myTasks ?? []).filter((task) => task.due_date && new Date(task.due_date).getTime() < now);
-  const dueTodayTasks = (myTasks ?? []).filter((task) => {
-    if (!task.due_date) return false;
-    const due = new Date(task.due_date);
+  // Memoized so re-renders triggered by unrelated state (locale/theme
+  // toggles, sibling component updates) don't re-run these O(n) filters/
+  // sorts over the full customers/leads/tasks arrays every time.
+  const { overdueTasks, dueTodayTasks, upcomingTasks } = useMemo(() => {
+    const tasks = myTasks ?? [];
+    const now = Date.now();
     const today = new Date();
-    return due.toDateString() === today.toDateString();
-  });
-  const upcomingTasks = [...(myTasks ?? [])]
-    .sort((a, b) => {
-      if (!a.due_date) return 1;
-      if (!b.due_date) return -1;
-      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-    })
-    .slice(0, 5);
+    return {
+      overdueTasks: tasks.filter((task) => task.due_date && new Date(task.due_date).getTime() < now),
+      dueTodayTasks: tasks.filter((task) => task.due_date && new Date(task.due_date).toDateString() === today.toDateString()),
+      upcomingTasks: [...tasks]
+        .sort((a, b) => {
+          if (!a.due_date) return 1;
+          if (!b.due_date) return -1;
+          return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+        })
+        .slice(0, 5),
+    };
+  }, [myTasks]);
 
-  const activeCustomers = customers?.filter((c) => c.deleted_at === null) ?? [];
+  const activeCustomers = useMemo(() => customers?.filter((c) => c.deleted_at === null) ?? [], [customers]);
 
-  const customersByStatus = CUSTOMER_STATUSES.map((status) => ({
-    status,
-    count: activeCustomers.filter((c) => c.status === status).length,
-  }));
+  const { customersByStatus, newInquiries, inProduction, lostCustomers, recentCustomers } = useMemo(() => {
+    return {
+      customersByStatus: CUSTOMER_STATUSES.map((status) => ({
+        status,
+        count: activeCustomers.filter((c) => c.status === status).length,
+      })),
+      newInquiries: activeCustomers.filter((c) => c.status === "new_inquiry").length,
+      inProduction: activeCustomers.filter(
+        (c) => c.status === "in_production" || c.status === "installation_scheduled"
+      ).length,
+      lostCustomers: activeCustomers.filter((c) => c.status === "lost").length,
+      recentCustomers: [...activeCustomers]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 5),
+    };
+  }, [activeCustomers]);
 
-  const newInquiries = activeCustomers.filter((c) => c.status === "new_inquiry").length;
-  const inProduction = activeCustomers.filter(
-    (c) => c.status === "in_production" || c.status === "installation_scheduled"
-  ).length;
-  const lostCustomers = activeCustomers.filter((c) => c.status === "lost").length;
-
-  const recentCustomers = [...activeCustomers]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5);
-
-  const recentLeads = [...(leads ?? [])]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5);
+  const recentLeads = useMemo(
+    () =>
+      [...(leads ?? [])]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 5),
+    [leads]
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -255,9 +265,9 @@ export default function DashboardPage() {
             {recentLeads.length === 0 ? (
               <EmptyState title={t("noLeadsYet")} description={t("noLeadsDesc")} />
             ) : (
-              <div className="overflow-hidden rounded-md border border-border">
+              <div className="overflow-x-auto rounded-md border border-border">
                 <table className="w-full text-left text-sm">
-                  <thead className="border-b border-border bg-bg text-text-secondary">
+                  <thead className="sticky top-0 z-10 border-b border-border bg-bg text-text-secondary">
                     <tr>
                       <th className="px-4 py-2 font-medium">{t("tableName")}</th>
                       <th className="px-4 py-2 font-medium">{t("tableChannel")}</th>

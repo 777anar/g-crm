@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { ToastProvider } from "@/components/ui/toast";
 import { getAccessToken } from "@/lib/session";
 
 export default function AppGroupLayout({ children }: { children: React.ReactNode }) {
@@ -19,5 +20,9 @@ export default function AppGroupLayout({ children }: { children: React.ReactNode
 
   if (!ready) return null;
 
-  return <AppShell>{children}</AppShell>;
+  return (
+    <ToastProvider>
+      <AppShell>{children}</AppShell>
+    </ToastProvider>
+  );
 }
