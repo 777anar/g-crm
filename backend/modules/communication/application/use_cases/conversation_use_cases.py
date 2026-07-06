@@ -9,8 +9,9 @@ directly (CustomerModel lookups, CreateLeadUseCase) -- the same pattern
 Production/Installation/Finance use for their own cross-module calls, rather
 than the (unused, in this codebase) event-subscription mechanism.
 """
+import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -30,6 +31,7 @@ from modules.communication.application.dtos import (
     SendMessageInput,
     UpdateConversationInput,
 )
+from modules.communication.application.use_cases._provider_resolution import resolve_provider_and_credential
 from modules.communication.domain import events as comm_events
 from modules.communication.domain.exceptions import ChannelInactiveError
 from modules.communication.domain.value_objects import (
@@ -37,28 +39,35 @@ from modules.communication.domain.value_objects import (
     CHANNEL_LEAD_SOURCE,
     CONVERSATION_STATUS_CLOSED,
     CONVERSATION_STATUS_OPEN,
+    DEFAULT_MAX_QUEUE_ATTEMPTS,
     DEFAULT_MESSAGE_TYPE,
+    LOG_DIRECTION_OUTBOUND,
     MESSAGE_DIRECTION_INBOUND,
     MESSAGE_DIRECTION_OUTBOUND,
+    MESSAGE_STATUS_FAILED,
     MESSAGE_STATUS_RECEIVED,
     MESSAGE_STATUS_SENT,
+    QUEUE_STATUS_PENDING,
     SENDER_TYPE_AGENT,
     SENDER_TYPE_CUSTOMER,
     VALID_CONVERSATION_STATUSES,
 )
 from modules.communication.infrastructure.models.conversation import Conversation
 from modules.communication.infrastructure.models.conversation_note import ConversationNote
+from modules.communication.infrastructure.models.integration_log_entry import IntegrationLogEntry
 from modules.communication.infrastructure.models.message import Message
 from modules.communication.infrastructure.models.message_attachment import MessageAttachment
-from modules.communication.infrastructure.providers.registry import get_provider_for_channel
+from modules.communication.infrastructure.models.message_queue_entry import MessageQueueEntry
 from modules.communication.infrastructure.repositories.channel_repository import ChannelRepository
 from modules.communication.infrastructure.repositories.conversation_note_repository import (
     ConversationNoteRepository,
 )
 from modules.communication.infrastructure.repositories.conversation_repository import ConversationRepository
+from modules.communication.infrastructure.repositories.integration_log_repository import IntegrationLogRepository
 from modules.communication.infrastructure.repositories.message_attachment_repository import (
     MessageAttachmentRepository,
 )
+from modules.communication.infrastructure.repositories.message_queue_repository import MessageQueueRepository
 from modules.communication.infrastructure.repositories.message_repository import MessageRepository
 from modules.crm.application.dtos import CreateLeadInput
 from modules.crm.application.use_cases import CreateLeadUseCase
@@ -278,11 +287,26 @@ class ReceiveInboundMessageUseCase:
 
 
 class SendMessageUseCase:
+    """Sends through whatever provider `resolve_provider_and_credential`
+    resolves for this channel -- NullChannelProvider when no
+    ChannelCredential is configured (every pre-2.9 channel, and every
+    pre-2.9 test, behaves exactly as before), a real provider once one is.
+
+    A real provider raising (network error, rate limit, bad credentials)
+    does not fail this call: the Message is still recorded (status=failed),
+    a MessageQueueEntry is created so ProcessMessageQueueUseCase can retry
+    it, and the attempt is logged to IntegrationLogEntry -- "Retry queue"
+    and "Error handling" per Version 2.9's requirements, without ever
+    surfacing a raw provider exception as a 500 to the agent who clicked
+    Send."""
+
     def __init__(self, db: Session):
         self.db = db
         self.conversations = ConversationRepository(db)
         self.channels = ChannelRepository(db)
         self.messages = MessageRepository(db)
+        self.queue = MessageQueueRepository(db)
+        self.logs = IntegrationLogRepository(db)
 
     def execute(self, data: SendMessageInput) -> Message:
         conversation = self.conversations.get(company_id=data.company_id, conversation_id=data.conversation_id)
@@ -295,13 +319,21 @@ class SendMessageUseCase:
             raise ChannelInactiveError("This channel is deactivated and cannot send messages")
 
         message_type = data.message_type or DEFAULT_MESSAGE_TYPE
-        provider = get_provider_for_channel(channel.channel_type)
-        external_message_id = provider.send(
-            channel=channel,
-            external_contact_id=conversation.external_contact_id,
-            body=data.body,
-            message_type=message_type,
-        )
+        provider, credential = resolve_provider_and_credential(self.db, channel)
+
+        started = time.perf_counter()
+        external_message_id: Optional[str] = None
+        send_error: Optional[str] = None
+        try:
+            external_message_id = provider.send(
+                channel=channel,
+                external_contact_id=conversation.external_contact_id,
+                body=data.body,
+                message_type=message_type,
+            )
+        except Exception as exc:  # noqa: BLE001 -- any provider failure is queued for retry, not raised to the caller
+            send_error = str(exc)
+        duration_ms = int((time.perf_counter() - started) * 1000)
 
         message = Message(
             company_id=data.company_id,
@@ -313,9 +345,36 @@ class SendMessageUseCase:
             body=data.body,
             template_id=data.template_id,
             external_message_id=external_message_id,
-            status=MESSAGE_STATUS_SENT,
+            status=MESSAGE_STATUS_FAILED if send_error else MESSAGE_STATUS_SENT,
         )
         self.messages.add(message)
+
+        if send_error:
+            self.queue.add(
+                MessageQueueEntry(
+                    company_id=data.company_id, message_id=message.id, channel_id=channel.id,
+                    status=QUEUE_STATUS_PENDING, attempts=0, max_attempts=DEFAULT_MAX_QUEUE_ATTEMPTS,
+                    next_attempt_at=_now() + timedelta(minutes=1), last_error=send_error,
+                )
+            )
+            event_bus.publish(
+                Event(
+                    name=comm_events.MESSAGE_QUEUED_FOR_RETRY,
+                    company_id=data.company_id,
+                    payload={"message_id": str(message.id), "channel_id": str(channel.id), "error": send_error},
+                    published_by_module=MODULE_NAME,
+                ),
+                self.db,
+            )
+
+        if credential is not None:
+            self.logs.add(
+                IntegrationLogEntry(
+                    company_id=data.company_id, channel_id=channel.id, provider=credential.provider,
+                    direction=LOG_DIRECTION_OUTBOUND, action="send_message",
+                    success=send_error is None, error_message=send_error, duration_ms=duration_ms,
+                )
+            )
 
         conversation.last_message_at = _now()
         conversation.last_message_preview = (data.body or "")[:300]
@@ -328,7 +387,7 @@ class SendMessageUseCase:
             action="message.sent",
             entity_type="message",
             entity_id=message.id,
-            diff={"conversation_id": str(conversation.id)},
+            diff={"conversation_id": str(conversation.id), "status": message.status},
         )
         self.db.flush()
 

@@ -1,10 +1,13 @@
 import { apiRequest } from "../api-client";
 import type {
   Channel,
+  ChannelCredential,
   Conversation,
   ConversationNote,
+  IntegrationLogEntry,
   Message,
   MessageAttachment,
+  MessageQueueEntry,
   MessageTemplate,
   Paginated,
 } from "../types";
@@ -176,4 +179,56 @@ export function updateTemplate(
   input: { name?: string; body?: string; channel_type?: string; shortcut?: string; is_active?: boolean }
 ) {
   return apiRequest<MessageTemplate>(`${BASE}/templates/${id}`, { method: "PATCH", body: input });
+}
+
+// ── Real integrations (Version 2.9) ──────────────────────────────────────────
+
+export function getChannelCredential(channelId: string) {
+  return apiRequest<ChannelCredential>(`${BASE}/channels/${channelId}/credential`);
+}
+
+export function configureChannelCredential(
+  channelId: string,
+  input: { provider: string; config: Record<string, unknown>; webhook_secret?: string }
+) {
+  return apiRequest<ChannelCredential>(`${BASE}/channels/${channelId}/credential`, { method: "PUT", body: input });
+}
+
+export function removeChannelCredential(channelId: string) {
+  return apiRequest<{ ok: boolean }>(`${BASE}/channels/${channelId}/credential`, { method: "DELETE" });
+}
+
+export function testChannelConnection(channelId: string) {
+  return apiRequest<{ ok: boolean; detail: string; health_status: string }>(
+    `${BASE}/channels/${channelId}/test-connection`,
+    { method: "POST" }
+  );
+}
+
+export function syncImapMailbox(channelId: string) {
+  return apiRequest<{ synced_count: number }>(`${BASE}/channels/${channelId}/imap-sync`, { method: "POST" });
+}
+
+export function listMessageQueue(params: { status?: string; limit?: number } = {}) {
+  return apiRequest<{ items: MessageQueueEntry[] }>(`${BASE}/queue`, { searchParams: params });
+}
+
+export function processMessageQueue(limit?: number) {
+  return apiRequest<{ processed: number; sent: number; failed: number; still_pending: number }>(
+    `${BASE}/queue/process`,
+    { method: "POST", searchParams: { limit } }
+  );
+}
+
+export function listIntegrationLogs(
+  params: { channelId?: string; provider?: string; direction?: string; limit?: number } = {}
+) {
+  return apiRequest<{ items: IntegrationLogEntry[] }>(`${BASE}/integration-logs`, {
+    searchParams: {
+      channel_id: params.channelId,
+      provider: params.provider,
+      direction: params.direction,
+      limit: params.limit,
+    },
+  });
 }

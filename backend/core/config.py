@@ -23,5 +23,11 @@ class Settings(BaseSettings):
 
     cors_allow_origins: list[str] = ["http://localhost:3000"]
 
+    # Symmetric key protecting third-party integration credentials at rest
+    # (modules/communication/infrastructure/security/encryption.py). Any
+    # string works -- it's stretched into a proper Fernet key via SHA-256,
+    # so operators don't need to hand-generate a base64 Fernet key.
+    channel_credentials_encryption_key: str = "dev-channel-credentials-key-change-me"
+
 
 settings = Settings()

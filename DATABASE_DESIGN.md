@@ -509,6 +509,58 @@ _Note: provider-agnostic AI recommendations layered on CRM, Communication, Sales
 
 One table covers all 27 recommendation types, discriminated by `recommendation_type`, rather than one table per type — the same pattern as `communication_message_templates` covering both templates and quick replies. **Nothing in this module ever writes to another module's tables** as a side effect of analysis or of a review decision — accepting/rejecting/editing a recommendation only ever updates this table's own `status`/`reviewed_by`/`reviewed_at`/`edited_response` columns, which is what makes "AI never performs business actions automatically" a structural property rather than a UI convention.
 
+## 5.8 Real Integrations Module Tables (Version 2.9 — as actually implemented, extends Communication Center §5.6)
+
+_Note: real WhatsApp/Instagram/Messenger (Meta Graph API), SMTP/IMAP email, and Twilio SMS providers, plus a generic webhook provider, layered onto the existing `communication_channels` table without changing its shape. A channel with no `communication_channel_credentials` row keeps using `NullChannelProvider` exactly as in Version 2.7 — configuring a credential is what "upgrades" a channel to a real integration._
+
+### 5.8.1 `communication_channel_credentials`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, REFERENCES companies(id), indexed |
+| channel_id | UUID | NOT NULL, REFERENCES communication_channels(id), **UNIQUE**, indexed — at most one credential per channel |
+| provider | TEXT(30) | NOT NULL — one of `meta_whatsapp`\|`meta_instagram`\|`meta_messenger`\|`smtp`\|`twilio_sms`\|`webhook` |
+| encrypted_config | TEXT | NOT NULL — a Fernet-encrypted JSON blob (host/port/account ids/tokens/passwords, whatever the provider needs); never returned to the frontend unencrypted or unmasked |
+| webhook_secret_encrypted | TEXT | nullable, encrypted |
+| imap_last_synced_uid | INTEGER | nullable — the sync cursor for `email` channels, so `SyncImapMailboxUseCase` only ever fetches what's new |
+| health_status | TEXT(20) | NOT NULL, default `unknown` (`unknown`\|`ok`\|`error`) |
+| last_checked_at | TIMESTAMPTZ | nullable |
+| last_error | TEXT | nullable |
+| created_by | UUID | nullable, REFERENCES users(id) |
+
+### 5.8.2 `communication_message_queue`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| message_id | UUID | NOT NULL, REFERENCES communication_messages(id), indexed |
+| channel_id | UUID | NOT NULL, REFERENCES communication_channels(id), indexed |
+| status | TEXT(20) | NOT NULL, default `pending`, indexed (`pending`\|`processing`\|`sent`\|`failed`) |
+| attempts | INTEGER | NOT NULL, default `0` |
+| max_attempts | INTEGER | NOT NULL, default `5` |
+| next_attempt_at | TIMESTAMPTZ | nullable, indexed |
+| last_error | TEXT | nullable |
+
+A real provider send failure never surfaces as a 500 — the Message is recorded `failed` and a row is created here for `POST /communication/queue/process` to retry (exponential backoff, permanently `failed` after `max_attempts`), since this codebase has no background job scheduler.
+
+### 5.8.3 `communication_integration_logs`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | nullable, indexed — nullable only in principle; always resolved from the channel in practice |
+| channel_id | UUID | nullable, REFERENCES communication_channels(id), indexed |
+| provider | TEXT(30) | NOT NULL, indexed |
+| direction | TEXT(10) | NOT NULL, indexed (`outbound`\|`inbound`) |
+| action | TEXT(30) | NOT NULL, indexed — `send_message`\|`test_connection`\|`queue_retry`\|`imap_sync`\|`receive_webhook` |
+| success | BOOLEAN | NOT NULL |
+| status_code | INTEGER | nullable |
+| signature_valid | BOOLEAN | nullable — set only for `direction=inbound` rows |
+| error_message | TEXT | nullable |
+| duration_ms | INTEGER | nullable |
+| payload | JSON | nullable — the request/webhook payload, for diagnostics |
+
+One table, discriminated by `direction`/`action`, backs three admin surfaces at once — Provider Diagnostics, Logs, and the Webhook Monitor (`direction=inbound`) — the same single-table-per-concern pattern `ai_recommendations` established in §5.7. A rejected webhook signature is still logged (`success=false`, `signature_valid=false`) rather than dropped, since it's itself an operational signal.
+
 ## 6. Future-Phase Module Schemas (conceptual — not migrated in Phase 1)
 
 Kept here only so foreign-key shapes are pre-considered and won't surprise later modules.

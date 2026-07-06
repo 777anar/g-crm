@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { labelKey: "tasks", href: "/crm/tasks" },
   { labelKey: "inbox", href: "/communication/inbox" },
   { labelKey: "channels", href: "/communication/channels" },
+  { labelKey: "integrations", href: "/communication/integrations" },
   { labelKey: "messageTemplates", href: "/communication/templates" },
   { labelKey: "catalog", href: "/catalog/materials" },
   { labelKey: "brands", href: "/catalog/brands" },

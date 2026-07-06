@@ -1,7 +1,7 @@
 """Application-layer input DTOs for the Communication Center module."""
 import uuid
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -97,3 +97,47 @@ class UpdateMessageTemplateInput(ActorContext):
     channel_type: Optional[str] = None
     shortcut: Optional[str] = None
     is_active: Optional[bool] = None
+
+
+# ── Real integrations (Version 2.9) ─────────────────────────────────────────
+
+
+@dataclass
+class ConfigureChannelCredentialInput(ActorContext):
+    channel_id: uuid.UUID
+    provider: str
+    config: Dict[str, Any]
+    webhook_secret: Optional[str] = None
+
+
+@dataclass
+class TestChannelConnectionInput(ActorContext):
+    channel_id: uuid.UUID
+
+
+@dataclass
+class ProcessMessageQueueInput(ActorContext):
+    limit: int = 50
+
+
+@dataclass
+class SyncImapMailboxInput(ActorContext):
+    channel_id: uuid.UUID
+
+
+@dataclass
+class UpdateMessageDeliveryStatusInput:
+    company_id: uuid.UUID
+    actor_user_id: uuid.UUID
+    external_message_id: str
+    new_status: str
+    channel_id: Optional[uuid.UUID] = None
+
+
+@dataclass
+class ReceiveProviderWebhookInput:
+    channel_id: uuid.UUID
+    provider: str
+    raw_body: bytes
+    signature_header: Optional[str]
+    parsed_payload: Dict[str, Any]

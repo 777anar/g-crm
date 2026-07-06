@@ -840,7 +840,7 @@ export type FinanceAnalytics = {
 
 // ── Communication Center (Version 2.7) ───────────────────────────────────────
 
-export const CHANNEL_TYPES = ["whatsapp", "instagram", "messenger", "email", "sms"] as const;
+export const CHANNEL_TYPES = ["whatsapp", "instagram", "messenger", "email", "sms", "webhook"] as const;
 export type ChannelType = (typeof CHANNEL_TYPES)[number];
 
 export type Channel = {
@@ -897,7 +897,7 @@ export type Message = {
   body: string | null;
   template_id: string | null;
   external_message_id: string | null;
-  status: "received" | "sent" | "delivered" | "read" | "failed";
+  status: "received" | "queued" | "sent" | "delivered" | "read" | "failed";
   created_at: string;
   updated_at: string;
 };
@@ -929,6 +929,74 @@ export type MessageTemplate = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// ── Real Integrations (Version 2.9) ──────────────────────────────────────────
+
+export const PROVIDER_NAMES = [
+  "meta_whatsapp",
+  "meta_instagram",
+  "meta_messenger",
+  "smtp",
+  "twilio_sms",
+  "webhook",
+] as const;
+export type ProviderName = (typeof PROVIDER_NAMES)[number];
+
+export const PROVIDERS_FOR_CHANNEL_TYPE: Record<ChannelType, ProviderName[]> = {
+  whatsapp: ["meta_whatsapp"],
+  instagram: ["meta_instagram"],
+  messenger: ["meta_messenger"],
+  email: ["smtp"],
+  sms: ["twilio_sms"],
+  webhook: ["webhook"],
+};
+
+export const HEALTH_STATUSES = ["unknown", "ok", "error"] as const;
+export type HealthStatus = (typeof HEALTH_STATUSES)[number];
+
+export type ChannelCredential = {
+  id: string;
+  channel_id: string;
+  provider: ProviderName;
+  masked_config: Record<string, unknown>;
+  has_webhook_secret: boolean;
+  health_status: HealthStatus;
+  last_checked_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const QUEUE_STATUSES = ["pending", "processing", "sent", "failed"] as const;
+export type QueueStatus = (typeof QUEUE_STATUSES)[number];
+
+export type MessageQueueEntry = {
+  id: string;
+  message_id: string;
+  channel_id: string;
+  status: QueueStatus;
+  attempts: number;
+  max_attempts: number;
+  next_attempt_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type IntegrationLogEntry = {
+  id: string;
+  channel_id: string | null;
+  provider: string;
+  direction: "outbound" | "inbound";
+  action: string;
+  success: boolean;
+  status_code: number | null;
+  signature_valid: boolean | null;
+  error_message: string | null;
+  duration_ms: number | null;
+  payload: unknown;
+  created_at: string;
 };
 
 // ── AI Sales Assistant (Version 2.8) ─────────────────────────────────────────

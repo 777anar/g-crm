@@ -294,3 +294,36 @@ Provider-agnostic AI recommendations layered on top of CRM, Communication, Sales
 | GET | `/ai/recommendations/{id}` | `ai:recommendations:read` | Get one recommendation, including its full audit fields (`provider`, `model`, `prompt`, `response`, `confidence_score`, `execution_time_ms`, `requested_by`) |
 | POST | `/ai/recommendations/{id}/review` | `ai:recommendations:write` | Body `{decision: "accept"\|"reject"\|"edit", edited_response?}` — sets the recommendation's own status only (`accepted`/`rejected`/`edited`) and records `reviewed_by`/`reviewed_at` — `422` if already reviewed (a decision is final) — publishes `RecommendationAccepted`/`RecommendationRejected`/`RecommendationEdited` |
 | GET | `/ai/dashboard` | `ai:dashboard:read` | Aggregated AI Dashboard: lead score distribution, pipeline health, average win probability, at-risk customers, follow-up recommendations, today's recommendations, recent activity feed, and usage statistics (status/provider counts, acceptance rate, average execution time) |
+
+## 15. Real Integrations Endpoints (`/api/v1/communication/...`, Version 2.9, as actually implemented)
+
+Extends the Communication Center (§13) with real provider connections. **The `ChannelProvider` interface (`send()`/`test_connection()`) is completely unchanged from Version 2.7** — every real provider below is a new implementation of that same interface, constructed with per-channel decrypted credentials; `NullChannelProvider` remains the default for any channel with no credential configured, so every pre-2.9 behavior (and every pre-2.9 test) is unaffected. Real providers: WhatsApp Business Cloud API, Instagram Messaging API, and Messenger Send API (all three via the Meta Graph API), SMTP (outbound email) + IMAP (inbound sync, one credential per `email` channel), Twilio SMS, and a generic outbound/inbound webhook provider for arbitrary partner systems.
+
+**Credential management** (owner-only write, manager-tier read, per the `settings:read`/`settings:write` RBAC action-suffix convention):
+
+| Method | Path | Permission | Description |
+|---|---|---|---|
+| GET | `/communication/channels/{channel_id}/credential` | `communication:channels:settings:read` | Get a channel's configured provider + **masked** config (secret-looking fields reduced to their last 4 characters; non-secret fields like `phone_number_id`/`from_address` shown in full) + health status |
+| PUT | `/communication/channels/{channel_id}/credential` | `communication:channels:settings:write` | Configure/replace a channel's provider credentials — encrypted at rest (Fernet, keyed by `CHANNEL_CREDENTIALS_ENCRYPTION_KEY`) — validates `provider` is valid for the channel's `channel_type`; resets `health_status` to `unknown` until re-verified |
+| DELETE | `/communication/channels/{channel_id}/credential` | `communication:channels:settings:write` | Removes the credential — the channel reverts to `NullChannelProvider` |
+
+**Operational endpoints** (no secrets exposed, so normal read/write tiers apply):
+
+| Method | Path | Permission | Description |
+|---|---|---|---|
+| POST | `/communication/channels/{channel_id}/test-connection` | `communication:integrations:write` | Calls the real provider's `test_connection()` (a lightweight read-only API call, e.g. WhatsApp's phone-number lookup, Twilio's account lookup, an SMTP/IMAP login) — records `health_status`/`last_checked_at`/`last_error` on the credential and logs the attempt |
+| POST | `/communication/channels/{channel_id}/imap-sync` | `communication:integrations:write` | Pull-triggered IMAP sync (email has no push/webhook) — fetches new messages since the last synced UID, creates inbound Messages + MessageAttachments (via the shared core Documents pipeline), advances the sync cursor |
+| GET | `/communication/queue?status=&limit=` | `communication:integrations:read` | Lists the outbound retry queue (`MessageQueueEntry`) — a real provider send failure never surfaces as a 500 to the agent; the Message is recorded `failed` and queued here instead |
+| POST | `/communication/queue/process?limit=` | `communication:integrations:write` | Re-attempts every due queue entry (exponential backoff between attempts, permanently `failed` after `max_attempts`) — pull-triggered, since this codebase has no background job scheduler, exactly like Tasks & Reminders' `POST /crm/task-notifications/check` |
+| GET | `/communication/integration-logs?channel_id=&provider=&direction=&limit=` | `communication:integrations:read` | Every provider interaction, both `outbound` (send/test-connection/imap-sync attempts we made) and `inbound` (webhook deliveries a provider sent us, including rejected/invalid-signature ones) — backs Provider Diagnostics, Logs, and the Webhook Monitor admin views at once |
+
+**Public webhook endpoints** (no `Authorization` header — external providers never carry our JWTs; trust comes entirely from each provider's own signature scheme, verified before any payload is treated as authentic):
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/communication/webhooks/meta/{channel_id}` | Meta's one-time subscription verification handshake (`hub.mode`/`hub.verify_token`/`hub.challenge`) |
+| POST | `/communication/webhooks/meta/{channel_id}` | WhatsApp/Instagram/Messenger inbound messages and delivery/read status callbacks — verifies `X-Hub-Signature-256` (HMAC-SHA256 over the raw body, keyed by the channel's `app_secret`) |
+| POST | `/communication/webhooks/twilio/{channel_id}` | Twilio inbound SMS and delivery status callbacks (form-encoded) — verifies `X-Twilio-Signature` (HMAC-SHA1 over the full callback URL + sorted form params, base64-encoded, keyed by `auth_token`) |
+| POST | `/communication/webhooks/generic/{channel_id}` | Generic partner webhook — verifies `X-Signature-256` (HMAC-SHA256 over the raw JSON body, keyed by the channel's configured secret) |
+
+A rejected signature returns `403` and is still logged (`direction=inbound`, `signature_valid=false`) rather than silently dropped, since a misconfigured secret or a spoofing attempt is itself an operational signal worth surfacing in the Webhook Monitor. A processing error *after* signature verification succeeds never propagates as a 500 to the provider (which would trigger its own retry storm) — it's caught, logged, and the endpoint still returns `200`.

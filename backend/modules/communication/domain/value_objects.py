@@ -8,13 +8,77 @@ CHANNEL_TYPE_INSTAGRAM = "instagram"
 CHANNEL_TYPE_MESSENGER = "messenger"
 CHANNEL_TYPE_EMAIL = "email"
 CHANNEL_TYPE_SMS = "sms"
+CHANNEL_TYPE_WEBHOOK = "webhook"
 VALID_CHANNEL_TYPES = {
     CHANNEL_TYPE_WHATSAPP,
     CHANNEL_TYPE_INSTAGRAM,
     CHANNEL_TYPE_MESSENGER,
     CHANNEL_TYPE_EMAIL,
     CHANNEL_TYPE_SMS,
+    CHANNEL_TYPE_WEBHOOK,
 }
+
+# ── Real integration providers (Version 2.9) ────────────────────────────────
+#
+# `NullChannelProvider` remains the default for every channel type (see
+# infrastructure/providers/registry.py) -- a channel only gets a real
+# provider once a company explicitly configures credentials for it via
+# ChannelCredential. This is what keeps every existing Communication Center
+# behavior (and every pre-2.9 test) unchanged: no credential row means no
+# behavior change at all.
+
+PROVIDER_NULL = "null"
+PROVIDER_META_WHATSAPP = "meta_whatsapp"
+PROVIDER_META_INSTAGRAM = "meta_instagram"
+PROVIDER_META_MESSENGER = "meta_messenger"
+PROVIDER_SMTP = "smtp"
+PROVIDER_TWILIO_SMS = "twilio_sms"
+PROVIDER_WEBHOOK = "webhook"
+VALID_PROVIDERS = {
+    PROVIDER_NULL,
+    PROVIDER_META_WHATSAPP,
+    PROVIDER_META_INSTAGRAM,
+    PROVIDER_META_MESSENGER,
+    PROVIDER_SMTP,
+    PROVIDER_TWILIO_SMS,
+    PROVIDER_WEBHOOK,
+}
+
+# Which real provider(s) a given channel_type may be configured with -- e.g.
+# you cannot point a `sms` channel at the `meta_whatsapp` provider. `email`
+# maps to `smtp` for sending; IMAP sync is configured on the same credential
+# row (see ChannelCredential) since a mailbox needs both to be a channel.
+VALID_PROVIDERS_FOR_CHANNEL_TYPE = {
+    CHANNEL_TYPE_WHATSAPP: {PROVIDER_META_WHATSAPP},
+    CHANNEL_TYPE_INSTAGRAM: {PROVIDER_META_INSTAGRAM},
+    CHANNEL_TYPE_MESSENGER: {PROVIDER_META_MESSENGER},
+    CHANNEL_TYPE_EMAIL: {PROVIDER_SMTP},
+    CHANNEL_TYPE_SMS: {PROVIDER_TWILIO_SMS},
+    CHANNEL_TYPE_WEBHOOK: {PROVIDER_WEBHOOK},
+}
+
+# ── Health monitoring ────────────────────────────────────────────────────────
+
+HEALTH_STATUS_UNKNOWN = "unknown"
+HEALTH_STATUS_OK = "ok"
+HEALTH_STATUS_ERROR = "error"
+VALID_HEALTH_STATUSES = {HEALTH_STATUS_UNKNOWN, HEALTH_STATUS_OK, HEALTH_STATUS_ERROR}
+
+# ── Retry queue ──────────────────────────────────────────────────────────────
+
+QUEUE_STATUS_PENDING = "pending"
+QUEUE_STATUS_PROCESSING = "processing"
+QUEUE_STATUS_SENT = "sent"
+QUEUE_STATUS_FAILED = "failed"
+VALID_QUEUE_STATUSES = {QUEUE_STATUS_PENDING, QUEUE_STATUS_PROCESSING, QUEUE_STATUS_SENT, QUEUE_STATUS_FAILED}
+TERMINAL_QUEUE_STATUSES = {QUEUE_STATUS_SENT, QUEUE_STATUS_FAILED}
+DEFAULT_MAX_QUEUE_ATTEMPTS = 5
+
+# ── Integration logs ─────────────────────────────────────────────────────────
+
+LOG_DIRECTION_OUTBOUND = "outbound"
+LOG_DIRECTION_INBOUND = "inbound"
+VALID_LOG_DIRECTIONS = {LOG_DIRECTION_OUTBOUND, LOG_DIRECTION_INBOUND}
 
 # ── Conversations ────────────────────────────────────────────────────────────
 
@@ -61,12 +125,14 @@ VALID_MESSAGE_TYPES = {
 DEFAULT_MESSAGE_TYPE = MESSAGE_TYPE_TEXT
 
 MESSAGE_STATUS_RECEIVED = "received"
+MESSAGE_STATUS_QUEUED = "queued"
 MESSAGE_STATUS_SENT = "sent"
 MESSAGE_STATUS_DELIVERED = "delivered"
 MESSAGE_STATUS_READ = "read"
 MESSAGE_STATUS_FAILED = "failed"
 VALID_MESSAGE_STATUSES = {
     MESSAGE_STATUS_RECEIVED,
+    MESSAGE_STATUS_QUEUED,
     MESSAGE_STATUS_SENT,
     MESSAGE_STATUS_DELIVERED,
     MESSAGE_STATUS_READ,

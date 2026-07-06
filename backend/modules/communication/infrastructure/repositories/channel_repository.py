@@ -21,6 +21,13 @@ class ChannelRepository:
             select(Channel).where(Channel.id == channel_id, Channel.company_id == company_id)
         )
 
+    def get_by_id_any_company(self, channel_id: uuid.UUID) -> Optional[Channel]:
+        """Unscoped by company -- used only by public webhook receivers,
+        which have no authenticated active-company context and must resolve
+        company_id *from* the channel, not the other way around. Every
+        other caller in this codebase goes through `get()` instead."""
+        return self.db.scalar(select(Channel).where(Channel.id == channel_id))
+
     def list(
         self,
         *,
