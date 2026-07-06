@@ -15,10 +15,11 @@ import {
 } from "@/lib/api/orders";
 import { createWorkOrder, getWorkOrderForOrder } from "@/lib/api/production";
 import { createInstallationJob, getInstallationJobForOrder } from "@/lib/api/installation";
-import type { Order, OrderItem, OrderMeasurement, OrderSection, WorkOrder, InstallationJob } from "@/lib/types";
+import { createInvoice, getInvoiceForOrder } from "@/lib/api/finance";
+import type { Order, OrderItem, OrderMeasurement, OrderSection, WorkOrder, InstallationJob, Invoice } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { OrderStatusBadge, WorkOrderStatusBadge, InstallationJobStatusBadge } from "@/components/ui/badge";
+import { OrderStatusBadge, WorkOrderStatusBadge, InstallationJobStatusBadge, InvoiceStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiRequestError } from "@/lib/api-client";
 
@@ -61,10 +62,12 @@ export default function OrderDetailPage() {
   const [sectionData, setSectionData] = useState<SectionData[] | null>(null);
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [installationJob, setInstallationJob] = useState<InstallationJob | null>(null);
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [transitioning, setTransitioning] = useState(false);
   const [creatingWorkOrder, setCreatingWorkOrder] = useState(false);
   const [creatingInstallationJob, setCreatingInstallationJob] = useState(false);
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
   const [cancelMode, setCancelMode] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [editMode, setEditMode] = useState(false);
@@ -120,6 +123,16 @@ export default function OrderDetailPage() {
       }
     }
 
+    try {
+      setInvoice(await getInvoiceForOrder(id));
+    } catch (err) {
+      if (err instanceof ApiRequestError && err.status === 404) {
+        setInvoice(null);
+      } else {
+        throw err;
+      }
+    }
+
     setLoading(false);
   }, [id]);
 
@@ -142,6 +155,16 @@ export default function OrderDetailPage() {
       await reload();
     } finally {
       setCreatingInstallationJob(false);
+    }
+  }
+
+  async function handleCreateInvoice() {
+    setCreatingInvoice(true);
+    try {
+      await createInvoice(id);
+      await reload();
+    } finally {
+      setCreatingInvoice(false);
     }
   }
 
@@ -278,6 +301,27 @@ export default function OrderDetailPage() {
           <p className="text-sm text-text-secondary">{t("noInstallationJobYet")}</p>
           <Button onClick={handleCreateInstallationJob} disabled={creatingInstallationJob}>
             {creatingInstallationJob ? t("saving") : t("createInstallationJob")}
+          </Button>
+        </Card>
+      ) : null}
+
+      {/* Invoice */}
+      {invoice ? (
+        <Card className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-text-secondary">{t("invoice")}:</span>
+            <span className="font-mono text-sm font-medium text-text-primary">{invoice.invoice_number}</span>
+            <InvoiceStatusBadge status={invoice.status} />
+          </div>
+          <Link href={`/finance/invoices/${invoice.id}`} className="text-sm text-primary hover:underline">
+            {t("viewInvoice")} →
+          </Link>
+        </Card>
+      ) : ["ready", "delivered", "installed", "completed"].includes(order.status) ? (
+        <Card className="flex items-center justify-between">
+          <p className="text-sm text-text-secondary">{t("noInvoiceYet")}</p>
+          <Button onClick={handleCreateInvoice} disabled={creatingInvoice}>
+            {creatingInvoice ? t("saving") : t("createInvoice")}
           </Button>
         </Card>
       ) : null}

@@ -690,6 +690,87 @@ export type InstallationAnalytics = {
   }[];
 };
 
+// ── Finance module ────────────────────────────────────────────────────────────
+
+export const INVOICE_STATUSES = [
+  "draft",
+  "sent",
+  "partially_paid",
+  "paid",
+  "overdue",
+  "cancelled",
+] as const;
+export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
+
+export type Invoice = {
+  id: string;
+  company_id: string;
+  order_id: string;
+  customer_id: string;
+  installation_job_id: string | null;
+  invoice_number: string;
+  status: InvoiceStatus;
+  currency: string;
+  subtotal_amount: string;
+  total_amount: string;
+  amount_paid: string;
+  balance_due: string;
+  issue_date: string;
+  due_date: string | null;
+  notes: string | null;
+  sent_at: string | null;
+  paid_at: string | null;
+  cancelled_at: string | null;
+  cancelled_reason: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InvoiceLine = {
+  id: string;
+  company_id: string;
+  invoice_id: string;
+  description: string;
+  amount: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export const PAYMENT_METHODS = ["cash", "bank_transfer", "card", "check", "other"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export type Payment = {
+  id: string;
+  company_id: string;
+  invoice_id: string;
+  amount: string;
+  method: PaymentMethod;
+  paid_at: string;
+  reference_note: string | null;
+  recorded_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const EXPENSE_CATEGORIES = ["materials", "labor", "transport", "utilities", "rent", "other"] as const;
+export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+
+export type Expense = {
+  id: string;
+  company_id: string;
+  order_id: string | null;
+  category: ExpenseCategory;
+  description: string | null;
+  amount: string;
+  currency: string;
+  expense_date: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type FinanceAnalytics = {
   date_from: string;
   date_to: string;

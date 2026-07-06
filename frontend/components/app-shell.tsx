@@ -11,11 +11,10 @@ import { QuickCreateMenu } from "@/components/quick-create-menu";
 
 // Dashboard is core-platform navigation, always present regardless of which
 // modules are installed. The remaining items mirror each enabled module's
-// navigation contribution -- per UI_UX_GUIDELINES.md section 6.1. CRM and
-// Catalog are installed as of Version 2.0, so this list mirrors
-// backend/modules/crm/navigation.py and backend/modules/catalog/navigation.py
-// directly. A future phase replaces the module portion with a real
-// GET /nav-config call once per-company enablement matters.
+// navigation contribution -- per UI_UX_GUIDELINES.md section 6.1. This list
+// mirrors each backend/modules/<name>/navigation.py directly. A future phase
+// replaces the module portion with a real GET /nav-config call once
+// per-company enablement matters.
 const NAV_ITEMS = [
   { labelKey: "dashboard", href: "/dashboard" },
   { labelKey: "customers", href: "/crm/customers" },
@@ -29,6 +28,8 @@ const NAV_ITEMS = [
   { labelKey: "orders", href: "/orders" },
   { labelKey: "production", href: "/production" },
   { labelKey: "installation", href: "/installation" },
+  { labelKey: "invoices", href: "/finance/invoices" },
+  { labelKey: "expenses", href: "/finance/expenses" },
   { labelKey: "reports", href: "/reports" },
 ] as const;
 

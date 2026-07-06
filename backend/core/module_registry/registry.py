@@ -36,6 +36,7 @@ INSTALLED_MODULES: List[str] = [
     "modules.orders",
     "modules.production",
     "modules.installation",
+    "modules.finance",
     "modules.reports",
 ]
 

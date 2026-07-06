@@ -168,3 +168,17 @@ export function CrewStatusBadge({ status }: { status: string }) {
   const t = useTranslations("installation");
   return <Badge tone={CREW_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
 }
+
+const INVOICE_STATUS_TONE: Record<string, Tone> = {
+  draft: "neutral",
+  sent: "info",
+  partially_paid: "warning",
+  paid: "success",
+  overdue: "danger",
+  cancelled: "danger",
+};
+
+export function InvoiceStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("finance");
+  return <Badge tone={INVOICE_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+}
