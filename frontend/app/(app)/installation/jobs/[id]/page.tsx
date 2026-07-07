@@ -20,6 +20,8 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { InstallationJobStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { SignaturePad } from "@/components/signature-pad";
+import { useToast } from "@/components/ui/toast";
+import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 
 const NEXT_STATUS: Record<string, string | null> = {
@@ -36,6 +38,7 @@ export default function InstallationJobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("installation");
   const tCommon = useTranslations("common");
+  const toast = useToast();
 
   const [job, setJob] = useState<InstallationJob | null>(null);
   const [crews, setCrews] = useState<Crew[]>([]);
@@ -92,14 +95,18 @@ export default function InstallationJobDetailPage() {
   useEffect(() => { reload(); }, [reload]);
 
   async function handleSaveSchedule() {
-    await updateInstallationJob(id, {
-      crew_id: form.crew_id || null,
-      scheduled_date: form.scheduled_date || null,
-      scheduled_time_slot: form.scheduled_time_slot || null,
-      route_sequence: form.route_sequence ? Number(form.route_sequence) : null,
-      notes: form.notes || null,
-    });
-    await reload();
+    try {
+      await updateInstallationJob(id, {
+        crew_id: form.crew_id || null,
+        scheduled_date: form.scheduled_date || null,
+        scheduled_time_slot: form.scheduled_time_slot || null,
+        route_sequence: form.route_sequence ? Number(form.route_sequence) : null,
+        notes: form.notes || null,
+      });
+      await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
   }
 
   async function handleAdvance() {
@@ -110,6 +117,8 @@ export default function InstallationJobDetailPage() {
     try {
       await updateInstallationJobStatus(id, next);
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setTransitioning(false);
     }
@@ -121,6 +130,8 @@ export default function InstallationJobDetailPage() {
       await updateInstallationJobStatus(id, "cancelled", { cancelledReason: cancelReason || undefined });
       setCancelMode(false);
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setTransitioning(false);
     }
@@ -132,6 +143,8 @@ export default function InstallationJobDetailPage() {
       await updateInstallationJobStatus(id, "completed", { completionNotes: completionNotes || undefined });
       setCompleteMode(false);
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setTransitioning(false);
     }
@@ -143,6 +156,8 @@ export default function InstallationJobDetailPage() {
       const doc = await uploadInstallationAsset(id, file);
       await addInstallationPhoto(id, { document_id: doc.id, photo_type: photoType });
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setUploadingPhoto(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -155,6 +170,8 @@ export default function InstallationJobDetailPage() {
       const doc = await uploadInstallationAsset(id, file);
       await addInstallationPhoto(id, { document_id: doc.id, photo_type: "signature" });
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setUploadingPhoto(false);
     }

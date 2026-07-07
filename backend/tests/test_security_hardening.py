@@ -14,12 +14,27 @@ def test_app_refuses_to_start_with_default_secret_outside_development(monkeypatc
         app_factory.create_app()
 
 
+def test_app_refuses_to_start_with_default_channel_credentials_key_outside_development(monkeypatch):
+    from core.bootstrap import app_factory
+    from core.config import settings
+
+    monkeypatch.setattr(settings, "environment", "production")
+    monkeypatch.setattr(settings, "jwt_secret_key", "a-real-randomly-generated-secret")
+    monkeypatch.setattr(
+        settings, "channel_credentials_encryption_key", app_factory.DEFAULT_CHANNEL_CREDENTIALS_KEY
+    )
+
+    with pytest.raises(RuntimeError, match="CHANNEL_CREDENTIALS_ENCRYPTION_KEY"):
+        app_factory.create_app()
+
+
 def test_app_boots_in_production_with_a_real_secret(monkeypatch):
     from core.bootstrap import app_factory
     from core.config import settings
 
     monkeypatch.setattr(settings, "environment", "production")
     monkeypatch.setattr(settings, "jwt_secret_key", "a-real-randomly-generated-secret")
+    monkeypatch.setattr(settings, "channel_credentials_encryption_key", "a-real-randomly-generated-key")
 
     app = app_factory.create_app()
     assert app is not None

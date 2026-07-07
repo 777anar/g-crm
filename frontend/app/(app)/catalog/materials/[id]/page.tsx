@@ -249,6 +249,7 @@ export default function MaterialDetailPage() {
         {prices.length === 0 ? (
           <p className="text-sm text-text-secondary">{tDetail("noPrices")}</p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border text-text-secondary">
               <tr>
@@ -267,6 +268,7 @@ export default function MaterialDetailPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </Card>
 
@@ -275,6 +277,7 @@ export default function MaterialDetailPage() {
         {slabs.length === 0 ? (
           <p className="text-sm text-text-secondary">{tDetail("noSlabs")}</p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border text-text-secondary">
               <tr>
@@ -295,6 +298,7 @@ export default function MaterialDetailPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </Card>
     </div>

@@ -9,6 +9,7 @@ directly (CustomerModel lookups, CreateLeadUseCase) -- the same pattern
 Production/Installation/Finance use for their own cross-module calls, rather
 than the (unused, in this codebase) event-subscription mechanism.
 """
+import logging
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -74,6 +75,7 @@ from modules.crm.application.use_cases import CreateLeadUseCase
 from modules.crm.infrastructure.models.customer import Customer as CustomerModel
 
 MODULE_NAME = "communication"
+logger = logging.getLogger("modules.communication.conversations")
 
 
 def _now() -> datetime:
@@ -319,12 +321,17 @@ class SendMessageUseCase:
             raise ChannelInactiveError("This channel is deactivated and cannot send messages")
 
         message_type = data.message_type or DEFAULT_MESSAGE_TYPE
-        provider, credential = resolve_provider_and_credential(self.db, channel)
 
         started = time.perf_counter()
         external_message_id: Optional[str] = None
         send_error: Optional[str] = None
+        credential = None
         try:
+            # Provider construction itself can fail (a malformed/undecryptable
+            # config) -- that must be queued for retry too, not raised
+            # straight to the agent who clicked Send, so it stays inside
+            # this try alongside the actual send.
+            provider, credential = resolve_provider_and_credential(self.db, channel)
             external_message_id = provider.send(
                 channel=channel,
                 external_contact_id=conversation.external_contact_id,
@@ -333,6 +340,7 @@ class SendMessageUseCase:
             )
         except Exception as exc:  # noqa: BLE001 -- any provider failure is queued for retry, not raised to the caller
             send_error = str(exc)
+            logger.warning("Send failed for channel %s, queuing for retry: %s", channel.id, send_error)
         duration_ms = int((time.perf_counter() - started) * 1000)
 
         message = Message(

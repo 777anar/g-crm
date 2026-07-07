@@ -11,6 +11,7 @@ import { EntityStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TextField } from "@/components/ui/field";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useListShortcuts } from "@/lib/use-list-shortcuts";
 
@@ -106,9 +107,9 @@ export default function BrandsPage() {
       {brands && brands.length === 0 && <EmptyState title={t("noBrandsYet")} description={t("noBrandsDesc")} />}
 
       {brands && brands.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className={tableScrollShellClass}>
           <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 z-10 border-b border-border bg-bg text-text-secondary">
+            <thead className={stickyTheadClass}>
               <tr>
                 <th className="px-4 py-2 font-medium">{t("name")}</th>
                 <th className="px-4 py-2 font-medium">{t("description")}</th>

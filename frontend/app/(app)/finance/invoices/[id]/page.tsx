@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InvoiceStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/toast";
+import { ApiRequestError } from "@/lib/api-client";
 import { formatDate, formatDateTime } from "@/lib/format";
 
 const inputClasses =
@@ -26,6 +28,7 @@ export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("finance");
   const tCommon = useTranslations("common");
+  const toast = useToast();
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [lines, setLines] = useState<InvoiceLine[] | null>(null);
@@ -56,6 +59,8 @@ export default function InvoiceDetailPage() {
     try {
       await updateInvoiceStatus(id, "sent");
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setBusy(false);
     }
@@ -66,6 +71,8 @@ export default function InvoiceDetailPage() {
     try {
       await updateInvoiceStatus(id, "overdue");
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setBusy(false);
     }
@@ -77,15 +84,21 @@ export default function InvoiceDetailPage() {
       await updateInvoiceStatus(id, "cancelled", cancelReason || undefined);
       setCancelMode(false);
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setBusy(false);
     }
   }
 
   async function handleSaveDetails() {
-    await updateInvoice(id, { due_date: form.due_date || null, notes: form.notes || null });
-    setEditMode(false);
-    await reload();
+    try {
+      await updateInvoice(id, { due_date: form.due_date || null, notes: form.notes || null });
+      setEditMode(false);
+      await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
   }
 
   async function handleRecordPayment() {
@@ -220,6 +233,7 @@ export default function InvoiceDetailPage() {
         <div className="flex items-center justify-between bg-text-primary px-4 py-3 text-white">
           <h2 className="font-semibold">{t("lineItems")}</h2>
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="text-text-secondary">
             <tr>
@@ -238,12 +252,14 @@ export default function InvoiceDetailPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
 
       <Card>
         <h2 className="mb-3 text-sm font-semibold text-text-primary">{t("payments")}</h2>
 
         {payments && payments.length > 0 ? (
+          <div className="overflow-x-auto">
           <table className="mb-4 w-full text-left text-sm">
             <thead className="text-text-secondary">
               <tr>
@@ -266,6 +282,7 @@ export default function InvoiceDetailPage() {
               ))}
             </tbody>
           </table>
+          </div>
         ) : (
           <p className="mb-4 text-sm text-text-secondary">{t("noPaymentsYet")}</p>
         )}

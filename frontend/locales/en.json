@@ -31,7 +31,9 @@
     "resetColumns": "Reset columns",
     "deleteSavedFilter": "Delete saved filter \"{name}\"",
     "filterNamePlaceholder": "Filter name",
-    "saveCurrentFilters": "Save current filters"
+    "saveCurrentFilters": "Save current filters",
+    "dismiss": "Dismiss",
+    "actionFailed": "Action failed. Please try again."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -149,6 +151,7 @@
     "contactPhone": "Contact Phone",
     "creating": "Creating...",
     "createFailed": "Failed to create customer.",
+    "customerCreated": "Customer created.",
     "phone": "Phone",
     "whatsapp": "WhatsApp",
     "instagram": "Instagram",
@@ -848,6 +851,7 @@
     "recurrenceEndDate": "Repeat Until",
     "creating": "Creating...",
     "createFailed": "Failed to create task",
+    "taskCreated": "Task created.",
     "loadFailed": "Failed to load",
     "allPriorities": "All Priorities",
     "allAssignees": "All Assignees",

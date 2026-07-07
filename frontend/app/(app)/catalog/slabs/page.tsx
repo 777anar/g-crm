@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SelectField, TextField } from "@/components/ui/field";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
 import { useSlabStatusLabel } from "@/lib/i18n/hooks";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 
@@ -231,9 +232,9 @@ export default function SlabsPage() {
       {slabs && slabs.length === 0 && <EmptyState title={t("noSlabsYet")} description={t("noSlabsDesc")} />}
 
       {slabs && slabs.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className={tableScrollShellClass}>
           <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 z-10 border-b border-border bg-bg text-text-secondary">
+            <thead className={stickyTheadClass}>
               <tr>
                 <SortableHeader field="slab_number" label={t("tableSlabNumber")} sort={sort} onSortChange={setSort} />
                 <th className="px-4 py-2 font-medium">{t("tableMaterial")}</th>

@@ -15,6 +15,7 @@ the original inbound.py docstring anticipated: "once a real provider exists,
 its webhook handler would call ReceiveInboundMessageUseCase directly
 instead, under its own signature-verification, not this route."
 """
+import logging
 import time
 from typing import Any, Dict, Optional
 
@@ -41,6 +42,7 @@ from modules.communication.infrastructure.repositories.channel_repository import
 from modules.communication.infrastructure.repositories.integration_log_repository import IntegrationLogRepository
 
 MODULE_NAME = "communication"
+logger = logging.getLogger("modules.communication.webhooks")
 
 
 class _BaseWebhookUseCase:
@@ -121,6 +123,7 @@ class ReceiveMetaWebhookUseCase(_BaseWebhookUseCase):
         except Exception as exc:  # noqa: BLE001 -- log and re-raise so the endpoint still 200s per provider expectations
             error_message = str(exc)
             success = False
+            logger.exception("Meta webhook processing failed for channel %s", channel_id)
 
         self._log(
             company_id=channel.company_id, channel_id=channel_id, provider=credential.provider,
@@ -243,6 +246,7 @@ class ReceiveTwilioWebhookUseCase(_BaseWebhookUseCase):
         except Exception as exc:  # noqa: BLE001
             error_message = str(exc)
             success = False
+            logger.exception("Twilio webhook processing failed for channel %s", channel_id)
 
         self._log(
             company_id=channel.company_id, channel_id=channel_id, provider=credential.provider,
@@ -300,6 +304,7 @@ class ReceiveGenericWebhookUseCase(_BaseWebhookUseCase):
         except Exception as exc:  # noqa: BLE001
             error_message = str(exc)
             success = False
+            logger.exception("Generic webhook processing failed for channel %s", channel_id)
 
         self._log(
             company_id=channel.company_id, channel_id=channel_id, provider=credential.provider,

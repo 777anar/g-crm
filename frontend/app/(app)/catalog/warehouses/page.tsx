@@ -11,6 +11,7 @@ import { EntityStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TextField } from "@/components/ui/field";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
 
 export default function WarehousesPage() {
   const t = useTranslations("catalog");
@@ -81,9 +82,9 @@ export default function WarehousesPage() {
       )}
 
       {warehouses && warehouses.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className={tableScrollShellClass}>
           <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 z-10 border-b border-border bg-bg text-text-secondary">
+            <thead className={stickyTheadClass}>
               <tr>
                 <th className="px-4 py-2 font-medium">{t("name")}</th>
                 <th className="px-4 py-2 font-medium">{t("tableAddress")}</th>

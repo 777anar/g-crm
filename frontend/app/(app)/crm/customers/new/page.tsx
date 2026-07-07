@@ -8,6 +8,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SelectField, TextAreaField, TextField } from "@/components/ui/field";
+import { useToast } from "@/components/ui/toast";
 import { CUSTOMER_STATUSES, LEAD_SOURCE_CHANNELS } from "@/lib/types";
 import { useCustomerStatusLabel, useLeadChannelLabel } from "@/lib/i18n/hooks";
 
@@ -17,6 +18,7 @@ export default function NewCustomerPage() {
   const tCommon = useTranslations("common");
   const channelLabel = useLeadChannelLabel();
   const statusLabel = useCustomerStatusLabel();
+  const toast = useToast();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -53,6 +55,7 @@ export default function NewCustomerPage() {
         status: status as (typeof CUSTOMER_STATUSES)[number],
         notes: notes || undefined,
       });
+      toast.success(t("customerCreated"));
       router.push(`/crm/customers/${customer.id}`);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("createFailed"));
@@ -107,8 +110,8 @@ export default function NewCustomerPage() {
             <Button type="button" variant="secondary" onClick={() => router.back()}>
               {tCommon("cancel")}
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? t("creating") : t("title")}
+            <Button type="submit" loading={submitting}>
+              {t("title")}
             </Button>
           </div>
         </form>

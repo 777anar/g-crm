@@ -3,12 +3,15 @@ raises these exceptions; the core's exception handlers (registered once in
 app_factory.py) translate them into the standard envelope -- no module needs
 to know about the envelope shape itself.
 """
+import logging
 import uuid
 from typing import Any, List, Optional
 
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+
+logger = logging.getLogger("core.api.errors")
 
 
 class APIError(Exception):
@@ -83,6 +86,13 @@ def register_error_handlers(app) -> None:
     @app.exception_handler(Exception)
     async def handle_unexpected_error(request: Request, exc: Exception):
         request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+        # Unlike the expected APIError/RequestValidationError branches above
+        # (normal 4xx client traffic), an unhandled exception here is always
+        # an operational bug -- log it with the same request_id returned to
+        # the caller so support can correlate a user-reported request_id
+        # with the actual stack trace, per the "logged with request_id for
+        # support purposes" intent already documented in UI_UX_GUIDELINES.md.
+        logger.exception("Unhandled exception on %s %s [request_id=%s]", request.method, request.url.path, request_id)
         return JSONResponse(
             status_code=500,
             content=_envelope("INTERNAL_ERROR", "An unexpected error occurred", [], request_id),

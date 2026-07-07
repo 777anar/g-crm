@@ -31,7 +31,9 @@
     "resetColumns": "Sütunları sıfırla",
     "deleteSavedFilter": "\"{name}\" saxlanmış filtrini sil",
     "filterNamePlaceholder": "Filtrin adı",
-    "saveCurrentFilters": "Cari filtrləri saxla"
+    "saveCurrentFilters": "Cari filtrləri saxla",
+    "dismiss": "Bağla",
+    "actionFailed": "Əməliyyat uğursuz oldu. Yenidən cəhd edin."
   },
   "nav": {
     "dashboard": "İdarə paneli",
@@ -149,6 +151,7 @@
     "contactPhone": "Əlaqənin telefonu",
     "creating": "Yaradılır...",
     "createFailed": "Müştəri yaradıla bilmədi.",
+    "customerCreated": "Müştəri yaradıldı.",
     "phone": "Telefon",
     "whatsapp": "WhatsApp",
     "instagram": "Instagram",
@@ -848,6 +851,7 @@
     "recurrenceEndDate": "Bitmə tarixi",
     "creating": "Yaradılır...",
     "createFailed": "Tapşırıq yaradıla bilmədi",
+    "taskCreated": "Tapşırıq yaradıldı.",
     "loadFailed": "Yükləmə xətası",
     "allPriorities": "Bütün prioritetlər",
     "allAssignees": "Bütün məsul şəxslər",

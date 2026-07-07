@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { OrderStatusBadge, WorkOrderStatusBadge, InstallationJobStatusBadge, InvoiceStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
 
 type SectionData = {
@@ -57,6 +58,7 @@ export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("orders");
   const tCommon = useTranslations("common");
+  const toast = useToast();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [sectionData, setSectionData] = useState<SectionData[] | null>(null);
@@ -143,6 +145,8 @@ export default function OrderDetailPage() {
     try {
       await createWorkOrder(id);
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setCreatingWorkOrder(false);
     }
@@ -153,6 +157,8 @@ export default function OrderDetailPage() {
     try {
       await createInstallationJob(id);
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setCreatingInstallationJob(false);
     }
@@ -163,6 +169,8 @@ export default function OrderDetailPage() {
     try {
       await createInvoice(id);
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setCreatingInvoice(false);
     }
@@ -176,6 +184,8 @@ export default function OrderDetailPage() {
     try {
       await updateOrderStatus(id, next);
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setTransitioning(false);
     }
@@ -187,22 +197,28 @@ export default function OrderDetailPage() {
       await updateOrderStatus(id, "cancelled", cancelReason || undefined);
       setCancelMode(false);
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setTransitioning(false);
     }
   }
 
   async function handleSaveDetails() {
-    await updateOrder(id, {
-      notes: form.notes || null,
-      production_notes: form.production_notes || null,
-      installation_notes: form.installation_notes || null,
-      delivery_address: form.delivery_address || null,
-      scheduled_production_date: form.scheduled_production_date || null,
-      scheduled_installation_date: form.scheduled_installation_date || null,
-    });
-    setEditMode(false);
-    await reload();
+    try {
+      await updateOrder(id, {
+        notes: form.notes || null,
+        production_notes: form.production_notes || null,
+        installation_notes: form.installation_notes || null,
+        delivery_address: form.delivery_address || null,
+        scheduled_production_date: form.scheduled_production_date || null,
+        scheduled_installation_date: form.scheduled_installation_date || null,
+      });
+      setEditMode(false);
+      await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
   }
 
   async function handleItemStatusChange(
@@ -210,8 +226,12 @@ export default function OrderDetailPage() {
     field: "production_status" | "installation_status",
     value: string
   ) {
-    await updateOrderItem(id, itemId, { [field]: value || null });
-    await reload();
+    try {
+      await updateOrderItem(id, itemId, { [field]: value || null });
+      await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
   }
 
   if (loading || !order) return <TableSkeleton rows={5} columns={5} />;
@@ -401,6 +421,7 @@ export default function OrderDetailPage() {
           {measurements.length > 0 && (
             <div className="border-b border-border bg-bg p-3 text-sm">
               <p className="mb-2 text-xs font-medium text-text-secondary">{t("measurements")}</p>
+              <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="text-text-secondary">
                   <tr>
@@ -425,11 +446,13 @@ export default function OrderDetailPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 
           {items.length > 0 && (
             <div className="p-3">
+              <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="text-text-secondary">
                   <tr>
@@ -482,6 +505,7 @@ export default function OrderDetailPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </Card>

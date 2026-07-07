@@ -6,6 +6,7 @@ that arrive from a provider's webhook. Cross-cutting concerns (audit event
 other use case in this module already does.
 """
 import json
+import logging
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -34,6 +35,12 @@ from modules.communication.domain.value_objects import (
     LOG_DIRECTION_OUTBOUND,
     MESSAGE_STATUS_FAILED,
     MESSAGE_STATUS_SENT,
+    PROVIDER_META_INSTAGRAM,
+    PROVIDER_META_MESSENGER,
+    PROVIDER_META_WHATSAPP,
+    PROVIDER_SMTP,
+    PROVIDER_TWILIO_SMS,
+    PROVIDER_WEBHOOK,
     QUEUE_STATUS_FAILED,
     QUEUE_STATUS_PENDING,
     QUEUE_STATUS_SENT,
@@ -42,6 +49,14 @@ from modules.communication.domain.value_objects import (
 )
 from modules.communication.infrastructure.models.channel_credential import ChannelCredential
 from modules.communication.infrastructure.models.integration_log_entry import IntegrationLogEntry
+from modules.communication.infrastructure.providers import (
+    instagram_provider,
+    messenger_provider,
+    smtp_provider,
+    twilio_sms_provider,
+    webhook_provider,
+    whatsapp_provider,
+)
 from modules.communication.infrastructure.providers.imap_sync_client import ImapMailboxClient
 from modules.communication.infrastructure.repositories.channel_credential_repository import (
     ChannelCredentialRepository,
@@ -54,6 +69,22 @@ from modules.communication.infrastructure.repositories.message_repository import
 from modules.communication.infrastructure.security.encryption import encrypt_text
 
 MODULE_NAME = "communication"
+logger = logging.getLogger("modules.communication.integrations")
+
+# Required config fields per provider, so an incomplete credential is
+# rejected at configuration time (a clean 400) instead of only surfacing
+# later as a provider-construction failure the first time something tries
+# to use it (see SendMessageUseCase/TestChannelConnectionUseCase, which now
+# also catch that construction failure gracefully as defense in depth, but
+# failing fast here is the better user experience).
+_REQUIRED_CONFIG_FIELDS_BY_PROVIDER = {
+    PROVIDER_META_WHATSAPP: whatsapp_provider.REQUIRED_CONFIG_FIELDS,
+    PROVIDER_META_INSTAGRAM: instagram_provider.REQUIRED_CONFIG_FIELDS,
+    PROVIDER_META_MESSENGER: messenger_provider.REQUIRED_CONFIG_FIELDS,
+    PROVIDER_SMTP: smtp_provider.REQUIRED_CONFIG_FIELDS,
+    PROVIDER_TWILIO_SMS: twilio_sms_provider.REQUIRED_CONFIG_FIELDS,
+    PROVIDER_WEBHOOK: webhook_provider.REQUIRED_CONFIG_FIELDS,
+}
 
 
 def _now() -> datetime:
@@ -76,6 +107,17 @@ class ConfigureChannelCredentialUseCase:
             raise ValidationAPIError(
                 f"Provider '{data.provider}' is not valid for channel_type '{channel.channel_type}'",
                 details=[{"field": "provider", "issue": f"must be one of {sorted(allowed_providers)}"}],
+            )
+
+        # Reject an incomplete config up front (a clean 400) rather than
+        # accepting it and only discovering it's unusable the first time
+        # something tries to send/test through this channel.
+        required_fields = _REQUIRED_CONFIG_FIELDS_BY_PROVIDER.get(data.provider, ())
+        missing_fields = [f for f in required_fields if not data.config.get(f)]
+        if missing_fields:
+            raise ValidationAPIError(
+                f"Config for provider '{data.provider}' is missing required field(s): {', '.join(missing_fields)}",
+                details=[{"field": f, "issue": "required"} for f in missing_fields],
             )
 
         credential = self.credentials.get_by_channel(company_id=data.company_id, channel_id=channel.id)
@@ -163,7 +205,7 @@ class TestChannelConnectionUseCase:
         if channel is None:
             raise NotFoundError("Channel not found")
 
-        provider, credential = resolve_provider_and_credential(self.db, channel)
+        credential = self.credentials.get_by_channel(company_id=data.company_id, channel_id=channel.id)
         if credential is None:
             raise NotFoundError("No credential configured for this channel")
 
@@ -171,11 +213,16 @@ class TestChannelConnectionUseCase:
         success = False
         detail = ""
         try:
+            # Provider construction itself can fail (a malformed/undecryptable
+            # config) -- that must be treated as a failed health check too,
+            # not an unhandled 500, so it stays inside this try.
+            provider, _ = resolve_provider_and_credential(self.db, channel)
             result = provider.test_connection()
             success = bool(result.get("ok"))
             detail = str(result.get("detail", ""))
         except Exception as exc:  # noqa: BLE001 -- any provider/network failure is a failed health check, not a 500
             detail = str(exc)
+            logger.warning("Connection test failed for channel %s: %s", channel.id, detail)
         duration_ms = int((time.perf_counter() - started) * 1000)
 
         credential.health_status = HEALTH_STATUS_OK if success else HEALTH_STATUS_ERROR
@@ -266,6 +313,10 @@ class ProcessMessageQueueUseCase:
                 sent += 1
             except Exception as exc:  # noqa: BLE001 -- classify below by attempts, not exception type
                 error_message = str(exc)
+                logger.warning(
+                    "Queue retry failed for message %s (attempt %s/%s): %s",
+                    entry.message_id, entry.attempts, entry.max_attempts, error_message,
+                )
                 if entry.attempts >= entry.max_attempts:
                     entry.status = QUEUE_STATUS_FAILED
                     message.status = MESSAGE_STATUS_FAILED
@@ -356,6 +407,7 @@ class SyncImapMailboxUseCase:
         except Exception as exc:  # noqa: BLE001
             error_message = str(exc)
             success = False
+            logger.exception("IMAP sync failed for channel %s", channel.id)
         duration_ms = int((time.perf_counter() - started) * 1000)
 
         self.logs.add(

@@ -248,6 +248,7 @@ export default function TaskDetailPage() {
           <div className="bg-text-primary px-4 py-3 text-white">
             <h2 className="font-semibold">{t("series")}</h2>
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="text-text-secondary">
               <tr>
@@ -274,6 +275,7 @@ export default function TaskDetailPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
     </div>

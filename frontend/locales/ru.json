@@ -31,7 +31,9 @@
     "resetColumns": "Сбросить столбцы",
     "deleteSavedFilter": "Удалить сохранённый фильтр «{name}»",
     "filterNamePlaceholder": "Название фильтра",
-    "saveCurrentFilters": "Сохранить текущие фильтры"
+    "saveCurrentFilters": "Сохранить текущие фильтры",
+    "dismiss": "Закрыть",
+    "actionFailed": "Действие не выполнено. Попробуйте ещё раз."
   },
   "nav": {
     "dashboard": "Панель управления",
@@ -149,6 +151,7 @@
     "contactPhone": "Телефон контакта",
     "creating": "Создание...",
     "createFailed": "Не удалось создать клиента.",
+    "customerCreated": "Клиент создан.",
     "phone": "Телефон",
     "whatsapp": "WhatsApp",
     "instagram": "Instagram",
@@ -848,6 +851,7 @@
     "recurrenceEndDate": "Повторять до",
     "creating": "Создание...",
     "createFailed": "Не удалось создать задачу",
+    "taskCreated": "Задача создана.",
     "loadFailed": "Ошибка загрузки",
     "allPriorities": "Все приоритеты",
     "allAssignees": "Все исполнители",

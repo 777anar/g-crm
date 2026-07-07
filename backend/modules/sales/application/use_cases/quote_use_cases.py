@@ -4,7 +4,9 @@ import copy
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import Dict
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from core.api.errors import NotFoundError
@@ -368,24 +370,32 @@ class UpdateQuoteStatusUseCase:
 
         return quote
 
-    def _check_slab_availability(self, quote: Quote) -> None:
+    def _quoted_slabs_by_id(self, quote: Quote) -> Dict[uuid.UUID, Slab]:
+        """Batch-fetches every distinct slab quoted on this quote in a
+        single query, instead of one `db.get()` per line item -- a quote
+        with many items previously issued one slab lookup per item."""
         items = self.items.list_with_slabs_for_quote(
             company_id=quote.company_id, quote_id=quote.id
         )
+        slab_ids = {item.slab_id for item in items}
+        if not slab_ids:
+            return {}
+        slabs = self.db.scalars(select(Slab).where(Slab.id.in_(slab_ids))).all()
+        return {slab.id: slab for slab in slabs}
+
+    def _check_slab_availability(self, quote: Quote) -> None:
+        items = self.items.list_with_slabs_for_quote(company_id=quote.company_id, quote_id=quote.id)
+        slabs_by_id = self._quoted_slabs_by_id(quote)
         for item in items:
-            slab = self.db.get(Slab, item.slab_id)
+            slab = slabs_by_id.get(item.slab_id)
             if slab is None or slab.status != "available":
                 raise SlabConflictError(
                     f"Slab {item.slab_id} is no longer available (status: {slab.status if slab else 'not found'})"
                 )
 
     def _reserve_slabs(self, quote: Quote, actor_user_id: uuid.UUID) -> None:
-        items = self.items.list_with_slabs_for_quote(
-            company_id=quote.company_id, quote_id=quote.id
-        )
-        for item in items:
-            slab = self.db.get(Slab, item.slab_id)
-            if slab and slab.status == "available":
+        for slab in self._quoted_slabs_by_id(quote).values():
+            if slab.status == "available":
                 slab.status = "reserved"
                 event_bus.publish(
                     Event(
@@ -398,12 +408,8 @@ class UpdateQuoteStatusUseCase:
                 )
 
     def _release_slabs(self, quote: Quote, actor_user_id: uuid.UUID) -> None:
-        items = self.items.list_with_slabs_for_quote(
-            company_id=quote.company_id, quote_id=quote.id
-        )
-        for item in items:
-            slab = self.db.get(Slab, item.slab_id)
-            if slab and slab.status == "reserved":
+        for slab in self._quoted_slabs_by_id(quote).values():
+            if slab.status == "reserved":
                 slab.status = "available"
                 event_bus.publish(
                     Event(

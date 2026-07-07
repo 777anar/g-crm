@@ -214,6 +214,7 @@ export default function QuoteBuilderPage() {
           {measurements.length > 0 && (
             <div className="border-b border-border bg-bg p-3">
               <div className="mb-2 text-xs font-medium text-text-secondary">{t("measurements")}</div>
+              <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="text-text-secondary">
                   <tr>
@@ -246,11 +247,13 @@ export default function QuoteBuilderPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 
           <div className="p-3">
             {items.length > 0 && (
+              <div className="overflow-x-auto">
               <table className="mb-3 w-full text-left text-sm">
                 <thead className="text-text-secondary">
                   <tr>
@@ -297,6 +300,7 @@ export default function QuoteBuilderPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
 
             {isEditable && (

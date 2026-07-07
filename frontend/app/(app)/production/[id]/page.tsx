@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { WorkOrderStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/toast";
+import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 
 const NEXT_STATUS: Record<string, string | null> = {
@@ -25,6 +27,7 @@ export default function WorkOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("production");
   const tCommon = useTranslations("common");
+  const toast = useToast();
 
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [items, setItems] = useState<WorkOrderItem[] | null>(null);
@@ -50,6 +53,8 @@ export default function WorkOrderDetailPage() {
     try {
       await updateWorkOrderStatus(id, next);
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setTransitioning(false);
     }
@@ -61,6 +66,8 @@ export default function WorkOrderDetailPage() {
       await updateWorkOrderStatus(id, "cancelled", cancelReason || undefined);
       setCancelMode(false);
       await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setTransitioning(false);
     }
@@ -130,6 +137,7 @@ export default function WorkOrderDetailPage() {
         <div className="border-b border-border bg-bg px-4 py-2 text-sm font-medium text-text-secondary">
           {t("slabsConsumed")}
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="text-text-secondary">
             <tr>
@@ -152,6 +160,7 @@ export default function WorkOrderDetailPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
 
       <p className="text-xs text-text-secondary">

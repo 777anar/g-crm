@@ -10,12 +10,14 @@ import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SelectField, TextAreaField, TextField } from "@/components/ui/field";
+import { useToast } from "@/components/ui/toast";
 import { fromDatetimeLocalValue } from "@/lib/format";
 
 export default function NewTaskPage() {
   const router = useRouter();
   const t = useTranslations("tasks");
   const tCommon = useTranslations("common");
+  const toast = useToast();
 
   const [users, setUsers] = useState<CompanyUser[]>([]);
   const [title, setTitle] = useState("");
@@ -57,6 +59,7 @@ export default function NewTaskPage() {
         recurrence_interval: isRecurring ? Number(recurrenceInterval) || 1 : undefined,
         recurrence_end_date: isRecurring ? recurrenceEndDate || undefined : undefined,
       });
+      toast.success(t("taskCreated"));
       router.push(`/crm/tasks/${task.id}`);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("createFailed"));
@@ -142,8 +145,8 @@ export default function NewTaskPage() {
             <Button type="button" variant="secondary" onClick={() => router.back()}>
               {tCommon("cancel")}
             </Button>
-            <Button type="submit" disabled={submitting || !title.trim() || (isRecurring && !dueDate)}>
-              {submitting ? t("creating") : t("newTask")}
+            <Button type="submit" loading={submitting} disabled={!title.trim() || (isRecurring && !dueDate)}>
+              {t("newTask")}
             </Button>
           </div>
         </form>

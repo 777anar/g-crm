@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 type ToastTone = "success" | "error";
 type ToastItem = { id: number; tone: ToastTone; message: string };
@@ -38,6 +39,7 @@ const TONE_ICON_CLASSES: Record<ToastTone, string> = {
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const tCommon = useTranslations("common");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(0);
 
@@ -82,7 +84,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => dismiss(toast.id)}
-              aria-label="Dismiss"
+              aria-label={tCommon("dismiss")}
               className="text-text-secondary hover:text-text-primary"
             >
               ✕
