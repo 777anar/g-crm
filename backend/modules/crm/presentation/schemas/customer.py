@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from modules.crm.domain.value_objects import (
     DEFAULT_CUSTOMER_STATUS,
@@ -14,7 +14,7 @@ from modules.crm.domain.value_objects import (
 
 class ContactCreate(BaseModel):
     full_name: str
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
     phone: Optional[str] = None
 
 
@@ -28,7 +28,7 @@ class CustomerCreate(BaseModel):
     whatsapp: Optional[str] = None
     instagram: Optional[str] = None
     facebook: Optional[str] = None
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
     address: Optional[str] = None
     company_name: Optional[str] = None
     notes: Optional[str] = None
@@ -54,7 +54,7 @@ class CustomerUpdate(BaseModel):
     whatsapp: Optional[str] = None
     instagram: Optional[str] = None
     facebook: Optional[str] = None
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
     address: Optional[str] = None
     company_name: Optional[str] = None
     notes: Optional[str] = None

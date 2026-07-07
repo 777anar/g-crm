@@ -67,7 +67,7 @@ export default function NewCustomerPage() {
   return (
     <div className="mx-auto max-w-xl">
       <Card>
-        <CardHeader title={t("title")} />
+        <CardHeader title={t("title")} subtitle={t("subtitle")} />
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <TextField label={t("name")} value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
 

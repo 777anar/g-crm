@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from modules.crm.domain.value_objects import VALID_LEAD_SOURCES
 
@@ -10,7 +10,7 @@ from modules.crm.domain.value_objects import VALID_LEAD_SOURCES
 class LeadCreate(BaseModel):
     full_name: str
     source_channel: str
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
     phone: Optional[str] = None
     campaign: Optional[str] = None
     assigned_manager_id: Optional[uuid.UUID] = None

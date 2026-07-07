@@ -7,7 +7,7 @@ def test_create_customer(app_client, owner_headers):
             "type": "business",
             "lead_source": "phone_call",
             "tags": ["vip"],
-            "contact": {"full_name": "John Doe", "email": "john@acme.test", "phone": "+994501234567"},
+            "contact": {"full_name": "John Doe", "email": "john@acme.example", "phone": "+994501234567"},
         },
     )
     assert response.status_code == 200, response.text
@@ -16,6 +16,16 @@ def test_create_customer(app_client, owner_headers):
     assert body["type"] == "business"
     assert body["primary_contact_id"] is not None
     assert body["deleted_at"] is None
+
+
+def test_create_customer_rejects_malformed_email(app_client, owner_headers):
+    response = app_client.post(
+        "/api/v1/crm/customers",
+        headers=owner_headers,
+        json={"name": "Bad Email Co", "type": "business", "email": "not-an-email"},
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
 def test_create_customer_requires_write_permission(app_client, viewer_headers):
@@ -131,7 +141,7 @@ def test_customer_profile_includes_all_required_sections(app_client, owner_heade
             "type": "business",
             "lead_source": "instagram",
             "advertising_campaign": "Summer Sale",
-            "contact": {"full_name": "Jane Doe", "email": "jane@profile.test"},
+            "contact": {"full_name": "Jane Doe", "email": "jane@profile.example"},
         },
     ).json()
     app_client.post(

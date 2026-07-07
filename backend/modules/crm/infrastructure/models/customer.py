@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from sqlalchemy import DateTime, ForeignKey, JSON, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.db.base import Base
@@ -36,4 +36,11 @@ class Customer(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     created_by: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
     deleted_at: Mapped[Optional[object]] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    __table_args__ = ()
+    # Every list/filter query scopes by company_id first, then (optionally)
+    # by status or lead_source (see CustomerRepository.list) -- composite
+    # indexes so that filter doesn't degrade to a per-company scan once a
+    # company has thousands of customers (RELEASE_CHECKLIST.md M6).
+    __table_args__ = (
+        Index("ix_crm_customers_company_status", "company_id", "status"),
+        Index("ix_crm_customers_company_lead_source", "company_id", "lead_source"),
+    )

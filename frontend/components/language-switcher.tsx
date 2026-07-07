@@ -1,10 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useLocaleSwitcher } from "@/lib/i18n/locale-context";
 import { SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
-import { useCloseOnEscape, useOutsideClick } from "@/lib/use-outside-click";
+import { DropdownItem, DropdownPanel, useDropdown } from "@/components/ui/dropdown";
 
 const LOCALE_FLAG: Record<Locale, string> = {
   az: "🇦🇿",
@@ -15,17 +14,13 @@ const LOCALE_FLAG: Record<Locale, string> = {
 export function LanguageSwitcher() {
   const t = useTranslations("language");
   const { locale, setLocale } = useLocaleSwitcher();
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useOutsideClick(containerRef, () => setOpen(false));
-  useCloseOnEscape(open, () => setOpen(false));
+  const { open, containerRef, toggle, close } = useDropdown();
 
   return (
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         aria-label={t("switchLanguage")}
         className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-bg"
       >
@@ -37,30 +32,23 @@ export function LanguageSwitcher() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-md border border-border bg-surface py-1 shadow-lg">
-          <p className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-text-secondary">
-            {t("switchLanguage")}
-          </p>
+        <DropdownPanel align="right" widthClassName="w-48" label={t("switchLanguage")}>
           {SUPPORTED_LOCALES.map((code) => (
-            <button
+            <DropdownItem
               key={code}
-              type="button"
+              active={code === locale}
               onClick={() => {
                 setLocale(code);
-                setOpen(false);
+                close();
               }}
-              className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-bg ${
-                code === locale ? "font-semibold text-primary" : "text-text-primary"
-              }`}
             >
               <span className="flex items-center gap-2">
                 <span aria-hidden>{LOCALE_FLAG[code]}</span>
                 {t(code)}
               </span>
-              {code === locale && <span aria-hidden>✓</span>}
-            </button>
+            </DropdownItem>
           ))}
-        </div>
+        </DropdownPanel>
       )}
     </div>
   );

@@ -4,10 +4,21 @@ export function Card({ children, className = "" }: { children: React.ReactNode; 
   );
 }
 
-export function CardHeader({ title, action }: { title: string; action?: React.ReactNode }) {
+export function CardHeader({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+}) {
   return (
     <div className="mb-3 flex items-center justify-between">
-      <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
+      <div>
+        <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-sm text-text-secondary">{subtitle}</p>}
+      </div>
       {action}
     </div>
   );

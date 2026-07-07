@@ -140,6 +140,7 @@
   },
   "customerNew": {
     "title": "Create Customer",
+    "subtitle": "Add a new customer profile with contact details and lead source.",
     "name": "Name",
     "type": "Type",
     "leadSource": "Lead Source",
@@ -163,6 +164,7 @@
     "status": "Customer Status"
   },
   "customerProfile": {
+    "subtitle": "Profile, contacts, notes, and activity for this customer.",
     "breadcrumbCustomers": "Customers",
     "backToList": "Back to list",
     "archiveCustomer": "Archive Customer",

@@ -18,6 +18,9 @@ import { Card } from "@/components/ui/card";
 import { TaskPriorityBadge, TaskStatusBadge } from "@/components/ui/badge";
 import { SelectField, TextAreaField, TextField } from "@/components/ui/field";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
+import { ApiRequestError } from "@/lib/api-client";
 import { formatDateTime, fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/format";
 
 const inputClasses =
@@ -28,6 +31,8 @@ export default function TaskDetailPage() {
   const router = useRouter();
   const t = useTranslations("tasks");
   const tCommon = useTranslations("common");
+  const confirm = useConfirm();
+  const toast = useToast();
 
   const [task, setTask] = useState<Task | null>(null);
   const [series, setSeries] = useState<Task[] | null>(null);
@@ -101,9 +106,13 @@ export default function TaskDetailPage() {
   }
 
   async function handleDelete() {
-    if (!window.confirm(t("confirmDelete"))) return;
-    await deleteTask(id);
-    router.push("/crm/tasks");
+    if (!(await confirm(t("confirmDelete")))) return;
+    try {
+      await deleteTask(id);
+      router.push("/crm/tasks");
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
   }
 
   if (loading || !task) return <TableSkeleton rows={5} columns={3} />;

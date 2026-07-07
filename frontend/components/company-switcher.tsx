@@ -1,20 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { me, selectCompany } from "@/lib/api/auth";
 import { listMyCompanies } from "@/lib/api/companies";
 import { setAccessToken } from "@/lib/session";
 import type { Company } from "@/lib/types";
-import { useCloseOnEscape, useOutsideClick } from "@/lib/use-outside-click";
+import { DropdownItem, DropdownPanel, useDropdown } from "@/components/ui/dropdown";
 
 export function CompanySwitcher() {
   const t = useTranslations("company");
   const [companies, setCompanies] = useState<Company[]>([]);
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
   const [switching, setSwitching] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { open, containerRef, toggle, close } = useDropdown();
 
   useEffect(() => {
     Promise.all([me(), listMyCompanies()])
@@ -28,12 +27,9 @@ export function CompanySwitcher() {
       });
   }, []);
 
-  useOutsideClick(containerRef, () => setOpen(false));
-  useCloseOnEscape(open, () => setOpen(false));
-
   async function handleSelect(companyId: string) {
     if (companyId === activeCompanyId) {
-      setOpen(false);
+      close();
       return;
     }
     setSwitching(true);
@@ -46,7 +42,7 @@ export function CompanySwitcher() {
       window.location.href = "/dashboard";
     } finally {
       setSwitching(false);
-      setOpen(false);
+      close();
     }
   }
 
@@ -58,7 +54,7 @@ export function CompanySwitcher() {
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         disabled={switching}
         className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-bg disabled:opacity-50"
       >
@@ -69,24 +65,13 @@ export function CompanySwitcher() {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-10 mt-1 w-56 rounded-md border border-border bg-surface py-1 shadow-lg">
-          <p className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-text-secondary">
-            {t("switchCompany")}
-          </p>
+        <DropdownPanel label={t("switchCompany")}>
           {companies.map((company) => (
-            <button
-              key={company.id}
-              type="button"
-              onClick={() => handleSelect(company.id)}
-              className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-bg ${
-                company.id === activeCompanyId ? "font-semibold text-primary" : "text-text-primary"
-              }`}
-            >
+            <DropdownItem key={company.id} active={company.id === activeCompanyId} onClick={() => handleSelect(company.id)}>
               {company.name}
-              {company.id === activeCompanyId && <span aria-hidden>✓</span>}
-            </button>
+            </DropdownItem>
           ))}
-        </div>
+        </DropdownPanel>
       )}
     </div>
   );

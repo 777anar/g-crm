@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { QuoteStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { ApiRequestError } from "@/lib/api-client";
 
 type SectionData = {
@@ -48,6 +49,7 @@ export default function QuoteBuilderPage() {
   const tOrders = useTranslations("orders");
   const tCommon = useTranslations("common");
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [sectionData, setSectionData] = useState<SectionData[] | null>(null);
@@ -78,8 +80,12 @@ export default function QuoteBuilderPage() {
   const isEditable = quote?.status === "draft";
 
   async function handleCreateOrder() {
-    const order = await createOrder(quoteId);
-    router.push(`/orders/${order.id}`);
+    try {
+      const order = await createOrder(quoteId);
+      router.push(`/orders/${order.id}`);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    }
   }
 
   async function handleDownloadPdf() {
@@ -107,9 +113,13 @@ export default function QuoteBuilderPage() {
   }
 
   async function handleDeleteSection(sectionId: string) {
-    if (!confirm(tCommon("confirmDelete"))) return;
-    await deleteSection(sectionId);
-    await reload();
+    if (!(await confirm(tCommon("confirmDelete")))) return;
+    try {
+      await deleteSection(sectionId);
+      await reload();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    }
   }
 
   async function handleAddItem(sectionId: string, itemType: string) {

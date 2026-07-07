@@ -140,6 +140,7 @@
   },
   "customerNew": {
     "title": "Müştəri yarat",
+    "subtitle": "Əlaqə məlumatları və lead mənbəyi ilə yeni müştəri profili əlavə edin.",
     "name": "Ad",
     "type": "Növ",
     "leadSource": "Lead mənbəyi",
@@ -163,6 +164,7 @@
     "status": "Müştəri statusu"
   },
   "customerProfile": {
+    "subtitle": "Bu müştərinin profili, əlaqələri, qeydləri və fəaliyyəti.",
     "breadcrumbCustomers": "Müştərilər",
     "backToList": "Siyahıya qayıt",
     "archiveCustomer": "Müştərini arxivlə",

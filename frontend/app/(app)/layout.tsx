@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { ConfirmProvider } from "@/components/ui/confirm-dialog";
 import { ToastProvider } from "@/components/ui/toast";
 import { getAccessToken } from "@/lib/session";
 
@@ -22,7 +23,9 @@ export default function AppGroupLayout({ children }: { children: React.ReactNode
 
   return (
     <ToastProvider>
-      <AppShell>{children}</AppShell>
+      <ConfirmProvider>
+        <AppShell>{children}</AppShell>
+      </ConfirmProvider>
     </ToastProvider>
   );
 }

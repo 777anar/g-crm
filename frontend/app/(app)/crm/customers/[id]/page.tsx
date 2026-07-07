@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   addCustomerNote,
@@ -19,18 +19,19 @@ import { Badge, CustomerArchivedBadge, CustomerStatusBadge, LeadChannelBadge } f
 import { EmptyState } from "@/components/ui/empty-state";
 import { TextAreaField } from "@/components/ui/field";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { formatDateTime } from "@/lib/format";
 import { useCustomerStatusLabel } from "@/lib/i18n/hooks";
 
 export default function CustomerProfilePage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const customerId = params.id;
 
   const t = useTranslations("customerProfile");
   const tCommon = useTranslations("common");
   const tActivityType = useTranslations("activityType");
   const statusLabel = useCustomerStatusLabel();
+  const confirm = useConfirm();
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +74,7 @@ export default function CustomerProfilePage() {
   }
 
   async function handleArchive() {
-    if (!confirm(t("archiveConfirm"))) return;
+    if (!(await confirm(t("archiveConfirm")))) return;
     setArchiving(true);
     try {
       await archiveCustomer(customerId);
@@ -176,14 +177,14 @@ export default function CustomerProfilePage() {
       </nav>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold text-text-primary">{customer.name}</h1>
-          <CustomerArchivedBadge archived={customer.deleted_at !== null} />
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-semibold text-text-primary">{customer.name}</h1>
+            <CustomerArchivedBadge archived={customer.deleted_at !== null} />
+          </div>
+          <p className="mt-0.5 text-sm text-text-secondary">{t("subtitle")}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => router.push("/crm/customers")}>
-            {t("backToList")}
-          </Button>
           {customer.deleted_at === null && (
             <Button variant="destructive" onClick={handleArchive} disabled={archiving}>
               {archiving ? t("archiving") : t("archiveCustomer")}

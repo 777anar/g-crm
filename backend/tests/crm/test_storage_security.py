@@ -68,10 +68,42 @@ def test_upload_rejects_file_over_size_limit(app_client, owner_headers):
         "/api/v1/core/documents",
         headers=owner_headers,
         data={"module": "crm", "related_entity_type": "customer", "related_entity_id": str(uuid.uuid4())},
-        files={"file": ("big.bin", oversized, "application/octet-stream")},
+        files={"file": ("big.pdf", oversized, "application/pdf")},
     )
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert response.json()["error"]["details"][0]["issue"] == "file too large"
+
+
+def test_upload_rejects_disallowed_content_type(app_client, owner_headers):
+    import uuid
+
+    response = app_client.post(
+        "/api/v1/core/documents",
+        headers=owner_headers,
+        data={"module": "crm", "related_entity_type": "customer", "related_entity_id": str(uuid.uuid4())},
+        files={"file": ("evil.exe", b"MZ\x90\x00", "application/x-msdownload")},
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert response.json()["error"]["details"][0]["issue"] == "unsupported content type"
+
+
+def test_upload_allows_common_business_content_types(app_client, owner_headers):
+    import uuid
+
+    for filename, content_type in [
+        ("photo.jpg", "image/jpeg"),
+        ("doc.pdf", "application/pdf"),
+        ("voice.ogg", "audio/ogg"),
+    ]:
+        response = app_client.post(
+            "/api/v1/core/documents",
+            headers=owner_headers,
+            data={"module": "crm", "related_entity_type": "customer", "related_entity_id": str(uuid.uuid4())},
+            files={"file": (filename, b"fake bytes", content_type)},
+        )
+        assert response.status_code == 200, response.text
 
 
 def test_upload_requires_write_permission(app_client, viewer_headers):

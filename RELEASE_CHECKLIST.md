@@ -79,31 +79,33 @@ The persistent "Notes" textarea on the customer profile was rendered via `<TextA
 
 ---
 
-## Medium (documented, not fixed this pass)
+## Medium
 
-| # | Issue | Category | Notes |
+_Status as of the Version 2.9.1 "Enterprise Polish" pass (2026-07-07), which re-audited every item below against the current codebase — several were resolved incidentally by later versions (2.8.1, 2.9), the rest fixed directly in that pass._
+
+| # | Issue | Category | Status |
 |---|---|---|---|
-| M1 | No upload content-type/extension allowlist | Security | Uploaded files are never served back as executable content today, which limits real-world impact; still worth an allowlist (e.g. images/PDF/office docs) before this is internet-facing. |
-| M2 | `customer.type` (individual/business) is now write-only dead weight | Tech debt | The Phase 3 stone-industry form no longer exposes a Type picker (always sends `"individual"`); the column, schema field, and badge logic still exist but are functionally orphaned. Fixing means either reintroducing a Type picker (a feature) or a migration to drop it (riskier than warranted mid-RC) — deferred. |
-| M3 | No toast/confirmation feedback on save actions | UX | Status changes, note saves, and customer creation rely on silent reload or navigation as the only feedback. `UI_UX_GUIDELINES.md` §5.7 calls for transient toasts on action confirmation; never implemented. |
-| M4 | `CompanySwitcher` and `LanguageSwitcher` duplicate dropdown markup | Duplicate code | Both independently implement the same open/close panel, chevron icon, and checkmark-row pattern. `useOutsideClick` was already extracted; the rendering itself wasn't. Worth a shared `<Dropdown>` primitive. |
-| M5 | Native `confirm()` used for customer archive | UX consistency | Every other destructive-action confirmation in the design system is a styled dialog; archive falls back to the browser's native `confirm()`, which looks and behaves inconsistently across browsers/OSes. |
-| M6 | No composite index on `(company_id, status)` / `(company_id, lead_source)` | Performance | Each column is individually indexed; fine at current data volumes, but list-with-filter queries will do a less efficient merge once companies have thousands of customers. |
-| M7 | Refresh tokens cannot be revoked | Security | `logout` is a client-side token discard only (already documented at implementation time); a stolen refresh token remains valid until natural expiry (30 days). A denylist (Redis, already in the stack) would close this. |
-| M8 | `GetCustomerProfileUseCase` still computes a `contacts` list nobody renders | Tech debt | The Phase 3 customer profile page stopped displaying the separate `Contact` sub-entity in favor of the customer's own phone/email/etc. fields, but the backend still queries and returns `contacts[]` in the profile payload, and the contact-creation code path in `CreateCustomerUseCase` is now unreachable from the current UI. Harmless, but dead weight. |
-| M9 | Email fields are unvalidated free text | Validation | `Customer.email`, `Contact.email` etc. accept any string — no `EmailStr` format validation server-side (the frontend `<input type="email">` provides only client-side, bypassable validation). |
+| M1 | No upload content-type/extension allowlist | Security | **[FIXED in 2.9.1]** `core/storage/router.py` now checks `file.content_type` against an explicit allowlist (images, PDF, common office formats, plain text/CSV, and the audio/video types Communication Center's WhatsApp/Instagram/Messenger message attachments need) before accepting an upload, rejecting anything else with a clean `400`. |
+| M2 | `customer.type` (individual/business) is now write-only dead weight | Tech debt | **Still deferred.** Unchanged from the original finding: fixing means either reintroducing a Type picker (a feature) or a migration to drop the column (riskier than warranted for a no-business-logic-change release) — both out of scope for a polish pass. |
+| M3 | No toast/confirmation feedback on save actions | UX | **[FIXED]** Resolved incrementally: Version 2.8.1 introduced the global `Toast` primitive; Version 2.9.1 then found and fixed the actual remaining gap — several detail pages' write-action handlers (Orders/Production/Finance Invoice/Installation Job) had no error handling *at all*, not just no toast. All now report failures via `useToast`. |
+| M4 | `CompanySwitcher` and `LanguageSwitcher` duplicate dropdown markup | Duplicate code | **[FIXED in 2.9.1]** Extracted into `components/ui/dropdown.tsx` (`useDropdown` hook + `DropdownPanel`/`DropdownItem` presentational components); both switchers now consume the shared primitive instead of hand-rolling their own open/close/panel/item markup. |
+| M5 | Native `confirm()` used for customer archive | UX consistency | **[FIXED in 2.9.1]** New `components/ui/confirm-dialog.tsx` (`useConfirm()` + `ConfirmProvider`, mounted at the app root next to `ToastProvider`) replaces every remaining native `confirm()`/`window.confirm()` call (customer archive, task delete, quote-section delete) with a consistent styled, Escape/backdrop-dismissible dialog. |
+| M6 | No composite index on `(company_id, status)` / `(company_id, lead_source)` | Performance | **[FIXED in 2.9.1]** Added `Index("company_id", "status")` and `Index("company_id", "lead_source")` on `Customer`, and the equivalent pair (`status`, `source_channel`) on `Lead` — matching the exact filter combinations `CustomerRepository.list`/`LeadRepository.list` actually issue. Migration `e042f8386f09`. |
+| M7 | Refresh tokens cannot be revoked | Security | **Still deferred.** A real Redis-backed denylist is a genuine feature build (revocation semantics, logout-endpoint changes, refresh-endpoint checks), not a fix to existing behavior — out of scope for a "no business logic changes" polish release. Consistent with every prior session's assessment (see `ROADMAP.md`'s change log). |
+| M8 | `GetCustomerProfileUseCase` still computes a `contacts` list nobody renders in the current UI | Tech debt | **Reviewed, intentionally left as-is.** `contacts` is part of the tested, documented `GET /crm/customers/{id}/profile` response contract (`tests/crm/test_customers_api.py` asserts on it directly) — removing it now would be a breaking API change, which conflicts with this release's explicit backward-compatibility constraint. Revisit only alongside a deliberate API version bump. |
+| M9 | Email fields are unvalidated free text | Validation | **[FIXED in 2.9.1]** `Customer.email`, `Contact.email`, and `Lead.email` on the *input* schemas (`CustomerCreate`/`CustomerUpdate`/`ContactCreate`/`LeadCreate`) now use Pydantic's `EmailStr` (syntax-only; `check_deliverability` stays off, so no network/DNS calls happen on the request path). Output schemas (`CustomerOut`, `LeadOut`, ...) deliberately keep plain `str` so any already-stored malformed email can still be read back without a serialization error. |
 
-## Low (documented, not fixed this pass)
+## Low
 
-| # | Issue | Category | Notes |
+| # | Issue | Category | Status |
 |---|---|---|---|
-| L1 | Decorative SVG icons missing `aria-hidden` | Accessibility | Chevron/checkmark icons in dropdowns and badges are exposed to assistive tech with no semantic value. |
-| L2 | No keyboard focus trap / Escape-to-close on dropdown menus | Accessibility | Company switcher and language switcher close on outside-click but not on `Escape`, and focus isn't moved into the panel on open. |
-| L3 | No skip-to-content link | Accessibility | Keyboard users must tab through the full sidebar nav on every page load to reach main content. |
-| L4 | Inconsistent page-header subtitles | UI consistency | Dashboard/Customers/Leads show a descriptive subtitle under the page title; Customer Profile/Customer New do not. |
-| L5 | Filter UI pattern differs between list pages | UI consistency | Leads page uses pill/chip filters for channel; Customers page uses a `<select>` dropdown for status. Both are reasonable individually but inconsistent side-by-side. |
-| L6 | `core/db/session.py`'s `db_session()` context manager is unused | Tech debt | Dead since the event-bus refactor that moved event persistence onto the caller's own session. Zero call sites remain. |
-| L7 | Breadcrumb + "Back to list" button both present on Customer Profile | UX redundancy | Two different controls do the same navigation; minor, not confusing, but redundant. |
+| L1 | Decorative SVG icons missing `aria-hidden` | Accessibility | **[FIXED]** Resolved by Version 2.8.1's accessibility baseline pass — verified still in place during the 2.9.1 re-audit. |
+| L2 | No keyboard focus trap / Escape-to-close on dropdown menus | Accessibility | **[FIXED]** Resolved by Version 2.8.1 (`useCloseOnEscape`/`useOutsideClick`) — verified still in place during the 2.9.1 re-audit. |
+| L3 | No skip-to-content link | Accessibility | **[FIXED]** Resolved by Version 2.8.1 (`app/layout.tsx`'s `.skip-link`) — verified still in place during the 2.9.1 re-audit. Its link text is still hardcoded English rather than translated (the root layout is a server component outside the client-side `LocaleProvider` tree); left as-is, consistent with the small set of already-documented English-fallback strings noted in `CLAUDE.md`. |
+| L4 | Inconsistent page-header subtitles | UI consistency | **[FIXED in 2.9.1]** `CardHeader` gained an optional `subtitle` prop; Customer New and Customer Profile now show one, matching the Dashboard/Customers/Leads pattern. |
+| L5 | Filter UI pattern differs between list pages | UI consistency | **Stale finding, no longer applicable.** Re-checked during the 2.9.1 pass: Leads' channel filter and Customers' status filter are both label+`<select>` dropdowns today (the pill/chip pattern this finding described no longer exists, superseded at some point during the 2.8.1 design-system pass). |
+| L6 | `core/db/session.py`'s `db_session()` context manager is unused | Tech debt | **[FIXED in 2.9.1]** Removed — confirmed zero call sites anywhere in the codebase before deleting. |
+| L7 | Breadcrumb + "Back to list" button both present on Customer Profile | UX redundancy | **[FIXED in 2.9.1]** Removed the redundant "Back to list" button; the breadcrumb already covers that navigation. |
 
 ---
 
@@ -119,3 +121,7 @@ The persistent "Notes" textarea on the customer profile was rendered via `<TextA
   - `assigned_manager_id` rejected when it doesn't resolve to a member of the active company, including a cross-tenant UUID, on both create and update (H5)
 - Frontend: `tsc --noEmit` and `next build` clean (all 8 routes).
 - No new features, routes, or modules were introduced — every change in this pass is a fix to existing, already-shipped behavior.
+
+### 2026-07-07 re-audit (Version 2.9.1 "Enterprise Polish")
+
+Every Medium/Low item above was re-checked against the current codebase (10 modules, 8 versions later) rather than assumed still valid from the original 2026-06-30 pass. Result: M1, M4, M5, M6, M9, L4, L6, L7 were genuinely still outstanding and fixed directly; M3, L1, L2, L3 had already been resolved by Version 2.8.1 and were verified rather than re-fixed; L5 was a stale finding no longer reflecting the current UI; M2 and M7 remain consciously deferred (both are scoped feature/schema decisions, not fixes, and out of bounds for a "no business logic changes" release); M8 was reviewed and left alone specifically because removing it now would break a tested API contract. Full backend suite passing (492/492, including 3 new tests for the M1 allowlist and 1 for M9's email validation), frontend `tsc --noEmit` and `next build` both clean.
