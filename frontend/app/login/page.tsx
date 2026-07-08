@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { login, selectCompany } from "@/lib/api/auth";
-import { setAccessToken } from "@/lib/session";
+import { setAccessToken, setRefreshToken } from "@/lib/session";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
@@ -28,6 +28,7 @@ export default function LoginPage() {
     try {
       const result = await login(email, password);
       setAccessToken(result.access_token);
+      setRefreshToken(result.refresh_token);
       setCompanies(result.companies);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("loginFailed"));
