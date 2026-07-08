@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -71,6 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const tCommon = useTranslations("common");
+  const tNav = useTranslations("nav");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   useCloseOnEscape(mobileNavOpen, () => setMobileNavOpen(false));
 
@@ -78,6 +79,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     clearAccessToken();
     router.push("/login");
   }
+
+  // Every route lives under this one client-side layout with no per-page
+  // <title>/generateMetadata, so the browser tab is kept in sync here --
+  // matched against the longest NAV_ITEMS href prefix, since detail routes
+  // (e.g. /crm/customers/[id]) should show their parent section's title.
+  useEffect(() => {
+    if (!pathname) return;
+    const match = [...NAV_ITEMS]
+      .sort((a, b) => b.href.length - a.href.length)
+      .find((item) => pathname.startsWith(item.href));
+    document.title = match ? `${tNav(match.labelKey)} · ${tCommon("appName")}` : tCommon("appName");
+  }, [pathname, tNav, tCommon]);
 
   return (
     <div className="flex min-h-screen flex-col">

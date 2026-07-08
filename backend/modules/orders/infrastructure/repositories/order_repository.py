@@ -7,6 +7,13 @@ from sqlalchemy.orm import Session
 from modules.orders.infrastructure.models.order import Order
 from modules.orders.infrastructure.models.order_number_sequence import OrderNumberSequence
 
+_SORTABLE = {
+    "order_number": Order.order_number,
+    "status": Order.status,
+    "created_at": Order.created_at,
+    "total_final": Order.total_final,
+}
+
 
 class OrderRepository:
     def __init__(self, db: Session):
@@ -43,7 +50,9 @@ class OrderRepository:
             stmt = stmt.where(Order.status == status)
         if search:
             stmt = stmt.where(Order.order_number.ilike(f"%{search}%"))
-        stmt = stmt.order_by(Order.created_at.desc()).offset(offset).limit(limit)
+        sort_col = _SORTABLE.get((sort or "-created_at").lstrip("-"), Order.created_at)
+        desc = not sort or sort.startswith("-")
+        stmt = stmt.order_by(sort_col.desc() if desc else sort_col.asc()).offset(offset).limit(limit)
         return list(self.db.scalars(stmt).all())
 
     def list_for_project(self, *, company_id: uuid.UUID, project_id: uuid.UUID) -> List[Order]:

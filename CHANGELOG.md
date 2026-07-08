@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.9.2] — 2026-07-08 — Production Readiness & G-STONE Onboarding
+
+Phase 3: a full application-perspective audit ahead of real daily use by G-STONE GALLERY — every navigation item, CRUD flow, filter/sort/export, permission path, company switch, responsive/dark-mode/i18n behavior, and loading/empty/error state reviewed. Four independent research passes (backend security/demo-data, frontend branding/demo-data, navigation/i18n/UX-states, CRUD/filters/permissions/company-switching) plus a live end-to-end Playwright smoke test against the real dev database. No new features, no business-logic changes. See `PRODUCTION_READINESS_REPORT.md` for the full audit findings, including items considered and deliberately deferred.
+
+### Fixed
+- **Sales → Projects "create project" form was completely broken**: `listCustomers({ limit: 200 })` requested more rows than the `GET /crm/customers` endpoint allows (`le=100`), so every load of the customer dropdown 400'd and the picker silently rendered empty — Create was unusable from that form. Capped the request at 100.
+- **Orders list `sort` parameter was accepted but silently ignored**: the API and frontend wrapper both had a `sort` field, but `OrderRepository.list()` always ordered by `created_at desc` regardless of its value. Wired it to a real `_SORTABLE` field map (`order_number`, `status`, `created_at`, `total_final`), matching the pattern already used by `ProjectRepository`.
+- **Sales Quotes had no way to edit VAT rate, discount, currency, validity date, or notes after creation** — the backend `PATCH /quotes/{id}` endpoint and its translation keys existed but nothing in the UI called it, so every quote was stuck with its creation-time defaults. Added an editable "Quote Settings" panel to the quote builder page, active while a quote is in `draft`.
+- **Frontend `Quote.discount_type` TypeScript type didn't match the backend**: declared `"percentage"` where the backend only recognizes `"percent"` (`totals.py`). Dormant only because no UI ever set the field; would have silently produced a zero discount the moment the new settings panel started sending it. Fixed the type and used the correct value.
+- **Catalog Brands and Warehouses had no archive/restore affordance**: `PATCH .../status` existed and worked (Materials already used it), but the Brands/Warehouses list pages never exposed it. Added an Active/Hidden toggle button per row, and both lists now include hidden entities so a restore path exists.
+- Missing favicon — added `frontend/app/icon.svg` (Next.js's file-based icon convention), a simple "G" monogram in the app's primary color. Browser tabs previously showed a generic/blank icon.
+- Browser tab title was the same static "G-STONE ERP" on every one of the ~30 routes. `AppShell` now sets `document.title` to the active section's translated nav label on every in-app (client-side) navigation. Known remaining limitation: because the entire `(app)` route group is client-rendered behind a token-check gate (no per-route `generateMetadata` is possible without restructuring every page to a server-component wrapper), a hard page reload or a directly-opened/bookmarked URL still shows the static app-wide title until the next in-app navigation — documented as a follow-up rather than fixed here.
+
+### Changed
+- Sales Projects list gained the status filter and sortable-column headers every sibling list page already had (backend already supported both `status` and `sort` query params; the frontend simply never wired them up).
+- Removed two dead, unused translation keys (`sales.serviceSettings` / `sales.servicePriceUpdated`, orphaned from an earlier abandoned feature) from all three locale files and repurposed the slots for the new Quote Settings UI strings (`quoteSettings`, `discountTypeNone/Percent/Fixed`, `discountValue`) — key parity across `en.json`/`az.json`/`ru.json` maintained.
+
+### Verification
+Full backend suite (492/492 passing), frontend `tsc --noEmit` clean, frontend production build clean (all 41 routes), and a live end-to-end Playwright smoke test against the real dev database and both running servers: login, company selection, every touched page loaded with zero console/HTTP errors, a real brand created and its archive/restore toggle exercised, and a real project → quote created with its new Quote Settings panel edited and confirmed persisted across a page reload.
+
 ## [2.9.1] — 2026-07-07 — Enterprise Polish
 
 Production-readiness audit across all ten shipped modules (CRM, Tasks, Communication, AI, Sales, Orders, Production, Installation, Finance, Reports). No new features, no business-logic changes, no API contract changes.

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { listProjects, createProject } from "@/lib/api/sales";
 import { listCustomers } from "@/lib/api/crm";
-import type { Customer, Project } from "@/lib/types";
+import { PROJECT_STATUSES, type Customer, type Project } from "@/lib/types";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SelectField, TextField } from "@/components/ui/field";
@@ -13,6 +13,7 @@ import { ProjectStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
+import { SortableHeader } from "@/components/ui/sortable-header";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
@@ -27,6 +28,8 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchInput, setSearchInput] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sort, setSort] = useState("-created_at");
   const [error, setError] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [form, setForm] = useState({ customer_id: "", name: "", project_type: "other", address: "" });
@@ -34,14 +37,14 @@ export default function ProjectsPage() {
   const search = useDebouncedValue(searchInput, 250);
 
   useEffect(() => {
-    listCustomers({ limit: 200 }).then((r) => setCustomers(r.items)).catch(() => {});
+    listCustomers({ limit: 100 }).then((r) => setCustomers(r.items)).catch(() => {});
   }, []);
 
   const load = useCallback(() => {
-    listProjects({ search: search || undefined })
+    listProjects({ search: search || undefined, status: statusFilter || undefined, sort })
       .then((r) => setProjects(r.items))
       .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
-  }, [search, t]);
+  }, [search, statusFilter, sort, t]);
 
   useEffect(() => {
     setProjects(null);
@@ -126,13 +129,25 @@ export default function ProjectsPage() {
         </Card>
       )}
 
-      <input
-        type="search"
-        value={searchInput}
-        onChange={(e) => setSearchInput(e.target.value)}
-        placeholder={t("searchProjectsPlaceholder")}
-        className="w-full max-w-xs rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
-      />
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder={t("searchProjectsPlaceholder")}
+          className="w-full max-w-xs rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+        >
+          <option value="">{tCommon("allStatuses")}</option>
+          {PROJECT_STATUSES.map((s) => (
+            <option key={s} value={s}>{t(s as any)}</option>
+          ))}
+        </select>
+      </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
@@ -147,12 +162,12 @@ export default function ProjectsPage() {
           <table className="w-full text-left text-sm">
             <thead className={stickyTheadClass}>
               <tr>
-                <th className="px-4 py-2 font-medium">{t("tableProject")}</th>
+                <SortableHeader field="name" label={t("tableProject")} sort={sort} onSortChange={setSort} />
                 <th className="px-4 py-2 font-medium">{t("projectType")}</th>
                 <th className="px-4 py-2 font-medium">{t("tableCustomer")}</th>
                 <th className="px-4 py-2 font-medium">{t("address")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableCreated")}</th>
+                <SortableHeader field="status" label={t("tableStatus")} sort={sort} onSortChange={setSort} />
+                <SortableHeader field="created_at" label={t("tableCreated")} sort={sort} onSortChange={setSort} />
               </tr>
             </thead>
             <tbody>

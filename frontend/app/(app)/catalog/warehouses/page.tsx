@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { createWarehouse, listWarehouses } from "@/lib/api/catalog";
+import { createWarehouse, listWarehouses, updateWarehouse } from "@/lib/api/catalog";
 import type { Warehouse } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,21 @@ export default function WarehousesPage() {
 
   const reload = useCallback(async () => {
     try {
-      const res = await listWarehouses();
+      const res = await listWarehouses({ includeHidden: true });
       setWarehouses(res.items);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
     }
   }, [t]);
+
+  async function handleToggleStatus(warehouse: Warehouse) {
+    try {
+      const updated = await updateWarehouse(warehouse.id, { status: warehouse.status === "active" ? "hidden" : "active" });
+      setWarehouses((prev) => prev?.map((w) => (w.id === updated.id ? updated : w)) ?? prev);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("updateFailed"));
+    }
+  }
 
   useEffect(() => {
     setWarehouses(null);
@@ -89,6 +98,7 @@ export default function WarehousesPage() {
                 <th className="px-4 py-2 font-medium">{t("name")}</th>
                 <th className="px-4 py-2 font-medium">{t("tableAddress")}</th>
                 <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
+                <th className="px-4 py-2" />
               </tr>
             </thead>
             <tbody>
@@ -98,6 +108,11 @@ export default function WarehousesPage() {
                   <td className="px-4 py-2 text-text-secondary">{warehouse.address ?? tCommon("dash")}</td>
                   <td className="px-4 py-2">
                     <EntityStatusBadge status={warehouse.status} />
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <Button variant="secondary" onClick={() => handleToggleStatus(warehouse)}>
+                      {warehouse.status === "active" ? t("entityStatus.hidden") : t("entityStatus.active")}
+                    </Button>
                   </td>
                 </tr>
               ))}

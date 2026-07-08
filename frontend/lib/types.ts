@@ -330,7 +330,7 @@ export type Quote = {
   price_list_id: string | null;
   valid_until: string | null;
   vat_rate: string;
-  discount_type: "none" | "percentage" | "fixed";
+  discount_type: "none" | "percent" | "fixed";
   discount_value: string;
   subtotal_gross: string;
   discount_amount: string;

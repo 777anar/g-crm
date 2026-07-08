@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { createBrand, listBrands } from "@/lib/api/catalog";
+import { createBrand, listBrands, updateBrand } from "@/lib/api/catalog";
 import type { Brand } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -32,12 +32,21 @@ export default function BrandsPage() {
 
   const reload = useCallback(async () => {
     try {
-      const res = await listBrands({ search });
+      const res = await listBrands({ search, includeHidden: true });
       setBrands(res.items);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
     }
   }, [search, t]);
+
+  async function handleToggleStatus(brand: Brand) {
+    try {
+      const updated = await updateBrand(brand.id, { status: brand.status === "active" ? "hidden" : "active" });
+      setBrands((prev) => prev?.map((b) => (b.id === updated.id ? updated : b)) ?? prev);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("updateFailed"));
+    }
+  }
 
   useEffect(() => {
     setBrands(null);
@@ -114,6 +123,7 @@ export default function BrandsPage() {
                 <th className="px-4 py-2 font-medium">{t("name")}</th>
                 <th className="px-4 py-2 font-medium">{t("description")}</th>
                 <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
+                <th className="px-4 py-2" />
               </tr>
             </thead>
             <tbody>
@@ -123,6 +133,11 @@ export default function BrandsPage() {
                   <td className="px-4 py-2 text-text-secondary">{brand.description ?? tCommon("dash")}</td>
                   <td className="px-4 py-2">
                     <EntityStatusBadge status={brand.status} />
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <Button variant="secondary" onClick={() => handleToggleStatus(brand)}>
+                      {brand.status === "active" ? t("entityStatus.hidden") : t("entityStatus.active")}
+                    </Button>
                   </td>
                 </tr>
               ))}

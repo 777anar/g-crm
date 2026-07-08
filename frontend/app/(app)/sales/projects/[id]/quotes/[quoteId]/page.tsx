@@ -18,6 +18,7 @@ import {
   createMeasurement,
   deleteMeasurement,
   updateQuoteStatus,
+  updateQuote,
   downloadQuotePdf,
 } from "@/lib/api/sales";
 import type { Quote, QuoteSection, QuoteSectionItem, QuoteSectionMeasurement } from "@/lib/types";
@@ -159,6 +160,15 @@ export default function QuoteBuilderPage() {
     }
   }
 
+  async function handleUpdateQuoteField(field: Parameters<typeof updateQuote>[1]) {
+    try {
+      const newQuote = await updateQuote(quoteId, field);
+      setQuote(newQuote);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    }
+  }
+
   if (loading || !quote) return <TableSkeleton rows={5} columns={5} />;
 
   return (
@@ -204,6 +214,109 @@ export default function QuoteBuilderPage() {
         )}
         <div><span className="text-text-secondary">{t("vat")} {quote.vat_rate}%:</span> <strong className="text-text-primary">{quote.currency} {parseFloat(quote.vat_amount).toFixed(2)}</strong></div>
         <div className="ml-auto text-base"><span className="text-text-secondary">{t("totalFinal")}:</span> <strong className="text-lg text-primary">{quote.currency} {parseFloat(quote.total_final).toFixed(2)}</strong></div>
+      </Card>
+
+      {/* Quote settings */}
+      <Card className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold text-text-primary">{t("quoteSettings")}</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-text-secondary">{t("currency")}</span>
+            {isEditable ? (
+              <input
+                className={inputClasses}
+                defaultValue={quote.currency}
+                maxLength={3}
+                onBlur={(e) => e.target.value.trim() && handleUpdateQuoteField({ currency: e.target.value.trim().toUpperCase() })}
+              />
+            ) : (
+              <span className="text-text-primary">{quote.currency}</span>
+            )}
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-text-secondary">{t("vatRate")}</span>
+            {isEditable ? (
+              <input
+                className={inputClasses}
+                defaultValue={quote.vat_rate}
+                onBlur={(e) => e.target.value !== "" && handleUpdateQuoteField({ vat_rate: e.target.value })}
+              />
+            ) : (
+              <span className="text-text-primary">{quote.vat_rate}%</span>
+            )}
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-text-secondary">{t("discount")}</span>
+            {isEditable ? (
+              <select
+                className={inputClasses}
+                defaultValue={quote.discount_type}
+                onChange={(e) => handleUpdateQuoteField({ discount_type: e.target.value })}
+              >
+                <option value="none">{t("discountTypeNone")}</option>
+                <option value="percent">{t("discountTypePercent")}</option>
+                <option value="fixed">{t("discountTypeFixed")}</option>
+              </select>
+            ) : (
+              <span className="text-text-primary">{t(`discountType${quote.discount_type === "percent" ? "Percent" : quote.discount_type === "fixed" ? "Fixed" : "None"}`)}</span>
+            )}
+          </label>
+          {quote.discount_type !== "none" && (
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-text-secondary">{t("discountValue")}</span>
+              {isEditable ? (
+                <input
+                  className={inputClasses}
+                  defaultValue={quote.discount_value}
+                  onBlur={(e) => e.target.value !== "" && handleUpdateQuoteField({ discount_value: e.target.value })}
+                />
+              ) : (
+                <span className="text-text-primary">{quote.discount_value}{quote.discount_type === "percent" ? "%" : ` ${quote.currency}`}</span>
+              )}
+            </label>
+          )}
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-text-secondary">{t("validUntil")}</span>
+            {isEditable ? (
+              <input
+                type="date"
+                className={inputClasses}
+                defaultValue={quote.valid_until ? quote.valid_until.slice(0, 10) : ""}
+                onBlur={(e) => handleUpdateQuoteField({ valid_until: e.target.value || null })}
+              />
+            ) : (
+              <span className="text-text-primary">{quote.valid_until ? quote.valid_until.slice(0, 10) : "—"}</span>
+            )}
+          </label>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-text-secondary">{t("internalNotes")}</span>
+            {isEditable ? (
+              <textarea
+                className={inputClasses}
+                rows={2}
+                defaultValue={quote.internal_notes ?? ""}
+                onBlur={(e) => handleUpdateQuoteField({ internal_notes: e.target.value || null })}
+              />
+            ) : (
+              <span className="text-text-primary">{quote.internal_notes || "—"}</span>
+            )}
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-text-secondary">{t("customerNotes")}</span>
+            {isEditable ? (
+              <textarea
+                className={inputClasses}
+                rows={2}
+                defaultValue={quote.customer_notes ?? ""}
+                onBlur={(e) => handleUpdateQuoteField({ customer_notes: e.target.value || null })}
+              />
+            ) : (
+              <span className="text-text-primary">{quote.customer_notes || "—"}</span>
+            )}
+          </label>
+        </div>
       </Card>
 
       {/* Sections */}

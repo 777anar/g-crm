@@ -9,6 +9,7 @@ import { OrderStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
+import { SortableHeader } from "@/components/ui/sortable-header";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
@@ -21,14 +22,15 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [sort, setSort] = useState("-created_at");
   const [error, setError] = useState<string | null>(null);
   const search = useDebouncedValue(searchInput, 250);
 
   const load = useCallback(() => {
-    listOrders({ status: statusFilter || undefined, search: search || undefined })
+    listOrders({ status: statusFilter || undefined, search: search || undefined, sort })
       .then((r) => setOrders(r.items))
       .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
-  }, [statusFilter, search, t]);
+  }, [statusFilter, search, sort, t]);
 
   useEffect(() => {
     setOrders(null);
@@ -75,12 +77,12 @@ export default function OrdersPage() {
           <table className="w-full text-left text-sm">
             <thead className={stickyTheadClass}>
               <tr>
-                <th className="px-4 py-2 font-medium">{t("tableOrder")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
+                <SortableHeader field="order_number" label={t("tableOrder")} sort={sort} onSortChange={setSort} />
+                <SortableHeader field="status" label={t("tableStatus")} sort={sort} onSortChange={setSort} />
                 <th className="px-4 py-2 font-medium">{t("tableProject")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableTotal")}</th>
+                <SortableHeader field="total_final" label={t("tableTotal")} sort={sort} onSortChange={setSort} />
                 <th className="px-4 py-2 font-medium">{t("scheduledProduction")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableCreated")}</th>
+                <SortableHeader field="created_at" label={t("tableCreated")} sort={sort} onSortChange={setSort} />
               </tr>
             </thead>
             <tbody>
