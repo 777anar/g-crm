@@ -44,7 +44,7 @@ Each of these was considered and intentionally left alone, consistent with this 
 - **Backend validation-error messages aren't localized.** When `ApiRequestError.message` carries a real backend error, it bypasses the frontend's `t()` translation fallback and shows raw English to AZ/RU users. Fixing this properly means the backend returning error *codes* the frontend maps to translated strings, a cross-cutting API contract change — out of scope here.
 - **Production and Finance Invoices list pages have no backend `sort` parameter at all** (unlike Orders and Sales Projects, which already had one, just unwired on the frontend). Adding one means extending those two APIs, which this pass treated as feature work rather than a wiring fix.
 - **Sales Quote Sections/Measurements support delete-and-recreate only, not in-place edit.** A real gap, but a working (if clunky) path exists today, and it's lower-traffic than the quote-level settings gap that was fixed. Left for a future pass.
-- Pre-existing, already-documented gap (`ROADMAP.md` Version 2.9.1): only the Customers detail page has real breadcrumbs; every other detail page uses a "← Back to X" link instead. Reconfirmed still the state; not re-litigated here.
+- ~~Pre-existing, already-documented gap (`ROADMAP.md` Version 2.9.1): only the Customers detail page has real breadcrumbs; every other detail page uses a "← Back to X" link instead.~~ **Fixed in the follow-up pass below** (finding #12).
 
 ## Clean audit areas (no findings)
 
@@ -72,6 +72,55 @@ frontend/app/(app)/sales/projects/[id]/quotes/[quoteId]/page.tsx
 frontend/app/icon.svg (new)
 frontend/components/app-shell.tsx
 frontend/lib/types.ts
+frontend/locales/az.json
+frontend/locales/en.json
+frontend/locales/ru.json
+```
+
+---
+
+## Follow-up pass (2026-07-08, second round)
+
+The findings above came from four independent research audits run in parallel with this report's first draft. This section covers the audit findings that landed *after* the first round of fixes was already committed, plus one correction.
+
+### Findings fixed
+
+| # | Finding | Severity | Fix |
+|---|---|---|---|
+| 10 | `az.json`'s `catalog.tableDefault` key was left as literal English `"Default"` despite Azerbaijani being the app's default locale. | Medium (i18n, seen by every AZ user) | Translated to `"Standart"`, consistent with existing usage elsewhere in the file. |
+| 11 | Dashboard/Reports chart gridlines and data-point strokes (`components/ui/charts.tsx`) were hardcoded to light-mode hex (`#E2E5EA`/`#FFFFFF`) instead of the app's `--color-border`/`--color-surface` CSS variables, making them nearly invisible in dark mode. | Medium (dark mode, every chart) | Switched both to the existing CSS custom properties, which already repoint automatically between themes. Verified live with the dark-mode toggle active — gridline stroke resolves to the dark theme's border color. |
+| 12 | Only the Customers detail page had real breadcrumbs; the other nine (Orders, Production, Catalog Materials, Catalog Price Lists, CRM Tasks, Finance Invoices, Installation Jobs, Sales Projects, Sales Quote builder) used a plain "← Back to X" link — flagged as far back as the 2.9.1 changelog entry and reconfirmed unfixed by this pass's own nav/breadcrumb audit. | Medium (UX consistency, explicitly asked for in this phase's brief) | Extracted a shared `Breadcrumb` component (`components/ui/breadcrumb.tsx`) from the Customers page's existing markup and applied it to all ten detail pages. The Quote builder now shows a full three-level trail (Projects / project name / quote number), fetching the project name via the existing `getProject` endpoint since the page previously never loaded it. |
+| 13 | Eight now-orphaned `backTo*`/`back` translation keys left dead by finding #12's fix. | Low (dev-artifact cleanup) | Removed from all three locale files; key parity re-verified (1,006 keys, exact match across `en`/`az`/`ru`). |
+
+### A finding investigated and declined
+
+An earlier research pass (CRUD completeness audit) reported that CRM Customer archive had no "Restore" UI, and assumed the existing `PATCH /crm/customers/{id}` endpoint could already un-archive a customer if the frontend called it with the right status. On inspection this assumption was wrong: `UpdateCustomerUseCase` (`backend/modules/crm/application/use_cases/customer_use_cases.py`) never touches `deleted_at` — only `ArchiveCustomerUseCase` does, and no restore use case, endpoint, or repository method exists anywhere in the backend for this entity. Building one is new business logic (a new use case, a new endpoint, a decision about whether restore should be its own audit/event action) — explicitly out of scope for a "fix only real issues, no new features" pass. Recorded here as a genuine, not-yet-built product gap rather than silently wired up against a capability that turned out not to exist.
+
+### Also considered and declined
+
+Same reasoning as the first round: **no sidebar icon library** was added, despite `UI_UX_GUIDELINES.md` calling for one. This remains a real design-system decision (icon set choice, sizing, ~20 nav entries and every page header touched) rather than a bug fix.
+
+### Verification (second round)
+
+- **Backend**: unchanged — no backend files were touched this round, so the existing 492/492 pass stands.
+- **Frontend**: `tsc --noEmit` — clean. `next build` — clean, all 41 routes.
+- **Live smoke test** (Playwright, fresh dev server, real dev database): login → company selection; every touched list page loaded with zero console/HTTP errors. Breadcrumbs verified live with real records on 5 of the 10 refactored detail pages — Customers (pre-existing, dogfooded onto the new shared component), Sales Projects, CRM Tasks, Catalog Price Lists (the one page with extra fetch logic to resolve the record's display name), and the Sales Quote builder's three-level trail. The remaining 5 (Orders, Production, Catalog Materials, Finance Invoices, Installation Jobs) share the identical, type-checked pattern against tables that are currently empty in this dev database — not exercised live, but covered by strict TypeScript compilation and a clean production build. Dark mode toggled live via the app's documented `localStorage` mechanism; chart gridline stroke confirmed to resolve to the dark theme's border color instead of the old hardcoded light hex.
+
+### Files changed (second round)
+
+```
+frontend/app/(app)/catalog/materials/[id]/page.tsx
+frontend/app/(app)/catalog/price-lists/[id]/page.tsx
+frontend/app/(app)/crm/customers/[id]/page.tsx
+frontend/app/(app)/crm/tasks/[id]/page.tsx
+frontend/app/(app)/finance/invoices/[id]/page.tsx
+frontend/app/(app)/installation/jobs/[id]/page.tsx
+frontend/app/(app)/orders/[id]/page.tsx
+frontend/app/(app)/production/[id]/page.tsx
+frontend/app/(app)/sales/projects/[id]/page.tsx
+frontend/app/(app)/sales/projects/[id]/quotes/[quoteId]/page.tsx
+frontend/components/ui/breadcrumb.tsx (new)
+frontend/components/ui/charts.tsx
 frontend/locales/az.json
 frontend/locales/en.json
 frontend/locales/ru.json

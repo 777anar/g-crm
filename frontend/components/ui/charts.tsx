@@ -6,7 +6,6 @@ import { useId, useMemo, useState } from "react";
  * CVD-safe adjacent pairs) -- see UI_UX_GUIDELINES.md / tailwind.config.ts.
  * Never reassign or cycle this order; a chart with more series than colors
  * folds the remainder into "Other" instead of repeating a hue. */
-const CATEGORICAL_HEX = ["#1F4FD8", "#0E7C9D", "#1A8754", "#B8860B", "#C0392B"] as const;
 const CATEGORICAL_CLASS = ["fill-primary", "fill-info", "fill-success", "fill-warning", "fill-danger"] as const;
 
 function niceMax(value: number): number {
@@ -93,7 +92,7 @@ export function CategoryBarChart({
        * shapes, so labels live in the HTML row below instead. */}
       <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" className="w-full" style={{ height }}>
         {[0, 0.25, 0.5, 0.75, 1].map((f) => (
-          <line key={f} x1={0} x2={100} y1={height - f * height} y2={height - f * height} stroke="#E2E5EA" strokeWidth={0.5} />
+          <line key={f} x1={0} x2={100} y1={height - f * height} y2={height - f * height} stroke="var(--color-border)" strokeWidth={0.5} />
         ))}
         {data.map((d, i) => {
           const barHeight = max > 0 ? (d.value / max) * height : 0;
@@ -109,7 +108,7 @@ export function CategoryBarChart({
         })}
       </svg>
       <div className="mt-1 flex">
-        {data.map((d, i) => (
+        {data.map((d) => (
           <div key={d.label} className="truncate px-0.5 text-center text-xs text-text-secondary" style={{ width: `${barSlot}%` }}>
             {d.label}
           </div>
@@ -181,7 +180,7 @@ export function TrendChart({
           </clipPath>
         </defs>
         {[0, 0.5, 1].map((f) => (
-          <line key={f} x1={0} x2={100} y1={plotH * (1 - f)} y2={plotH * (1 - f)} stroke="#E2E5EA" strokeWidth={0.5} />
+          <line key={f} x1={0} x2={100} y1={plotH * (1 - f)} y2={plotH * (1 - f)} stroke="var(--color-border)" strokeWidth={0.5} />
         ))}
         {series.map((s) => {
           const points = data.map((d, i) => `${xFor(i)},${yFor(Number(d[s.key]) || 0)}`).join(" ");
@@ -195,7 +194,7 @@ export function TrendChart({
                   cy={yFor(Number(d[s.key]) || 0)}
                   r={hoverIndex === i ? 1.6 : 1.1}
                   fill={s.colorHex}
-                  stroke="#FFFFFF"
+                  stroke="var(--color-surface)"
                   strokeWidth={0.6}
                 />
               ))}
@@ -205,7 +204,7 @@ export function TrendChart({
         {hoverIndex !== null && (
           <line x1={xFor(hoverIndex)} x2={xFor(hoverIndex)} y1={0} y2={plotH} stroke="#5B6270" strokeWidth={0.3} />
         )}
-        {data.map((d, i) => (
+        {data.map((_, i) => (
           <rect
             key={i}
             x={xFor(i) - stepX / 2}

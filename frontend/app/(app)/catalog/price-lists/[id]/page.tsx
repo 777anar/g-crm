@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { listMaterials, listPriceListEntries, upsertPriceListEntry } from "@/lib/api/catalog";
+import { listMaterials, listPriceListEntries, listPriceLists, upsertPriceListEntry } from "@/lib/api/catalog";
 import type { Material, PriceListEntry } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SelectField, TextField } from "@/components/ui/field";
@@ -21,6 +21,7 @@ export default function PriceListDetailPage() {
 
   const [entries, setEntries] = useState<PriceListEntry[] | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [priceListName, setPriceListName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [materialId, setMaterialId] = useState("");
@@ -49,6 +50,12 @@ export default function PriceListDetailPage() {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    listPriceLists({ includeHidden: true }).then((res) => {
+      setPriceListName(res.items.find((p) => p.id === priceListId)?.name ?? null);
+    }).catch(() => {});
+  }, [priceListId]);
+
   function materialName(id: string) {
     return materials.find((m) => m.id === id)?.name ?? id.slice(0, 8);
   }
@@ -69,9 +76,12 @@ export default function PriceListDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/catalog/price-lists" className="text-sm text-primary hover:underline">
-        ← {tDetail("back")}
-      </Link>
+      <Breadcrumb
+        items={[
+          { label: t("priceListsTitle"), href: "/catalog/price-lists" },
+          { label: priceListName ?? tCommon("loading") },
+        ]}
+      />
 
       <Card>
         <CardHeader title={t("priceListsTitle")} />

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -13,6 +12,7 @@ import {
 } from "@/lib/api/crm";
 import { CUSTOMER_STATUSES, type CustomerProfile, type CustomerStatus } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, CustomerArchivedBadge, CustomerStatusBadge, LeadChannelBadge } from "@/components/ui/badge";
@@ -168,13 +168,7 @@ export default function CustomerProfilePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <nav className="flex items-center gap-1 text-sm text-text-secondary" aria-label={tCommon("breadcrumb")}>
-        <Link href="/crm/customers" className="hover:text-primary hover:underline">
-          {t("breadcrumbCustomers")}
-        </Link>
-        <span>/</span>
-        <span className="text-text-primary">{customer.name}</span>
-      </nav>
+      <Breadcrumb items={[{ label: t("breadcrumbCustomers"), href: "/crm/customers" }, { label: customer.name }]} />
 
       <div className="flex items-center justify-between">
         <div>

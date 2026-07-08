@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { getProject, updateProject, listQuotes, createQuote } from "@/lib/api/sales";
+import { getProject, listQuotes, createQuote } from "@/lib/api/sales";
 import type { Project, Quote } from "@/lib/types";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -16,6 +16,7 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("sales");
   const tCommon = useTranslations("common");
+  const tNav = useTranslations("nav");
   const router = useRouter();
 
   const [project, setProject] = useState<Project | null>(null);
@@ -47,9 +48,7 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/sales/projects" className="text-sm text-primary hover:underline">
-        ← {t("backToProjects")}
-      </Link>
+      <Breadcrumb items={[{ label: tNav("projects"), href: "/sales/projects" }, { label: project.name }]} />
 
       <div className="flex items-center justify-between">
         <div>

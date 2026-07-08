@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -29,6 +28,7 @@ import {
   type Slab,
 } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EntityStatusBadge, SlabStatusBadge } from "@/components/ui/badge";
@@ -143,9 +143,7 @@ export default function MaterialDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/catalog/materials" className="text-sm text-primary hover:underline">
-        ← {tDetail("back")}
-      </Link>
+      <Breadcrumb items={[{ label: t("materialsTitle"), href: "/catalog/materials" }, { label: material.name }]} />
 
       <div className="flex items-center justify-between">
         <div>

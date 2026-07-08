@@ -13,6 +13,7 @@ import {
   updateInvoiceStatus,
 } from "@/lib/api/finance";
 import { PAYMENT_METHODS, type Invoice, type InvoiceLine, type Payment } from "@/lib/types";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InvoiceStatusBadge } from "@/components/ui/badge";
@@ -28,6 +29,7 @@ export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("finance");
   const tCommon = useTranslations("common");
+  const tNav = useTranslations("nav");
   const toast = useToast();
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -126,9 +128,10 @@ export default function InvoiceDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/finance/invoices" className="print-hidden text-sm text-primary hover:underline">
-        ← {t("backToInvoices")}
-      </Link>
+      <Breadcrumb
+        className="print-hidden"
+        items={[{ label: tNav("invoices"), href: "/finance/invoices" }, { label: invoice.invoice_number }]}
+      />
 
       <div className="flex items-center justify-between">
         <div>

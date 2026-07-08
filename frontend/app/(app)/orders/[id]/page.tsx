@@ -17,6 +17,7 @@ import { createWorkOrder, getWorkOrderForOrder } from "@/lib/api/production";
 import { createInstallationJob, getInstallationJobForOrder } from "@/lib/api/installation";
 import { createInvoice, getInvoiceForOrder } from "@/lib/api/finance";
 import type { Order, OrderItem, OrderMeasurement, OrderSection, WorkOrder, InstallationJob, Invoice } from "@/lib/types";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { OrderStatusBadge, WorkOrderStatusBadge, InstallationJobStatusBadge, InvoiceStatusBadge } from "@/components/ui/badge";
@@ -58,6 +59,7 @@ export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("orders");
   const tCommon = useTranslations("common");
+  const tNav = useTranslations("nav");
   const toast = useToast();
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -241,9 +243,7 @@ export default function OrderDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/orders" className="text-sm text-primary hover:underline">
-        ← {t("backToOrders")}
-      </Link>
+      <Breadcrumb items={[{ label: tNav("orders"), href: "/orders" }, { label: order.order_number }]} />
 
       <div className="flex items-center justify-between">
         <div>

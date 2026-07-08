@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { createOrder } from "@/lib/api/orders";
 import {
+  getProject,
   getQuote,
   listSections,
   createSection,
@@ -21,9 +21,10 @@ import {
   updateQuote,
   downloadQuotePdf,
 } from "@/lib/api/sales";
-import type { Quote, QuoteSection, QuoteSectionItem, QuoteSectionMeasurement } from "@/lib/types";
+import type { Project, Quote, QuoteSection, QuoteSectionItem, QuoteSectionMeasurement } from "@/lib/types";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { QuoteStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -49,10 +50,12 @@ export default function QuoteBuilderPage() {
   const t = useTranslations("sales");
   const tOrders = useTranslations("orders");
   const tCommon = useTranslations("common");
+  const tNav = useTranslations("nav");
   const router = useRouter();
   const confirm = useConfirm();
 
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [sectionData, setSectionData] = useState<SectionData[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [newSectionName, setNewSectionName] = useState("");
@@ -77,6 +80,7 @@ export default function QuoteBuilderPage() {
   }, [quoteId]);
 
   useEffect(() => { reload(); }, [reload]);
+  useEffect(() => { getProject(id).then(setProject).catch(() => {}); }, [id]);
 
   const isEditable = quote?.status === "draft";
 
@@ -173,9 +177,13 @@ export default function QuoteBuilderPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href={`/sales/projects/${id}`} className="text-sm text-primary hover:underline">
-        ← {t("backToProject")}
-      </Link>
+      <Breadcrumb
+        items={[
+          { label: tNav("projects"), href: "/sales/projects" },
+          { label: project?.name ?? tCommon("loading"), href: `/sales/projects/${id}` },
+          { label: quote.quote_number },
+        ]}
+      />
 
       <div className="flex items-center justify-between">
         <div>

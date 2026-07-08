@@ -15,6 +15,7 @@ import {
   uploadInstallationAsset,
 } from "@/lib/api/installation";
 import type { Crew, InstallationJob, InstallationPhoto, PhotoType } from "@/lib/types";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { InstallationJobStatusBadge } from "@/components/ui/badge";
@@ -37,6 +38,7 @@ const PHOTO_TYPES: PhotoType[] = ["before", "after", "damage", "other"];
 export default function InstallationJobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("installation");
+  const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
   const toast = useToast();
 
@@ -186,9 +188,7 @@ export default function InstallationJobDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/installation/kanban" className="text-sm text-primary hover:underline">
-        ← {t("backToInstallation")}
-      </Link>
+      <Breadcrumb items={[{ label: tNav("installation"), href: "/installation/kanban" }, { label: job.job_number }]} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>

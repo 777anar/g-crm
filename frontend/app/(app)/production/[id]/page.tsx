@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { getWorkOrder, listWorkOrderItems, updateWorkOrderStatus } from "@/lib/api/production";
 import type { WorkOrder, WorkOrderItem } from "@/lib/types";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { WorkOrderStatusBadge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ export default function WorkOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("production");
   const tCommon = useTranslations("common");
+  const tNav = useTranslations("nav");
   const toast = useToast();
 
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
@@ -80,9 +82,7 @@ export default function WorkOrderDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/production" className="text-sm text-primary hover:underline">
-        ← {t("backToWorkOrders")}
-      </Link>
+      <Breadcrumb items={[{ label: tNav("production"), href: "/production" }, { label: workOrder.work_order_number }]} />
 
       <div className="flex items-center justify-between">
         <div>

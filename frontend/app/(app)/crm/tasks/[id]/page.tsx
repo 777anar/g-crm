@@ -13,6 +13,7 @@ import {
 } from "@/lib/api/crm";
 import { listCompanyUsers } from "@/lib/api/companies";
 import { TASK_PRIORITIES, type CompanyUser, type Task } from "@/lib/types";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TaskPriorityBadge, TaskStatusBadge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ export default function TaskDetailPage() {
   const router = useRouter();
   const t = useTranslations("tasks");
   const tCommon = useTranslations("common");
+  const tNav = useTranslations("nav");
   const confirm = useConfirm();
   const toast = useToast();
 
@@ -121,9 +123,7 @@ export default function TaskDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/crm/tasks" className="text-sm text-primary hover:underline">
-        ← {t("backToTasks")}
-      </Link>
+      <Breadcrumb items={[{ label: tNav("tasks"), href: "/crm/tasks" }, { label: task.title }]} />
 
       <div className="flex items-center justify-between">
         <div>

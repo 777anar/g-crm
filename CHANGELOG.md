@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.9.3] — 2026-07-08 — Production Readiness follow-up: i18n, dark mode, breadcrumbs
+
+A second pass over the four Phase 3 research findings that landed after 2.9.2 was already committed: an i18n audit, a responsive/dark-mode audit, a navigation/breadcrumb audit, and a CRUD-completeness audit. No new features, no business-logic changes.
+
+### Fixed
+- **`az.json` had one untranslated string**: `catalog.tableDefault` was left as the literal English `"Default"` even though Azerbaijani is the app's default locale, so every AZ user saw raw English on the Price Lists table's "Default" column. Translated to `"Standart"`, consistent with the existing `"standart"` usage elsewhere in the same file.
+- **Dashboard/Reports chart gridlines and data-point strokes were hardcoded to light-mode hex colors** (`components/ui/charts.tsx`): gridlines used a fixed `#E2E5EA` (the light theme's border color) and point strokes used a fixed `#FFFFFF`, so both were nearly invisible or wrong against a dark background. Switched both to the existing `--color-border`/`--color-surface` CSS custom properties, which already repoint automatically between light and dark (same mechanism every other themed element in the app uses) — verified live in a browser with the dark-mode toggle active.
+- **Breadcrumb inconsistency across detail pages**, flagged as a known gap as far back as the 2.9.1 changelog entry: only the Customers detail page had real breadcrumbs; the other nine (Orders, Production, Catalog Materials, Catalog Price Lists, CRM Tasks, Finance Invoices, Installation Jobs, Sales Projects, and the Sales Quote builder) used a plain "← Back to X" link instead. Extracted a shared `Breadcrumb` component (`components/ui/breadcrumb.tsx`) from the Customers page's existing markup and applied it to all ten pages; the Quote builder now shows the full three-level trail (Projects / project name / quote number). Verified live for five of the ten pages with real records (the rest share the identical, type-checked pattern against empty tables in the current dev database).
+
+### Removed
+- Eight now-orphaned `backTo*`/`back` translation keys (`orders.backToOrders`, `production.backToWorkOrders`, `finance.backToInvoices`, `tasks.backToTasks`, `installation.backToInstallation`, `sales.backToProjects`, `sales.backToProject`, `catalog.materialDetail.back`) from all three locale files, left dead by the breadcrumb replacement above. `tasks.backToPending` (a different, still-used string) was left untouched.
+- Two small pre-existing dev artifacts found while editing these same files: an unused `updateProject` import on the Sales Project detail page, and an unused `CardHeader` import left over from 2.9.2's Quote Settings panel.
+
+### Corrected
+- **Investigated and declined a finding from an earlier research pass**: CRM Customer archive was reported as missing a "Restore" button in the UI, with the assumption that the existing `PATCH /crm/customers/{id}` endpoint could already un-archive a customer. On inspection, `UpdateCustomerUseCase` never touches `deleted_at` — only `ArchiveCustomerUseCase` does, and no restore use case exists anywhere in the backend. Adding one would be new business logic, out of scope for this pass; recorded as a genuine, not-yet-built gap instead of a wiring fix.
+- **Considered and declined adding a sidebar icon library.** `UI_UX_GUIDELINES.md` calls for one consistent icon set across all ~20 nav items; the sidebar has been text-only since day one. This is a real design-system decision (icon set choice, sizing, every nav entry and page header touched) rather than a bug fix, so it was left as a documented, deliberately deferred gap rather than partially addressed.
+
+### Verification
+Full backend suite (492/492 passing, unchanged from 2.9.2 since no backend files were touched), frontend `tsc --noEmit` clean, frontend production build clean (all 41 routes), and a live end-to-end Playwright smoke test against the real dev database and both running servers: login, company selection, every touched list page, and five of the ten breadcrumb-refactored detail pages (Customers, Sales Projects, CRM Tasks, Catalog Price Lists, and the Sales Quote builder) exercised with real records and zero console errors; dark mode toggled live and the chart color fix confirmed via computed style (gridline stroke resolves to the dark theme's border color, not the old hardcoded light hex).
+
 ## [2.9.2] — 2026-07-08 — Production Readiness & G-STONE Onboarding
 
 Phase 3: a full application-perspective audit ahead of real daily use by G-STONE GALLERY — every navigation item, CRUD flow, filter/sort/export, permission path, company switch, responsive/dark-mode/i18n behavior, and loading/empty/error state reviewed. Four independent research passes (backend security/demo-data, frontend branding/demo-data, navigation/i18n/UX-states, CRUD/filters/permissions/company-switching) plus a live end-to-end Playwright smoke test against the real dev database. No new features, no business-logic changes. See `PRODUCTION_READINESS_REPORT.md` for the full audit findings, including items considered and deliberately deferred.
