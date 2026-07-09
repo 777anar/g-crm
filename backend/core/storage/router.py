@@ -15,15 +15,15 @@ router = APIRouter(prefix="/api/v1/core/documents", tags=["core:documents"])
 MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 
 # Every legitimate caller of this endpoint today: catalog material images,
-# installation job photos/signatures, customer attachments, and
-# Communication Center message attachments (which must cover WhatsApp/
-# Instagram/Messenger's own image/video/audio/document message types, not
-# just "office files"). Deliberately excludes executable/script/markup
-# content-types (exe, sh, html, svg+xml, js, ...) that would be actively
-# dangerous if this document store is ever served back inline -- this is a
-# coarse content-type allowlist (RELEASE_CHECKLIST.md M1), not a substitute
-# for the filename-sanitization fix (C1) that closes the actual path-
-# traversal hole.
+# installation job photos/signatures, customer attachments, Communication
+# Center message attachments (which must cover WhatsApp/Instagram/
+# Messenger's own image/video/audio/document message types, not just
+# "office files"), and the Measurement module's site photos/sketches/CAD
+# drawings. Deliberately excludes executable/script/markup content-types
+# (exe, sh, html, svg+xml, js, ...) that would be actively dangerous if this
+# document store is ever served back inline -- this is a coarse
+# content-type allowlist (RELEASE_CHECKLIST.md M1), not a substitute for the
+# filename-sanitization fix (C1) that closes the actual path-traversal hole.
 ALLOWED_UPLOAD_CONTENT_TYPES = frozenset(
     {
         "image/jpeg", "image/png", "image/gif", "image/webp",
@@ -37,8 +37,19 @@ ALLOWED_UPLOAD_CONTENT_TYPES = frozenset(
         "text/plain", "text/csv",
         "audio/mpeg", "audio/ogg", "audio/wav", "audio/webm", "audio/aac", "audio/amr",
         "video/mp4", "video/webm", "video/quicktime", "video/3gpp",
+        # CAD drawings (Measurement module: "Drawings" tab). Browsers/OSes have
+        # no single agreed-upon MIME type for these, hence the spread.
+        "image/vnd.dwg", "application/acad", "application/x-dwg", "application/x-autocad",
+        "image/vnd.dxf", "application/dxf", "application/x-dxf",
     }
 )
+
+# .dwg/.dxf uploads very commonly arrive as this generic type because the
+# browser/OS has no registered MIME type for them -- accepted only when the
+# filename extension itself confirms it's a CAD file, so this does not
+# widen the allowlist to arbitrary binaries.
+OCTET_STREAM_CONTENT_TYPES = frozenset({"application/octet-stream", ""})
+ALLOWED_OCTET_STREAM_EXTENSIONS = frozenset({".dwg", ".dxf"})
 
 
 @router.post("", response_model=DocumentOut)
@@ -54,7 +65,11 @@ async def upload_document(
     # the upload is "for" until the form body is parsed.
     current_user: CurrentUser = Depends(require_permission("core:documents:write")),
 ) -> DocumentOut:
-    if file.content_type not in ALLOWED_UPLOAD_CONTENT_TYPES:
+    is_allowed = file.content_type in ALLOWED_UPLOAD_CONTENT_TYPES
+    if not is_allowed and file.content_type in OCTET_STREAM_CONTENT_TYPES:
+        filename = (file.filename or "").lower()
+        is_allowed = any(filename.endswith(ext) for ext in ALLOWED_OCTET_STREAM_EXTENSIONS)
+    if not is_allowed:
         raise ValidationAPIError(
             f"File type '{file.content_type}' is not allowed",
             details=[{"field": "file", "issue": "unsupported content type"}],

@@ -561,6 +561,80 @@ A real provider send failure never surfaces as a 500 — the Message is recorded
 
 One table, discriminated by `direction`/`action`, backs three admin surfaces at once — Provider Diagnostics, Logs, and the Webhook Monitor (`direction=inbound`) — the same single-table-per-concern pattern `ai_recommendations` established in §5.7. A rejected webhook signature is still logged (`success=false`, `signature_valid=false`) rather than dropped, since it's itself an operational signal.
 
+## 5.9 Project Workspace Tables (Version 2.11 — as actually implemented, extends Sales Module §5)
+
+_Note: Sprint 3 ("Project" as the primary business object). Deliberately built as new tables inside the existing Sales module, not a new module — Rooms and Project Items are a project-planning structure, independent of any specific Quote version's Sections/Items (a Quote can be re-priced/re-versioned without the underlying Rooms changing). Material selection is always Brand → Stone → Thickness → Size via an existing `catalog_materials` row (`material_id`), never free text._
+
+### 5.9.1 `sales_rooms`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, REFERENCES companies(id), indexed |
+| project_id | UUID | NOT NULL, REFERENCES sales_projects(id), indexed |
+| room_type | TEXT(50) | NOT NULL, default `custom` — `kitchen`\|`bathroom`\|`living_room`\|`staircase`\|`exterior`\|`custom` |
+| name | TEXT(200) | nullable — an optional custom label alongside the type (e.g. "Kitchen — 2nd floor") |
+| notes | TEXT | nullable |
+| sort_order | INTEGER | NOT NULL, default `0` |
+
+### 5.9.2 `sales_project_items`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| project_id | UUID | NOT NULL, REFERENCES sales_projects(id), indexed — denormalized from the room for direct project-wide queries |
+| room_id | UUID | NOT NULL, REFERENCES sales_rooms(id), indexed |
+| item_type | TEXT(50) | NOT NULL, default `other` — the curated "piece" vocabulary (countertop, island, sink, tv_panel, vanity, wall_cladding, flooring, stairs, table, other), shared with Quote line items' `item_type` |
+| name | TEXT(200) | nullable |
+| material_id | UUID | nullable, REFERENCES catalog_materials(id), indexed |
+| quantity | NUMERIC(10,3) | NOT NULL, default `1` |
+| unit | TEXT(10) | NOT NULL, default `unit` |
+| notes | TEXT | nullable |
+| production_status | TEXT(50) | nullable |
+| installation_status | TEXT(50) | nullable |
+| sort_order | INTEGER | NOT NULL, default `0` |
+
+### 5.9.3 `sales_project_item_measurements`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| project_item_id | UUID | NOT NULL, REFERENCES sales_project_items(id), indexed |
+| revision_number | INTEGER | NOT NULL, default `1` — every new measurement for the same item is a new revision, never an overwrite; mirrors the Quote versioning pattern |
+| status | TEXT(20) | NOT NULL, default `draft` (`draft`\|`final`) |
+| length_mm, width_mm, thickness_mm | NUMERIC | nullable |
+| quantity | INTEGER | NOT NULL, default `1` |
+| area_m2 | NUMERIC(10,4) | nullable, computed from length × width × quantity |
+| measurer_name | TEXT(200) | NOT NULL, default `''` — free text (the measurer is often a field installer without a system login) |
+| measured_at | DATE | nullable |
+| notes | TEXT | nullable |
+| customer_signature_document_id | UUID | nullable, REFERENCES documents(id) — an uploaded signature image/PDF, attached once the customer signs off |
+| created_by | UUID | nullable, REFERENCES users(id) |
+
+### 5.9.4 `sales_project_item_drawings`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| project_item_id | UUID | NOT NULL, REFERENCES sales_project_items(id), indexed |
+| document_id | UUID | NOT NULL, REFERENCES documents(id), indexed |
+| drawing_type | TEXT(20) | NOT NULL, default `sketch` (`dwg`\|`dxf`\|`sketch`\|`pdf`) |
+| label | TEXT(200) | nullable |
+| sort_order | INTEGER | NOT NULL, default `0` |
+| uploaded_by | UUID | nullable, REFERENCES users(id) |
+
+### 5.9.5 `sales_project_item_photos`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| project_item_id | UUID | NOT NULL, REFERENCES sales_project_items(id), indexed |
+| document_id | UUID | NOT NULL, REFERENCES documents(id), indexed |
+| caption | TEXT(200) | nullable |
+| sort_order | INTEGER | NOT NULL, default `0` |
+| uploaded_by | UUID | nullable, REFERENCES users(id) |
+
+Drawings and Photos both reuse the core `documents` polymorphic store (§3) exactly like `catalog_material_documents`/`catalog_material_images` — the row here is only the link + categorization, the file itself lives in the one shared documents table. `core/storage/router.py`'s upload content-type allowlist was extended to accept DWG/DXF (accepted either by a matching MIME type or, since browsers commonly report `application/octet-stream` for CAD files with no registered MIME type, by filename extension).
+
 ## 6. Future-Phase Module Schemas (conceptual — not migrated in Phase 1)
 
 Kept here only so foreign-key shapes are pre-considered and won't surprise later modules.

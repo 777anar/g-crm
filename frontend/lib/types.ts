@@ -407,6 +407,14 @@ export const QUOTE_ITEM_TYPES = [
   "transport",
   "crane",
   "other",
+  "countertop",
+  "island",
+  "tv_panel",
+  "bathroom_furniture",
+  "flooring",
+  "stairs",
+  "table",
+  "sink",
 ] as const;
 export type QuoteItemType = (typeof QUOTE_ITEM_TYPES)[number];
 
@@ -437,6 +445,109 @@ export type ServicePrice = {
   service_key: string;
   sale_price: string;
   cost_price: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// ── Project workspace (Sprint 3: Rooms / Project Items / Measurements / Drawings / Photos) ────
+
+export const ROOM_TYPES = ["kitchen", "bathroom", "living_room", "staircase", "exterior", "custom"] as const;
+export type RoomType = (typeof ROOM_TYPES)[number];
+
+export type Room = {
+  id: string;
+  company_id: string;
+  project_id: string;
+  room_type: RoomType;
+  name: string | null;
+  notes: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+// The curated set offered by the Project Item picker -- a Room's physical
+// pieces. "sink" is new in Sprint 3; the rest reuse Sprint 2's item_type
+// vocabulary shared with Quote line items.
+export const PROJECT_ITEM_TYPES = [
+  "countertop",
+  "island",
+  "sink",
+  "tv_panel",
+  "vanity",
+  "wall_cladding",
+  "flooring",
+  "stairs",
+  "table",
+  "other",
+] as const;
+export type ProjectItemType = (typeof PROJECT_ITEM_TYPES)[number];
+
+export type ProjectItem = {
+  id: string;
+  company_id: string;
+  project_id: string;
+  room_id: string;
+  item_type: string;
+  name: string | null;
+  material_id: string | null;
+  quantity: string;
+  unit: string;
+  notes: string | null;
+  production_status: string | null;
+  installation_status: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export const MEASUREMENT_STATUSES = ["draft", "final"] as const;
+export type MeasurementStatus = (typeof MEASUREMENT_STATUSES)[number];
+
+export type ProjectItemMeasurement = {
+  id: string;
+  company_id: string;
+  project_item_id: string;
+  revision_number: number;
+  status: MeasurementStatus;
+  length_mm: string | null;
+  width_mm: string | null;
+  thickness_mm: string | null;
+  quantity: number;
+  area_m2: string | null;
+  measurer_name: string;
+  measured_at: string | null;
+  notes: string | null;
+  customer_signature_document_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const DRAWING_TYPES = ["dwg", "dxf", "sketch", "pdf"] as const;
+export type DrawingType = (typeof DRAWING_TYPES)[number];
+
+export type ProjectItemDrawing = {
+  id: string;
+  company_id: string;
+  project_item_id: string;
+  document_id: string;
+  drawing_type: DrawingType;
+  label: string | null;
+  sort_order: number;
+  uploaded_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectItemPhoto = {
+  id: string;
+  company_id: string;
+  project_item_id: string;
+  document_id: string;
+  caption: string | null;
+  sort_order: number;
+  uploaded_by: string | null;
   created_at: string;
   updated_at: string;
 };

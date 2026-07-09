@@ -326,4 +326,24 @@ Extends the Communication Center (§13) with real provider connections. **The `C
 | POST | `/communication/webhooks/twilio/{channel_id}` | Twilio inbound SMS and delivery status callbacks (form-encoded) — verifies `X-Twilio-Signature` (HMAC-SHA1 over the full callback URL + sorted form params, base64-encoded, keyed by `auth_token`) |
 | POST | `/communication/webhooks/generic/{channel_id}` | Generic partner webhook — verifies `X-Signature-256` (HMAC-SHA256 over the raw JSON body, keyed by the channel's configured secret) |
 
+## 16. Project Workspace Endpoints (`/api/v1/sales/...`, Version 2.11, as actually implemented, extends §8)
+
+Sprint 3 ("Project" as the primary business object): Rooms and Project Items are new sub-resources of an existing Project, independent of any Quote version. All endpoints below use the existing `sales:projects:read`/`sales:projects:write` permissions (matching how Quote Sections/Items/Measurements already ride on `sales:quotes:read`/`write` rather than getting their own permission strings) — no new permission strings were introduced.
+
+| Method | Path | Description |
+|---|---|---|
+| GET/POST | `/sales/projects/{project_id}/rooms` | List/create Rooms — publishes `RoomCreated` |
+| PATCH/DELETE | `/sales/rooms/{room_id}` | Update/delete a Room — deleting cascades to its Project Items (and their Measurements/Drawings/Photos) |
+| GET/POST | `/sales/rooms/{room_id}/items` | List/create Project Items within a Room — publishes `ProjectItemCreated` |
+| GET | `/sales/projects/{project_id}/items` | All Project Items across every Room in a project (used by the workspace's Measurements/Drawings/Photos/Production/Installation/Completion tabs) |
+| PATCH/DELETE | `/sales/project-items/{item_id}` | Update (including `production_status`/`installation_status`) or delete a Project Item |
+| GET/POST | `/sales/project-items/{item_id}/measurements` | List/create measurement revisions — every POST is a new revision (never an overwrite); publishes `ProjectItemMeasurementRecorded` |
+| PATCH/DELETE | `/sales/project-item-measurements/{measurement_id}` | Edit a revision in place (e.g. attach `customer_signature_document_id` and mark `final`) or delete it |
+| GET/POST | `/sales/project-items/{item_id}/drawings` | List/attach a DWG/DXF/sketch/PDF drawing (`document_id` from a prior `POST /core/documents` upload) |
+| DELETE | `/sales/project-item-drawings/{drawing_id}` | Detach a drawing |
+| GET/POST | `/sales/project-items/{item_id}/photos` | List/attach a site photo |
+| DELETE | `/sales/project-item-photos/{photo_id}` | Detach a photo |
+
+Drawings/Photos/the measurement signature all reuse the existing `POST /api/v1/core/documents` upload endpoint (`module=sales`, `related_entity_type` one of `project_item_drawing`\|`project_item_photo`\|`project_item_measurement`) — the same generic Documents pipeline every other module's file attachments already use. That endpoint's content-type allowlist was extended to accept DWG/DXF files.
+
 A rejected signature returns `403` and is still logged (`direction=inbound`, `signature_valid=false`) rather than silently dropped, since a misconfigured secret or a spoofing attempt is itself an operational signal worth surfacing in the Webhook Monitor. A processing error *after* signature verification succeeds never propagates as a 500 to the provider (which would trigger its own retry storm) — it's caught, logged, and the endpoint still returns `200`.

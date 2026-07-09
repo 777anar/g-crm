@@ -240,6 +240,23 @@ Reports
 
 ---
 
+## Version 2.11.0 — Measurement & Room Management
+
+**Theme:** makes "Layihə" (Project) genuinely the primary business object, per Sprint 2's intent, by giving it real internal structure: a Project now contains Rooms ("Məkanlar"), each Room contains Project Items ("Məmulatlar" — the physical pieces being fabricated), and each Project Item owns its own Material selection, Measurement history, Drawings, and Photos. Built entirely inside the existing Sales module — **no new module was created** — since Rooms/Items are a project-planning structure that belongs alongside Project/Quote, not a separate concern. An initial plan to build Measurement and Room as standalone modules was corrected mid-sprint specifically to avoid that duplication.
+
+| Change | Area | Business value |
+|---|---|---|
+| New `Room` entity (`sales_rooms`) scoped to a Project — kitchen/bathroom/living_room/staircase/exterior/custom, with an optional custom label | Backend — Sales | Office staff record a project as the physical spaces the customer's job actually covers, not an abstract list |
+| New `ProjectItem` entity (`sales_project_items`) scoped to a Room — the curated piece vocabulary from Sprint 2 (countertop, island, sink *(new)*, tv_panel, vanity, wall_cladding, flooring, stairs, table, other) plus a Brand→Stone→Thickness→Size Material selection (an existing `catalog_materials` row, never free text) | Backend — Sales | Each physical piece being fabricated is now a first-class record with its own material, quantity, production status, and installation status — matching how a stone gallery actually plans a job |
+| New `ProjectItemMeasurement` entity with **revisions**: every recorded measurement is a new `revision_number`, never an overwrite, so a re-measure never loses the original site visit's numbers. Records length/width/thickness, quantity, computed area, measurer name, measurement date, notes, and an attachable customer signature (`customer_signature_document_id`) | Backend — Sales | A full audit trail of every site visit for a piece, with proof the customer signed off on the final numbers before fabrication |
+| New `ProjectItemDrawing` (DWG/DXF/sketch/PDF) and `ProjectItemPhoto` entities, both backed by the existing core `documents` polymorphic store — same pattern as `catalog_material_documents`/`catalog_material_images` | Backend — Sales | Technical drawings and site photos live with the piece they belong to, reusing the one shared file-storage pipeline instead of a parallel one |
+| `core/storage/router.py`'s upload content-type allowlist extended to accept DWG/DXF (by MIME type, or by filename extension when the browser reports the common `application/octet-stream` fallback) | Backend — Core | DWG/DXF uploads (required for Drawings) were previously rejected by every module's shared upload endpoint |
+| Project detail page rebuilt into a tabbed workspace: Overview, Rooms, Measurements, Drawings, Photos, Production, Installation, Completion | Frontend — Sales | Replaces the old single quotes-list page; Rooms is the primary nested CRUD surface (Room → Project Item → Material/Measurements/Drawings/Photos), the other tabs are project-wide rollups and a computed completion summary. Primary app navigation (the 9-section sidebar from Sprint 2) is unchanged — this is entirely within the existing "Layihələr" page |
+
+**Verification:** full backend suite (514/514 passing — 492 prior + 22 new), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes).
+
+---
+
 ## Complexity key
 
 - **S** (Small): a few files, one focused PR, low risk
@@ -264,6 +281,7 @@ Reports
 | 2.9.2 | Production Readiness & G-STONE Onboarding — Phase 3 application-wide audit ahead of real daily use: navigation, branding, CRUD completeness, filters/sort/export, permissions, company switching, i18n, dev artifacts | No | No |
 | 2.9.3 | Production Readiness follow-up — i18n, dark-mode chart colors, breadcrumb consistency across ten detail pages | No | No |
 | 2.10.0 | G-STONE Sprint 2 — simplified 9-section navigation, Layihə-centric project-item types, structured Material entry, 1C-territory pages regrouped into a Settings hub | No (extended `VALID_ITEM_TYPES` vocabulary only) | No |
+| 2.11.0 | Measurement & Room Management — Project → Room → Project Item hierarchy with per-item Material/Measurement revisions/Drawings/Photos, all inside the existing Sales module | Yes (Room, ProjectItem, ProjectItemMeasurement, ProjectItemDrawing, ProjectItemPhoto) | No (extends Sales' existing Project workspace) |
 
 ## Change log
 

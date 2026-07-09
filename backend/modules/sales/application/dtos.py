@@ -1,6 +1,7 @@
 """Application-layer input DTOs — framework-free dataclasses."""
 import uuid
 from dataclasses import dataclass, field
+from datetime import date
 from decimal import Decimal
 from typing import Optional
 
@@ -156,3 +157,99 @@ class UpsertServicePriceInput(ActorContext):
     service_key: str
     sale_price: Decimal = Decimal("0")
     cost_price: Decimal = Decimal("0")
+
+
+# ── Room (Sprint 3: Project workspace) ────────────────────────────────────────
+
+@dataclass
+class CreateRoomInput(ActorContext):
+    project_id: uuid.UUID
+    room_type: str = "custom"
+    name: Optional[str] = None
+    notes: Optional[str] = None
+    sort_order: int = 0
+
+
+@dataclass
+class UpdateRoomInput(ActorContext):
+    room_id: uuid.UUID
+    room_type: Optional[str] = None
+    name: Optional[str] = None
+    notes: Optional[str] = None
+    sort_order: Optional[int] = None
+
+
+# ── Project Item ───────────────────────────────────────────────────────────────
+
+@dataclass
+class CreateProjectItemInput(ActorContext):
+    room_id: uuid.UUID
+    item_type: str
+    name: Optional[str] = None
+    material_id: Optional[uuid.UUID] = None
+    quantity: Decimal = Decimal("1")
+    unit: Optional[str] = None
+    notes: Optional[str] = None
+    sort_order: int = 0
+
+
+@dataclass
+class UpdateProjectItemInput(ActorContext):
+    project_item_id: uuid.UUID
+    item_type: Optional[str] = None
+    name: Optional[str] = None
+    material_id: Optional[uuid.UUID] = None
+    quantity: Optional[Decimal] = None
+    unit: Optional[str] = None
+    notes: Optional[str] = None
+    sort_order: Optional[int] = None
+    production_status: Optional[str] = None
+    installation_status: Optional[str] = None
+
+
+# ── Project Item Measurement ───────────────────────────────────────────────────
+
+@dataclass
+class CreateProjectItemMeasurementInput(ActorContext):
+    project_item_id: uuid.UUID
+    length_mm: Optional[Decimal] = None
+    width_mm: Optional[Decimal] = None
+    thickness_mm: Optional[Decimal] = None
+    quantity: int = 1
+    measurer_name: str = ""
+    measured_at: Optional[date] = None
+    notes: Optional[str] = None
+    status: str = "draft"
+
+
+@dataclass
+class UpdateProjectItemMeasurementInput(ActorContext):
+    measurement_id: uuid.UUID
+    length_mm: Optional[Decimal] = None
+    width_mm: Optional[Decimal] = None
+    thickness_mm: Optional[Decimal] = None
+    quantity: Optional[int] = None
+    measurer_name: Optional[str] = None
+    measured_at: Optional[date] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
+    customer_signature_document_id: Optional[uuid.UUID] = None
+
+
+# ── Project Item Drawing / Photo ───────────────────────────────────────────────
+
+@dataclass
+class AddProjectItemDrawingInput(ActorContext):
+    project_item_id: uuid.UUID
+    document_id: uuid.UUID
+    drawing_type: str = "sketch"
+    label: Optional[str] = None
+    sort_order: int = 0
+
+
+@dataclass
+class AddProjectItemPhotoInput(ActorContext):
+    project_item_id: uuid.UUID
+    document_id: uuid.UUID
+    caption: Optional[str] = None
+    sort_order: int = 0

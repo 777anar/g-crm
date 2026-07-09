@@ -3,6 +3,8 @@ import pytest
 from core.auth.models import ROLE_OWNER, ROLE_VIEWER, User, UserCompanyRole
 from core.auth.security import create_access_token, hash_password
 from core.companies.models import Company
+from modules.catalog.infrastructure.models.brand import Brand
+from modules.catalog.infrastructure.models.material import StoneMaterial
 from modules.crm.infrastructure.models.customer import Customer
 
 
@@ -57,6 +59,23 @@ def customer(db_session, company):
     db_session.add(c)
     db_session.commit()
     return c
+
+
+@pytest.fixture()
+def material(db_session, company):
+    brand = Brand(company_id=company.id, name="NEOLITH")
+    db_session.add(brand)
+    db_session.flush()
+    m = StoneMaterial(
+        company_id=company.id,
+        brand_id=brand.id,
+        name="Calacatta Gold",
+        thickness_mm="12",
+        dimensions="3200x1600mm",
+    )
+    db_session.add(m)
+    db_session.commit()
+    return m
 
 
 def _auth_headers(user, company, role):

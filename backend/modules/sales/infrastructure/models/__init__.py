@@ -5,3 +5,8 @@ from modules.sales.infrastructure.models.quote_section_measurement import QuoteS
 from modules.sales.infrastructure.models.quote_section_item import QuoteSectionItem  # noqa: F401
 from modules.sales.infrastructure.models.company_service_price import CompanyServicePrice  # noqa: F401
 from modules.sales.infrastructure.models.quote_number_sequence import QuoteNumberSequence  # noqa: F401
+from modules.sales.infrastructure.models.room import Room  # noqa: F401
+from modules.sales.infrastructure.models.project_item import ProjectItem  # noqa: F401
+from modules.sales.infrastructure.models.project_item_measurement import ProjectItemMeasurement  # noqa: F401
+from modules.sales.infrastructure.models.project_item_drawing import ProjectItemDrawing  # noqa: F401
+from modules.sales.infrastructure.models.project_item_photo import ProjectItemPhoto  # noqa: F401

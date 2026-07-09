@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.11.0] — 2026-07-09 — Measurement & Room Management
+
+Makes "Layihə" (Project) genuinely the primary business object: a Project now contains Rooms, each Room contains Project Items (the physical pieces being fabricated), and each Project Item owns its Material, Measurement history, Drawings, and Photos. Built entirely inside the existing Sales module (no new module) — an initial plan to build Measurement/Room as standalone modules was corrected mid-sprint to avoid duplicating the Project/Quote structure that already exists there.
+
+### Added
+- **`Room`** (`sales_rooms`): kitchen/bathroom/living_room/staircase/exterior/custom, scoped to a Project, with an optional custom label.
+- **`ProjectItem`** (`sales_project_items`): the curated piece vocabulary from Sprint 2 (countertop, island, sink *(new)*, tv_panel, vanity, wall_cladding, flooring, stairs, table, other), scoped to a Room, with a Brand→Stone→Thickness→Size Material reference (never free text), quantity, production status, and installation status.
+- **`ProjectItemMeasurement`** (`sales_project_item_measurements`): every recorded measurement is a new revision (never an overwrite) — length/width/thickness, computed area, measurer name, measurement date, notes, and an attachable customer signature.
+- **`ProjectItemDrawing`** / **`ProjectItemPhoto`**: DWG/DXF/sketch/PDF drawings and site photos attached to a Project Item, backed by the existing core `documents` store (same pattern as Catalog's material documents/images).
+- New Sales API endpoints for all of the above (`/sales/projects/{id}/rooms`, `/sales/rooms/{id}/items`, `/sales/project-items/{id}/measurements`, `.../drawings`, `.../photos`) — all gated by the existing `sales:projects:read`/`write` permissions, no new permission strings.
+- Project detail page rebuilt into a tabbed workspace: Overview, Rooms, Measurements, Drawings, Photos, Production, Installation, Completion.
+- 22 new backend tests (`tests/sales/test_rooms_and_project_items.py`): CRUD, revisioning, cross-tenant isolation, audit log + domain event coverage for every write action.
+
+### Changed
+- `core/storage/router.py`'s upload allowlist extended to accept DWG/DXF files (by MIME type or, for the common `application/octet-stream` browser fallback, by filename extension) — required for the Drawings tab.
+
+### Verification
+Full backend suite (514/514 passing — 492 prior + 22 new), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes).
+
 ## [2.10.0] — 2026-07-09 — G-STONE Sprint 2: Simplified Navigation & Layihə-Centric Workflow
 
 A usability restructuring driven by real G-STONE office feedback that the app read like accounting software rather than a gallery workflow tool. Re-anchors the UI around "Layihə" (Project) and its pieces, and pushes 1C's territory (warehouse/stock/accounting) out of daily view. No backend schema changes; nothing was deleted, only regrouped.

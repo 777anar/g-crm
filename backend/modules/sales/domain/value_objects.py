@@ -91,6 +91,11 @@ ITEM_TYPE_FLOORING = "flooring"
 ITEM_TYPE_STAIRS = "stairs"
 ITEM_TYPE_TABLE = "table"
 
+# Sprint 3: "Sink" is its own Project Item piece (a whole sink unit), distinct
+# from ITEM_TYPE_SINK_CUTOUT above (a cutout *service charge* on a Quote line
+# item for cutting a sink hole into an existing countertop piece).
+ITEM_TYPE_SINK = "sink"
+
 VALID_ITEM_TYPES = {
     ITEM_TYPE_MATERIAL,
     ITEM_TYPE_WALL_CLADDING,
@@ -111,6 +116,7 @@ VALID_ITEM_TYPES = {
     ITEM_TYPE_FLOORING,
     ITEM_TYPE_STAIRS,
     ITEM_TYPE_TABLE,
+    ITEM_TYPE_SINK,
 }
 
 # Item types that require a material_id from the Catalog.
@@ -126,7 +132,26 @@ MATERIAL_ITEM_TYPES = {
     ITEM_TYPE_FLOORING,
     ITEM_TYPE_STAIRS,
     ITEM_TYPE_TABLE,
+    ITEM_TYPE_SINK,
 }
+
+# The curated subset offered by the Project workspace's "Project Item" picker
+# (Sprint 3) -- a Room's physical pieces, as opposed to the full item_type
+# vocabulary above (which also includes non-piece billing lines like
+# transport/crane and legacy types like backsplash/bathroom_furniture kept
+# only for backward compatibility with existing Quotes).
+PROJECT_ITEM_TYPES = [
+    ITEM_TYPE_COUNTERTOP,
+    ITEM_TYPE_ISLAND,
+    ITEM_TYPE_SINK,
+    ITEM_TYPE_TV_PANEL,
+    ITEM_TYPE_VANITY,
+    ITEM_TYPE_WALL_CLADDING,
+    ITEM_TYPE_FLOORING,
+    ITEM_TYPE_STAIRS,
+    ITEM_TYPE_TABLE,
+    ITEM_TYPE_OTHER,
+]
 
 # Default unit per item type.
 ITEM_TYPE_DEFAULT_UNIT = {
@@ -149,6 +174,7 @@ ITEM_TYPE_DEFAULT_UNIT = {
     ITEM_TYPE_FLOORING: "m2",
     ITEM_TYPE_STAIRS: "m2",
     ITEM_TYPE_TABLE: "m2",
+    ITEM_TYPE_SINK: "unit",
 }
 
 # Company service-price key per item type.
@@ -174,3 +200,40 @@ VALID_DISCOUNT_TYPES = {DISCOUNT_TYPE_NONE, DISCOUNT_TYPE_PERCENT, DISCOUNT_TYPE
 # ── Reserved section name ─────────────────────────────────────────────────────
 
 LOGISTICS_SECTION_NAME = "Delivery & Logistics"
+
+# ── Rooms (Sprint 3: Project workspace) ───────────────────────────────────────
+# A Room ("Məkan") is a physical space within a Project. Project Items
+# ("Məmulat") belong to a Room; Measurements/Drawings/Photos belong to a
+# Project Item. This is a project-planning structure, independent of any
+# specific Quote version's Sections (a Quote can be re-priced/re-versioned
+# without the underlying Rooms changing).
+
+ROOM_TYPE_KITCHEN = "kitchen"
+ROOM_TYPE_BATHROOM = "bathroom"
+ROOM_TYPE_LIVING_ROOM = "living_room"
+ROOM_TYPE_STAIRCASE = "staircase"
+ROOM_TYPE_EXTERIOR = "exterior"
+ROOM_TYPE_CUSTOM = "custom"
+
+VALID_ROOM_TYPES = {
+    ROOM_TYPE_KITCHEN,
+    ROOM_TYPE_BATHROOM,
+    ROOM_TYPE_LIVING_ROOM,
+    ROOM_TYPE_STAIRCASE,
+    ROOM_TYPE_EXTERIOR,
+    ROOM_TYPE_CUSTOM,
+}
+
+# ── Project Item Drawings ──────────────────────────────────────────────────────
+
+DRAWING_TYPE_DWG = "dwg"
+DRAWING_TYPE_DXF = "dxf"
+DRAWING_TYPE_SKETCH = "sketch"
+DRAWING_TYPE_PDF = "pdf"
+VALID_DRAWING_TYPES = {DRAWING_TYPE_DWG, DRAWING_TYPE_DXF, DRAWING_TYPE_SKETCH, DRAWING_TYPE_PDF}
+
+# ── Project Item Measurements ─────────────────────────────────────────────────
+
+MEASUREMENT_STATUS_DRAFT = "draft"
+MEASUREMENT_STATUS_FINAL = "final"
+VALID_MEASUREMENT_STATUSES = {MEASUREMENT_STATUS_DRAFT, MEASUREMENT_STATUS_FINAL}

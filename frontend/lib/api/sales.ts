@@ -2,10 +2,15 @@ import { apiDownload, apiRequest } from "../api-client";
 import type {
   Paginated,
   Project,
+  ProjectItem,
+  ProjectItemDrawing,
+  ProjectItemMeasurement,
+  ProjectItemPhoto,
   Quote,
   QuoteSection,
   QuoteSectionItem,
   QuoteSectionMeasurement,
+  Room,
   ServicePrice,
 } from "../types";
 
@@ -230,4 +235,140 @@ export function upsertServicePrice(input: {
   cost_price: string;
 }) {
   return apiRequest<ServicePrice>(`${BASE}/service-prices`, { method: "PUT", body: input });
+}
+
+// ── Rooms (Sprint 3: Project workspace) ───────────────────────────────────────
+
+export function listRooms(projectId: string) {
+  return apiRequest<{ items: Room[] }>(`${BASE}/projects/${projectId}/rooms`);
+}
+
+export function createRoom(
+  projectId: string,
+  input: { room_type: string; name?: string; notes?: string; sort_order?: number }
+) {
+  return apiRequest<Room>(`${BASE}/projects/${projectId}/rooms`, { method: "POST", body: input });
+}
+
+export function updateRoom(id: string, input: Record<string, unknown>) {
+  return apiRequest<Room>(`${BASE}/rooms/${id}`, { method: "PATCH", body: input });
+}
+
+export function deleteRoom(id: string) {
+  return apiRequest<void>(`${BASE}/rooms/${id}`, { method: "DELETE" });
+}
+
+// ── Project Items ──────────────────────────────────────────────────────────────
+
+export function listProjectItems(roomId: string) {
+  return apiRequest<{ items: ProjectItem[] }>(`${BASE}/rooms/${roomId}/items`);
+}
+
+export function listProjectItemsForProject(projectId: string) {
+  return apiRequest<{ items: ProjectItem[] }>(`${BASE}/projects/${projectId}/items`);
+}
+
+export function createProjectItem(
+  roomId: string,
+  input: {
+    item_type: string;
+    name?: string;
+    material_id?: string;
+    quantity?: string;
+    unit?: string;
+    notes?: string;
+    sort_order?: number;
+  }
+) {
+  return apiRequest<ProjectItem>(`${BASE}/rooms/${roomId}/items`, { method: "POST", body: input });
+}
+
+export function updateProjectItem(id: string, input: Record<string, unknown>) {
+  return apiRequest<ProjectItem>(`${BASE}/project-items/${id}`, { method: "PATCH", body: input });
+}
+
+export function deleteProjectItem(id: string) {
+  return apiRequest<void>(`${BASE}/project-items/${id}`, { method: "DELETE" });
+}
+
+// ── Project Item Measurements ──────────────────────────────────────────────────
+
+export function listProjectItemMeasurements(itemId: string) {
+  return apiRequest<{ items: ProjectItemMeasurement[] }>(`${BASE}/project-items/${itemId}/measurements`);
+}
+
+export function createProjectItemMeasurement(
+  itemId: string,
+  input: {
+    length_mm?: string;
+    width_mm?: string;
+    thickness_mm?: string;
+    quantity?: number;
+    measurer_name?: string;
+    measured_at?: string;
+    notes?: string;
+    status?: string;
+  }
+) {
+  return apiRequest<ProjectItemMeasurement>(`${BASE}/project-items/${itemId}/measurements`, {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function updateProjectItemMeasurement(id: string, input: Record<string, unknown>) {
+  return apiRequest<ProjectItemMeasurement>(`${BASE}/project-item-measurements/${id}`, {
+    method: "PATCH",
+    body: input,
+  });
+}
+
+export function deleteProjectItemMeasurement(id: string) {
+  return apiRequest<void>(`${BASE}/project-item-measurements/${id}`, { method: "DELETE" });
+}
+
+// ── Project Item Drawings ──────────────────────────────────────────────────────
+
+export function listProjectItemDrawings(itemId: string) {
+  return apiRequest<{ items: ProjectItemDrawing[] }>(`${BASE}/project-items/${itemId}/drawings`);
+}
+
+export function addProjectItemDrawing(
+  itemId: string,
+  input: { document_id: string; drawing_type: string; label?: string; sort_order?: number }
+) {
+  return apiRequest<ProjectItemDrawing>(`${BASE}/project-items/${itemId}/drawings`, {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function deleteProjectItemDrawing(id: string) {
+  return apiRequest<void>(`${BASE}/project-item-drawings/${id}`, { method: "DELETE" });
+}
+
+export function uploadProjectItemAsset(itemId: string, relatedEntityType: string, file: File) {
+  const formData = new FormData();
+  formData.append("module", "sales");
+  formData.append("related_entity_type", relatedEntityType);
+  formData.append("related_entity_id", itemId);
+  formData.append("file", file);
+  return apiRequest<{ id: string; storage_path: string; mime_type: string }>("/api/v1/core/documents", {
+    method: "POST",
+    formData,
+  });
+}
+
+// ── Project Item Photos ────────────────────────────────────────────────────────
+
+export function listProjectItemPhotos(itemId: string) {
+  return apiRequest<{ items: ProjectItemPhoto[] }>(`${BASE}/project-items/${itemId}/photos`);
+}
+
+export function addProjectItemPhoto(itemId: string, input: { document_id: string; caption?: string; sort_order?: number }) {
+  return apiRequest<ProjectItemPhoto>(`${BASE}/project-items/${itemId}/photos`, { method: "POST", body: input });
+}
+
+export function deleteProjectItemPhoto(id: string) {
+  return apiRequest<void>(`${BASE}/project-item-photos/${id}`, { method: "DELETE" });
 }

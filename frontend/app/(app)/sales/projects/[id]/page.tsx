@@ -1,46 +1,258 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { getProject, listQuotes, createQuote } from "@/lib/api/sales";
-import type { Project, Quote } from "@/lib/types";
+import {
+  getProject,
+  listQuotes,
+  createQuote,
+  listRooms,
+  createRoom,
+  deleteRoom,
+  listProjectItems,
+  createProjectItem,
+  updateProjectItem,
+  deleteProjectItem,
+  listProjectItemMeasurements,
+  createProjectItemMeasurement,
+  updateProjectItemMeasurement,
+  deleteProjectItemMeasurement,
+  listProjectItemDrawings,
+  addProjectItemDrawing,
+  deleteProjectItemDrawing,
+  listProjectItemPhotos,
+  addProjectItemPhoto,
+  deleteProjectItemPhoto,
+  uploadProjectItemAsset,
+} from "@/lib/api/sales";
+import { getMaterial, listBrands, listMaterials } from "@/lib/api/catalog";
+import type {
+  Brand,
+  Material,
+  Project,
+  ProjectItem,
+  ProjectItemDrawing,
+  ProjectItemMeasurement,
+  ProjectItemPhoto,
+  Quote,
+  Room,
+} from "@/lib/types";
+import { PROJECT_ITEM_TYPES, ROOM_TYPES } from "@/lib/types";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
+import { SelectField, TextField, TextAreaField } from "@/components/ui/field";
+import { ProjectStatusBadge, QuoteStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ProjectStatusBadge, QuoteStatusBadge } from "@/components/ui/badge";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { formatDate } from "@/lib/format";
+import { ApiRequestError } from "@/lib/api-client";
+
+const PROD_STATUSES = ["pending", "queued", "cutting", "polishing", "quality_check", "done"];
+const INST_STATUSES = ["pending", "scheduled", "en_route", "in_progress", "done"];
+
+type Tab = "overview" | "rooms" | "measurements" | "drawings" | "photos" | "production" | "installation" | "completion";
+
+const inputClasses =
+  "rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary";
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("sales");
+  const tOrders = useTranslations("orders");
+  const tCatalog = useTranslations("catalog");
   const tCommon = useTranslations("common");
   const tNav = useTranslations("nav");
   const router = useRouter();
+  const confirm = useConfirm();
+
+  const [tab, setTab] = useState<Tab>("overview");
 
   const [project, setProject] = useState<Project | null>(null);
   const [quotes, setQuotes] = useState<Quote[] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
+  const [creatingQuote, setCreatingQuote] = useState(false);
 
-  useEffect(() => {
-    Promise.all([getProject(id), listQuotes(id)])
-      .then(([proj, qs]) => {
-        setProject(proj);
-        setQuotes(qs.items);
-      })
-      .finally(() => setLoading(false));
+  const [rooms, setRooms] = useState<Room[] | null>(null);
+  const [itemsByRoom, setItemsByRoom] = useState<Record<string, ProjectItem[]>>({});
+  const allItems = Object.values(itemsByRoom).flat();
+
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [materialsByBrand, setMaterialsByBrand] = useState<Record<string, Material[]>>({});
+
+  const [materialsById, setMaterialsById] = useState<Record<string, Material>>({});
+  const [measurementsByItem, setMeasurementsByItem] = useState<Record<string, ProjectItemMeasurement[]>>({});
+  const [drawingsByItem, setDrawingsByItem] = useState<Record<string, ProjectItemDrawing[]>>({});
+  const [photosByItem, setPhotosByItem] = useState<Record<string, ProjectItemPhoto[]>>({});
+  const [rollupLoaded, setRollupLoaded] = useState<Record<string, boolean>>({});
+
+  const [addingRoom, setAddingRoom] = useState(false);
+  const [newRoomType, setNewRoomType] = useState<string>("kitchen");
+  const [newRoomName, setNewRoomName] = useState("");
+
+  const [addingItemToRoom, setAddingItemToRoom] = useState<string | null>(null);
+  const [newItemType, setNewItemType] = useState<string>("countertop");
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemBrandId, setNewItemBrandId] = useState("");
+  const [newItemMaterialId, setNewItemMaterialId] = useState("");
+  const [newItemQuantity, setNewItemQuantity] = useState("1");
+  const [newItemNotes, setNewItemNotes] = useState("");
+
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    const [proj, qs] = await Promise.all([getProject(id), listQuotes(id)]);
+    setProject(proj);
+    setQuotes(qs.items);
   }, [id]);
 
+  useEffect(() => {
+    reload().finally(() => setLoading(false));
+  }, [reload]);
+
+  const loadRoomsAndItems = useCallback(async () => {
+    const roomsRes = await listRooms(id);
+    setRooms(roomsRes.items);
+    const entries = await Promise.all(
+      roomsRes.items.map(async (r) => [r.id, (await listProjectItems(r.id)).items] as const)
+    );
+    setItemsByRoom(Object.fromEntries(entries));
+  }, [id]);
+
+  useEffect(() => {
+    if (tab !== "overview" && rooms === null) {
+      loadRoomsAndItems().catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
+    }
+  }, [tab, rooms, loadRoomsAndItems, t]);
+
+  useEffect(() => {
+    if (
+      (tab === "measurements" || tab === "drawings" || tab === "photos") &&
+      allItems.length > 0 &&
+      !rollupLoaded[tab]
+    ) {
+      (async () => {
+        if (tab === "measurements") {
+          const entries = await Promise.all(
+            allItems.map(async (i) => [i.id, (await listProjectItemMeasurements(i.id)).items] as const)
+          );
+          setMeasurementsByItem((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+        } else if (tab === "drawings") {
+          const entries = await Promise.all(
+            allItems.map(async (i) => [i.id, (await listProjectItemDrawings(i.id)).items] as const)
+          );
+          setDrawingsByItem((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+        } else if (tab === "photos") {
+          const entries = await Promise.all(
+            allItems.map(async (i) => [i.id, (await listProjectItemPhotos(i.id)).items] as const)
+          );
+          setPhotosByItem((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+        }
+        setRollupLoaded((prev) => ({ ...prev, [tab]: true }));
+      })();
+    }
+  }, [tab, allItems, rollupLoaded]);
+
+  useEffect(() => {
+    if (addingItemToRoom) {
+      listBrands().then((res) => setBrands(res.items));
+    }
+  }, [addingItemToRoom]);
+
+  useEffect(() => {
+    if (newItemBrandId && !materialsByBrand[newItemBrandId]) {
+      listMaterials({ brandId: newItemBrandId }).then((res) =>
+        setMaterialsByBrand((prev) => ({ ...prev, [newItemBrandId]: res.items }))
+      );
+    }
+  }, [newItemBrandId, materialsByBrand]);
+
+  useEffect(() => {
+    const missing = Array.from(
+      new Set(allItems.map((i) => i.material_id).filter((id): id is string => !!id && !materialsById[id]))
+    );
+    if (missing.length === 0) return;
+    Promise.all(missing.map((materialId) => getMaterial(materialId))).then((materials) => {
+      setMaterialsById((prev) => {
+        const next = { ...prev };
+        materials.forEach((m) => { next[m.id] = m; });
+        return next;
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allItems]);
+
   async function handleNewQuote() {
-    setCreating(true);
+    setCreatingQuote(true);
     try {
       const q = await createQuote(id);
       router.push(`/sales/projects/${id}/quotes/${q.id}`);
     } finally {
-      setCreating(false);
+      setCreatingQuote(false);
     }
+  }
+
+  async function handleCreateRoom(e: React.FormEvent) {
+    e.preventDefault();
+    await createRoom(id, { room_type: newRoomType, name: newRoomName || undefined });
+    setAddingRoom(false);
+    setNewRoomName("");
+    await loadRoomsAndItems();
+  }
+
+  async function handleDeleteRoom(roomId: string) {
+    if (!(await confirm(tCommon("confirmDelete")))) return;
+    await deleteRoom(roomId);
+    await loadRoomsAndItems();
+  }
+
+  async function handleCreateItem(e: React.FormEvent, roomId: string) {
+    e.preventDefault();
+    await createProjectItem(roomId, {
+      item_type: newItemType,
+      name: newItemName || undefined,
+      material_id: newItemMaterialId || undefined,
+      quantity: newItemQuantity,
+      notes: newItemNotes || undefined,
+    });
+    setAddingItemToRoom(null);
+    setNewItemName("");
+    setNewItemBrandId("");
+    setNewItemMaterialId("");
+    setNewItemQuantity("1");
+    setNewItemNotes("");
+    await loadRoomsAndItems();
+  }
+
+  async function handleDeleteItem(itemId: string) {
+    if (!(await confirm(tCommon("confirmDelete")))) return;
+    await deleteProjectItem(itemId);
+    await loadRoomsAndItems();
+  }
+
+  async function handleItemStatusChange(itemId: string, field: "production_status" | "installation_status", value: string) {
+    await updateProjectItem(itemId, { [field]: value });
+    await loadRoomsAndItems();
+  }
+
+  function roomLabel(room: Room) {
+    const typeLabel = t(`roomType_${room.room_type}` as any);
+    return room.name ? `${typeLabel} — ${room.name}` : typeLabel;
+  }
+
+  function itemLabel(item: ProjectItem) {
+    const typeLabel = t(`itemType_${item.item_type}` as any);
+    return item.name ? `${typeLabel} — ${item.name}` : typeLabel;
+  }
+
+  function materialLabel(materialId: string | null) {
+    if (!materialId) return tCommon("dash");
+    const material = materialsById[materialId];
+    if (!material) return materialId.slice(0, 8);
+    return `${material.name} — ${material.thickness_mm ?? tCommon("dash")}mm — ${material.dimensions ?? tCommon("dash")}`;
   }
 
   if (loading) return <TableSkeleton rows={5} columns={5} />;
@@ -58,52 +270,604 @@ export default function ProjectDetailPage() {
             {project.address ? ` · ${project.address}` : ""}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <ProjectStatusBadge status={project.status} />
-          <Button onClick={handleNewQuote} disabled={creating}>
-            {creating ? t("creating") : t("createQuote")}
-          </Button>
-        </div>
+        <ProjectStatusBadge status={project.status} />
       </div>
 
-      <h2 className="text-lg font-semibold text-text-primary">{t("quotesTitle")}</h2>
+      <div className="flex flex-wrap gap-1 border-b border-border pb-2">
+        {(["overview", "rooms", "measurements", "drawings", "photos", "production", "installation", "completion"] as Tab[]).map(
+          (key) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                tab === key ? "bg-primary text-white" : "text-text-secondary hover:bg-bg"
+              }`}
+            >
+              {t(`tab${key.charAt(0).toUpperCase()}${key.slice(1)}` as any)}
+            </button>
+          )
+        )}
+      </div>
 
-      {quotes === null && <TableSkeleton rows={4} columns={5} />}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
-      {quotes && quotes.length === 0 && <EmptyState title={t("noQuotesYet")} />}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-end">
+            <Button onClick={handleNewQuote} disabled={creatingQuote}>
+              {creatingQuote ? t("creating") : t("createQuote")}
+            </Button>
+          </div>
 
-      {quotes && quotes.length > 0 && (
+          <h2 className="text-lg font-semibold text-text-primary">{t("quotesTitle")}</h2>
+          {quotes === null && <TableSkeleton rows={4} columns={5} />}
+          {quotes && quotes.length === 0 && <EmptyState title={t("noQuotesYet")} />}
+          {quotes && quotes.length > 0 && (
+            <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 z-10 border-b border-border bg-bg text-text-secondary">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">{t("tableQuoteNum")}</th>
+                    <th className="px-4 py-2 font-medium">{t("quoteVersion")}</th>
+                    <th className="px-4 py-2 font-medium">{t("quoteStatus")}</th>
+                    <th className="px-4 py-2 font-medium">{t("tableTotal")}</th>
+                    <th className="px-4 py-2 font-medium">{t("validUntil")}</th>
+                    <th className="px-4 py-2 font-medium">{t("tableCreated")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quotes.map((q) => (
+                    <tr
+                      key={q.id}
+                      onClick={() => router.push(`/sales/projects/${id}/quotes/${q.id}`)}
+                      className="cursor-pointer border-b border-border last:border-0 hover:bg-bg"
+                    >
+                      <td className="px-4 py-2 font-mono font-medium text-text-primary">{q.quote_number}</td>
+                      <td className="px-4 py-2 text-text-secondary">v{q.version}</td>
+                      <td className="px-4 py-2">
+                        <QuoteStatusBadge status={q.status} />
+                      </td>
+                      <td className="px-4 py-2 text-text-primary">
+                        {q.currency} {parseFloat(q.total_final).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-2 text-text-secondary">
+                        {q.valid_until ? formatDate(q.valid_until) : tCommon("dash")}
+                      </td>
+                      <td className="px-4 py-2 text-text-secondary">{formatDate(q.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "rooms" && (
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-end">
+            <Button onClick={() => setAddingRoom((v) => !v)}>{t("addRoom")}</Button>
+          </div>
+
+          {addingRoom && (
+            <Card>
+              <form className="grid grid-cols-1 gap-3 sm:grid-cols-3" onSubmit={handleCreateRoom}>
+                <SelectField label={t("roomType")} value={newRoomType} onChange={(e) => setNewRoomType(e.target.value)}>
+                  {ROOM_TYPES.map((rt) => (
+                    <option key={rt} value={rt}>
+                      {t(`roomType_${rt}` as any)}
+                    </option>
+                  ))}
+                </SelectField>
+                <TextField label={t("roomName")} value={newRoomName} onChange={(e) => setNewRoomName(e.target.value)} />
+                <div className="flex items-end">
+                  <Button type="submit">{tCommon("save")}</Button>
+                </div>
+              </form>
+            </Card>
+          )}
+
+          {rooms === null && <TableSkeleton rows={3} columns={3} />}
+          {rooms && rooms.length === 0 && !addingRoom && <EmptyState title={t("noRoomsYet")} />}
+
+          {rooms &&
+            rooms.map((room) => (
+              <Card key={room.id}>
+                <CardHeader
+                  title={roomLabel(room)}
+                  action={
+                    <div className="flex gap-2">
+                      <Button variant="secondary" onClick={() => setAddingItemToRoom(addingItemToRoom === room.id ? null : room.id)}>
+                        {t("addProjectItem")}
+                      </Button>
+                      <button onClick={() => handleDeleteRoom(room.id)} className="text-sm text-danger hover:underline">
+                        {tCommon("delete")}
+                      </button>
+                    </div>
+                  }
+                />
+
+                {addingItemToRoom === room.id && (
+                  <form
+                    className="mb-3 grid grid-cols-1 gap-3 rounded-md border border-border bg-bg p-3 sm:grid-cols-3"
+                    onSubmit={(e) => handleCreateItem(e, room.id)}
+                  >
+                    <SelectField label={t("itemType")} value={newItemType} onChange={(e) => setNewItemType(e.target.value)}>
+                      {PROJECT_ITEM_TYPES.map((it) => (
+                        <option key={it} value={it}>
+                          {t(`itemType_${it}` as any)}
+                        </option>
+                      ))}
+                    </SelectField>
+                    <TextField label={t("itemName")} value={newItemName} onChange={(e) => setNewItemName(e.target.value)} />
+                    <TextField
+                      label={t("quantity")}
+                      type="text"
+                      value={newItemQuantity}
+                      onChange={(e) => setNewItemQuantity(e.target.value)}
+                    />
+                    <SelectField label={tCatalog("brand")} value={newItemBrandId} onChange={(e) => { setNewItemBrandId(e.target.value); setNewItemMaterialId(""); }}>
+                      <option value="">{tCommon("select")}</option>
+                      {brands.map((b) => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
+                    </SelectField>
+                    <SelectField label={tCatalog("material")} value={newItemMaterialId} onChange={(e) => setNewItemMaterialId(e.target.value)} disabled={!newItemBrandId}>
+                      <option value="">{tCommon("select")}</option>
+                      {(materialsByBrand[newItemBrandId] || []).map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} — {m.thickness_mm ?? tCommon("dash")}mm — {m.dimensions ?? tCommon("dash")}
+                        </option>
+                      ))}
+                    </SelectField>
+                    <TextAreaField label={t("notes")} value={newItemNotes} onChange={(e) => setNewItemNotes(e.target.value)} />
+                    <div className="flex items-end sm:col-span-3">
+                      <Button type="submit">{tCommon("save")}</Button>
+                    </div>
+                  </form>
+                )}
+
+                {(itemsByRoom[room.id] || []).length === 0 ? (
+                  <p className="text-sm text-text-secondary">{t("noProjectItemsYet")}</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {(itemsByRoom[room.id] || []).map((item) => (
+                      <ProjectItemRow
+                        key={item.id}
+                        item={item}
+                        label={itemLabel(item)}
+                        materialLabel={materialLabel(item.material_id)}
+                        expanded={expandedItemId === item.id}
+                        onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
+                        onDelete={() => handleDeleteItem(item.id)}
+                        t={t}
+                        measurements={measurementsByItem[item.id]}
+                        drawings={drawingsByItem[item.id]}
+                        photos={photosByItem[item.id]}
+                        onLoadSubResources={async () => {
+                          const [m, d, p] = await Promise.all([
+                            listProjectItemMeasurements(item.id),
+                            listProjectItemDrawings(item.id),
+                            listProjectItemPhotos(item.id),
+                          ]);
+                          setMeasurementsByItem((prev) => ({ ...prev, [item.id]: m.items }));
+                          setDrawingsByItem((prev) => ({ ...prev, [item.id]: d.items }));
+                          setPhotosByItem((prev) => ({ ...prev, [item.id]: p.items }));
+                        }}
+                        onAddMeasurement={async (data) => {
+                          await createProjectItemMeasurement(item.id, data);
+                          const m = await listProjectItemMeasurements(item.id);
+                          setMeasurementsByItem((prev) => ({ ...prev, [item.id]: m.items }));
+                        }}
+                        onAttachSignature={async (measurementId, file) => {
+                          const doc = await uploadProjectItemAsset(item.id, "project_item_measurement", file);
+                          await updateProjectItemMeasurement(measurementId, {
+                            status: "final",
+                            customer_signature_document_id: doc.id,
+                          });
+                          const m = await listProjectItemMeasurements(item.id);
+                          setMeasurementsByItem((prev) => ({ ...prev, [item.id]: m.items }));
+                        }}
+                        onDeleteMeasurement={async (measurementId) => {
+                          if (!(await confirm(tCommon("confirmDelete")))) return;
+                          await deleteProjectItemMeasurement(measurementId);
+                          const m = await listProjectItemMeasurements(item.id);
+                          setMeasurementsByItem((prev) => ({ ...prev, [item.id]: m.items }));
+                        }}
+                        onAddDrawing={async (file, drawingType) => {
+                          const doc = await uploadProjectItemAsset(item.id, "project_item_drawing", file);
+                          await addProjectItemDrawing(item.id, { document_id: doc.id, drawing_type: drawingType });
+                          const d = await listProjectItemDrawings(item.id);
+                          setDrawingsByItem((prev) => ({ ...prev, [item.id]: d.items }));
+                        }}
+                        onDeleteDrawing={async (drawingId) => {
+                          if (!(await confirm(tCommon("confirmDelete")))) return;
+                          await deleteProjectItemDrawing(drawingId);
+                          const d = await listProjectItemDrawings(item.id);
+                          setDrawingsByItem((prev) => ({ ...prev, [item.id]: d.items }));
+                        }}
+                        onAddPhoto={async (file, caption) => {
+                          const doc = await uploadProjectItemAsset(item.id, "project_item_photo", file);
+                          await addProjectItemPhoto(item.id, { document_id: doc.id, caption });
+                          const p = await listProjectItemPhotos(item.id);
+                          setPhotosByItem((prev) => ({ ...prev, [item.id]: p.items }));
+                        }}
+                        onDeletePhoto={async (photoId) => {
+                          if (!(await confirm(tCommon("confirmDelete")))) return;
+                          await deleteProjectItemPhoto(photoId);
+                          const p = await listProjectItemPhotos(item.id);
+                          setPhotosByItem((prev) => ({ ...prev, [item.id]: p.items }));
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </Card>
+            ))}
+        </div>
+      )}
+
+      {tab === "measurements" && (
+        <RollupTable
+          items={allItems}
+          rooms={rooms}
+          emptyLabel={t("noMeasurementsYet")}
+          renderRow={(item) =>
+            (measurementsByItem[item.id] || []).map((m) => (
+              <tr key={m.id} className="border-b border-border last:border-0">
+                <td className="px-4 py-2 text-text-primary">{itemLabel(item)}</td>
+                <td className="px-4 py-2 text-text-secondary">#{m.revision_number}</td>
+                <td className="px-4 py-2 text-text-secondary">{m.length_mm ?? tCommon("dash")}</td>
+                <td className="px-4 py-2 text-text-secondary">{m.width_mm ?? tCommon("dash")}</td>
+                <td className="px-4 py-2 text-text-secondary">{m.area_m2 ?? tCommon("dash")}</td>
+                <td className="px-4 py-2 text-text-secondary">{m.measurer_name || tCommon("dash")}</td>
+                <td className="px-4 py-2 text-text-secondary">{m.measured_at ? formatDate(m.measured_at) : tCommon("dash")}</td>
+                <td className="px-4 py-2 text-text-secondary">{t(`measurementStatus_${m.status}` as any)}</td>
+              </tr>
+            ))
+          }
+          headers={[t("itemType"), t("measurementRevision"), t("measurementLength"), t("measurementWidth"), t("measurementArea"), t("measurer"), t("measuredAt"), t("measurementStatus")]}
+        />
+      )}
+
+      {tab === "drawings" && (
+        <RollupTable
+          items={allItems}
+          rooms={rooms}
+          emptyLabel={t("noDrawingsYet")}
+          renderRow={(item) =>
+            (drawingsByItem[item.id] || []).map((d) => (
+              <tr key={d.id} className="border-b border-border last:border-0">
+                <td className="px-4 py-2 text-text-primary">{itemLabel(item)}</td>
+                <td className="px-4 py-2 text-text-secondary">{t(`drawingType_${d.drawing_type}` as any)}</td>
+                <td className="px-4 py-2 text-text-secondary">{d.label || tCommon("dash")}</td>
+              </tr>
+            ))
+          }
+          headers={[t("itemType"), t("drawingType"), t("drawingLabel")]}
+        />
+      )}
+
+      {tab === "photos" && (
+        <RollupTable
+          items={allItems}
+          rooms={rooms}
+          emptyLabel={t("noPhotosYet")}
+          renderRow={(item) =>
+            (photosByItem[item.id] || []).map((p) => (
+              <tr key={p.id} className="border-b border-border last:border-0">
+                <td className="px-4 py-2 text-text-primary">{itemLabel(item)}</td>
+                <td className="px-4 py-2 text-text-secondary">{p.caption || tCommon("dash")}</td>
+              </tr>
+            ))
+          }
+          headers={[t("itemType"), t("photoCaption")]}
+        />
+      )}
+
+      {tab === "production" && (
         <div className="overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 z-10 border-b border-border bg-bg text-text-secondary">
+            <thead className="border-b border-border bg-bg text-text-secondary">
               <tr>
-                <th className="px-4 py-2 font-medium">{t("tableQuoteNum")}</th>
-                <th className="px-4 py-2 font-medium">{t("quoteVersion")}</th>
-                <th className="px-4 py-2 font-medium">{t("quoteStatus")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableTotal")}</th>
-                <th className="px-4 py-2 font-medium">{t("validUntil")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableCreated")}</th>
+                <th className="px-4 py-2 font-medium">{t("itemType")}</th>
+                <th className="px-4 py-2 font-medium">{tOrders("productionStatus")}</th>
               </tr>
             </thead>
             <tbody>
-              {quotes.map((q) => (
-                <tr
-                  key={q.id}
-                  onClick={() => router.push(`/sales/projects/${id}/quotes/${q.id}`)}
-                  className="cursor-pointer border-b border-border last:border-0 hover:bg-bg"
-                >
-                  <td className="px-4 py-2 font-mono font-medium text-text-primary">{q.quote_number}</td>
-                  <td className="px-4 py-2 text-text-secondary">v{q.version}</td>
-                  <td className="px-4 py-2">
-                    <QuoteStatusBadge status={q.status} />
+              {allItems.map((item) => (
+                <tr key={item.id} className="border-b border-border last:border-0">
+                  <td className="px-4 py-2 text-text-primary">{itemLabel(item)}</td>
+                  <td className="px-2 py-1">
+                    <select
+                      className={inputClasses}
+                      value={item.production_status ?? ""}
+                      onChange={(e) => handleItemStatusChange(item.id, "production_status", e.target.value)}
+                    >
+                      <option value="">—</option>
+                      {PROD_STATUSES.map((s) => (
+                        <option key={s} value={s}>{tOrders(`prodStatus_${s}` as any)}</option>
+                      ))}
+                    </select>
                   </td>
-                  <td className="px-4 py-2 text-text-primary">{q.currency} {parseFloat(q.total_final).toFixed(2)}</td>
-                  <td className="px-4 py-2 text-text-secondary">{q.valid_until ? formatDate(q.valid_until) : tCommon("dash")}</td>
-                  <td className="px-4 py-2 text-text-secondary">{formatDate(q.created_at)}</td>
                 </tr>
               ))}
+              {allItems.length === 0 && (
+                <tr><td colSpan={2} className="px-4 py-4"><EmptyState title={t("noProjectItemsYet")} /></td></tr>
+              )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {tab === "installation" && (
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-border bg-bg text-text-secondary">
+              <tr>
+                <th className="px-4 py-2 font-medium">{t("itemType")}</th>
+                <th className="px-4 py-2 font-medium">{tOrders("installationStatus")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allItems.map((item) => (
+                <tr key={item.id} className="border-b border-border last:border-0">
+                  <td className="px-4 py-2 text-text-primary">{itemLabel(item)}</td>
+                  <td className="px-2 py-1">
+                    <select
+                      className={inputClasses}
+                      value={item.installation_status ?? ""}
+                      onChange={(e) => handleItemStatusChange(item.id, "installation_status", e.target.value)}
+                    >
+                      <option value="">—</option>
+                      {INST_STATUSES.map((s) => (
+                        <option key={s} value={s}>{tOrders(`instStatus_${s}` as any)}</option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+              {allItems.length === 0 && (
+                <tr><td colSpan={2} className="px-4 py-4"><EmptyState title={t("noProjectItemsYet")} /></td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === "completion" && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <CompletionStat label={t("totalRooms")} value={rooms?.length ?? 0} />
+          <CompletionStat label={t("totalProjectItems")} value={allItems.length} />
+          <CompletionStat
+            label={t("itemsProduced")}
+            value={allItems.filter((i) => i.production_status === "done").length}
+          />
+          <CompletionStat
+            label={t("itemsInstalled")}
+            value={allItems.filter((i) => i.installation_status === "done").length}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CompletionStat({ label, value }: { label: string; value: number }) {
+  return (
+    <Card>
+      <p className="text-xs font-medium uppercase text-text-secondary">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-text-primary">{value}</p>
+    </Card>
+  );
+}
+
+function RollupTable({
+  items,
+  rooms,
+  headers,
+  renderRow,
+  emptyLabel,
+}: {
+  items: ProjectItem[];
+  rooms: Room[] | null;
+  headers: string[];
+  renderRow: (item: ProjectItem) => React.ReactNode;
+  emptyLabel: string;
+}) {
+  const rows = items.flatMap((item) => renderRow(item));
+  if (rooms === null) return <TableSkeleton rows={3} columns={headers.length} />;
+  if (rows.length === 0) return <EmptyState title={emptyLabel} />;
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <table className="w-full text-left text-sm">
+        <thead className="border-b border-border bg-bg text-text-secondary">
+          <tr>
+            {headers.map((h) => (
+              <th key={h} className="px-4 py-2 font-medium">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{rows}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function ProjectItemRow({
+  item,
+  label,
+  materialLabel,
+  expanded,
+  onToggle,
+  onDelete,
+  t,
+  measurements,
+  drawings,
+  photos,
+  onLoadSubResources,
+  onAddMeasurement,
+  onAttachSignature,
+  onDeleteMeasurement,
+  onAddDrawing,
+  onDeleteDrawing,
+  onAddPhoto,
+  onDeletePhoto,
+}: {
+  item: ProjectItem;
+  label: string;
+  materialLabel: string;
+  expanded: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+  t: ReturnType<typeof useTranslations>;
+  measurements?: ProjectItemMeasurement[];
+  drawings?: ProjectItemDrawing[];
+  photos?: ProjectItemPhoto[];
+  onLoadSubResources: () => Promise<void>;
+  onAddMeasurement: (data: { length_mm?: string; width_mm?: string; thickness_mm?: string; measurer_name?: string; measured_at?: string; notes?: string }) => Promise<void>;
+  onAttachSignature: (measurementId: string, file: File) => Promise<void>;
+  onDeleteMeasurement: (measurementId: string) => Promise<void>;
+  onAddDrawing: (file: File, drawingType: string) => Promise<void>;
+  onDeleteDrawing: (drawingId: string) => Promise<void>;
+  onAddPhoto: (file: File, caption: string) => Promise<void>;
+  onDeletePhoto: (photoId: string) => Promise<void>;
+}) {
+  const [length, setLength] = useState("");
+  const [width, setWidth] = useState("");
+  const [thickness, setThickness] = useState("");
+  const [measurer, setMeasurer] = useState("");
+  const [measuredAt, setMeasuredAt] = useState("");
+  const [drawingType, setDrawingType] = useState("sketch");
+  const [photoCaption, setPhotoCaption] = useState("");
+
+  useEffect(() => {
+    if (expanded && measurements === undefined) {
+      onLoadSubResources();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded]);
+
+  return (
+    <div className="rounded-md border border-border">
+      <div className="flex items-center justify-between px-3 py-2">
+        <button onClick={onToggle} className="flex-1 text-left text-sm font-medium text-text-primary hover:underline">
+          {label} {item.material_id && <span className="font-normal text-text-secondary">— {materialLabel}</span>}
+        </button>
+        <span className="mr-2 text-xs text-text-secondary">{item.quantity} {item.unit}</span>
+        <button onClick={onDelete} className="text-xs text-danger hover:underline">✕</button>
+      </div>
+
+      {expanded && (
+        <div className="flex flex-col gap-4 border-t border-border p-3">
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase text-text-secondary">{t("tabMeasurements")}</h3>
+            {(measurements || []).map((m) => (
+              <div key={m.id} className="mb-1 flex items-center justify-between rounded border border-border bg-bg px-2 py-1 text-xs">
+                <span>
+                  #{m.revision_number} · {m.length_mm ?? "—"}×{m.width_mm ?? "—"}mm · {m.area_m2 ?? "—"}m² ·{" "}
+                  {m.measurer_name || "—"} · {t(`measurementStatus_${m.status}` as any)}
+                  {m.customer_signature_document_id ? ` · ${t("signatureAttached")}` : ""}
+                </span>
+                <span className="flex items-center gap-2">
+                  {!m.customer_signature_document_id && (
+                    <label className="cursor-pointer text-primary hover:underline">
+                      {t("attachSignature")}
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) onAttachSignature(m.id, file);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  )}
+                  <button onClick={() => onDeleteMeasurement(m.id)} className="text-danger hover:underline">✕</button>
+                </span>
+              </div>
+            ))}
+            <form
+              className="mt-2 flex flex-wrap items-end gap-2"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await onAddMeasurement({
+                  length_mm: length || undefined,
+                  width_mm: width || undefined,
+                  thickness_mm: thickness || undefined,
+                  measurer_name: measurer || undefined,
+                  measured_at: measuredAt || undefined,
+                });
+                setLength("");
+                setWidth("");
+                setThickness("");
+              }}
+            >
+              <input className={inputClasses} placeholder={t("measurementLength")} value={length} onChange={(e) => setLength(e.target.value)} />
+              <input className={inputClasses} placeholder={t("measurementWidth")} value={width} onChange={(e) => setWidth(e.target.value)} />
+              <input className={inputClasses} placeholder={t("measurementThickness")} value={thickness} onChange={(e) => setThickness(e.target.value)} />
+              <input className={inputClasses} placeholder={t("measurer")} value={measurer} onChange={(e) => setMeasurer(e.target.value)} />
+              <input className={inputClasses} type="date" value={measuredAt} onChange={(e) => setMeasuredAt(e.target.value)} />
+              <Button type="submit">{t("recordMeasurement")}</Button>
+            </form>
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase text-text-secondary">{t("tabDrawings")}</h3>
+            {(drawings || []).map((d) => (
+              <div key={d.id} className="mb-1 flex items-center justify-between rounded border border-border bg-bg px-2 py-1 text-xs">
+                <span>{t(`drawingType_${d.drawing_type}` as any)} · {d.label || "—"}</span>
+                <button onClick={() => onDeleteDrawing(d.id)} className="text-danger hover:underline">✕</button>
+              </div>
+            ))}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <select className={inputClasses} value={drawingType} onChange={(e) => setDrawingType(e.target.value)}>
+                {["dwg", "dxf", "sketch", "pdf"].map((dt) => (
+                  <option key={dt} value={dt}>{t(`drawingType_${dt}` as any)}</option>
+                ))}
+              </select>
+              <input
+                type="file"
+                className="text-xs"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onAddDrawing(file, drawingType);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase text-text-secondary">{t("tabPhotos")}</h3>
+            {(photos || []).map((p) => (
+              <div key={p.id} className="mb-1 flex items-center justify-between rounded border border-border bg-bg px-2 py-1 text-xs">
+                <span>{p.caption || "—"}</span>
+                <button onClick={() => onDeletePhoto(p.id)} className="text-danger hover:underline">✕</button>
+              </div>
+            ))}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <input
+                className={inputClasses}
+                placeholder={t("photoCaption")}
+                value={photoCaption}
+                onChange={(e) => setPhotoCaption(e.target.value)}
+              />
+              <input
+                type="file"
+                accept="image/*"
+                className="text-xs"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onAddPhoto(file, photoCaption);
+                  e.target.value = "";
+                  setPhotoCaption("");
+                }}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
