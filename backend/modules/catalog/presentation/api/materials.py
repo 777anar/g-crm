@@ -11,18 +11,28 @@ from core.rbac.dependencies import CurrentUser, require_permission
 from modules.catalog.application.dtos import (
     AddMaterialDocumentInput,
     AddMaterialImageInput,
+    AddMaterialSizeInput,
+    AddMaterialThicknessInput,
     CreateMaterialInput,
     UpdateMaterialInput,
 )
 from modules.catalog.application.use_cases import (
     AddMaterialDocumentUseCase,
     AddMaterialImageUseCase,
+    AddMaterialSizeUseCase,
+    AddMaterialThicknessUseCase,
     CreateMaterialUseCase,
+    DeleteMaterialSizeUseCase,
+    DeleteMaterialThicknessUseCase,
     UpdateMaterialUseCase,
 )
 from modules.catalog.infrastructure.repositories.material_asset_repository import (
     MaterialDocumentRepository,
     MaterialImageRepository,
+)
+from modules.catalog.infrastructure.repositories.material_option_repository import (
+    MaterialSizeRepository,
+    MaterialThicknessRepository,
 )
 from modules.catalog.infrastructure.repositories.material_repository import MaterialRepository
 from modules.catalog.presentation.schemas.material import (
@@ -38,6 +48,14 @@ from modules.catalog.presentation.schemas.material_asset import (
     MaterialImageCreate,
     MaterialImageListOut,
     MaterialImageOut,
+)
+from modules.catalog.presentation.schemas.material_option import (
+    MaterialSizeCreate,
+    MaterialSizeListOut,
+    MaterialSizeOut,
+    MaterialThicknessCreate,
+    MaterialThicknessListOut,
+    MaterialThicknessOut,
 )
 
 router = APIRouter()
@@ -211,3 +229,99 @@ def add_material_document(
     db.commit()
     db.refresh(material_document)
     return MaterialDocumentOut.model_validate(material_document)
+
+
+@router.get("/materials/{material_id}/thicknesses", response_model=MaterialThicknessListOut)
+def list_material_thicknesses(
+    material_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("catalog:materials:read")),
+) -> MaterialThicknessListOut:
+    repo = MaterialThicknessRepository(db)
+    items = repo.list_for_material(company_id=current_user.active_company_id, material_id=material_id)
+    return MaterialThicknessListOut(items=[MaterialThicknessOut.model_validate(t) for t in items])
+
+
+@router.post("/materials/{material_id}/thicknesses", response_model=MaterialThicknessOut)
+def add_material_thickness(
+    material_id: uuid.UUID,
+    payload: MaterialThicknessCreate,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("catalog:materials:write")),
+) -> MaterialThicknessOut:
+    use_case = AddMaterialThicknessUseCase(db)
+    thickness = use_case.execute(
+        AddMaterialThicknessInput(
+            company_id=current_user.active_company_id,
+            actor_user_id=current_user.user_id,
+            material_id=material_id,
+            thickness_mm=payload.thickness_mm,
+            sort_order=payload.sort_order,
+        )
+    )
+    db.commit()
+    db.refresh(thickness)
+    return MaterialThicknessOut.model_validate(thickness)
+
+
+@router.delete("/material-thicknesses/{thickness_id}", status_code=204)
+def delete_material_thickness(
+    thickness_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("catalog:materials:write")),
+) -> None:
+    use_case = DeleteMaterialThicknessUseCase(db)
+    use_case.execute(
+        company_id=current_user.active_company_id,
+        actor_user_id=current_user.user_id,
+        thickness_id=thickness_id,
+    )
+    db.commit()
+
+
+@router.get("/materials/{material_id}/sizes", response_model=MaterialSizeListOut)
+def list_material_sizes(
+    material_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("catalog:materials:read")),
+) -> MaterialSizeListOut:
+    repo = MaterialSizeRepository(db)
+    items = repo.list_for_material(company_id=current_user.active_company_id, material_id=material_id)
+    return MaterialSizeListOut(items=[MaterialSizeOut.model_validate(s) for s in items])
+
+
+@router.post("/materials/{material_id}/sizes", response_model=MaterialSizeOut)
+def add_material_size(
+    material_id: uuid.UUID,
+    payload: MaterialSizeCreate,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("catalog:materials:write")),
+) -> MaterialSizeOut:
+    use_case = AddMaterialSizeUseCase(db)
+    size = use_case.execute(
+        AddMaterialSizeInput(
+            company_id=current_user.active_company_id,
+            actor_user_id=current_user.user_id,
+            material_id=material_id,
+            dimensions=payload.dimensions,
+            sort_order=payload.sort_order,
+        )
+    )
+    db.commit()
+    db.refresh(size)
+    return MaterialSizeOut.model_validate(size)
+
+
+@router.delete("/material-sizes/{size_id}", status_code=204)
+def delete_material_size(
+    size_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("catalog:materials:write")),
+) -> None:
+    use_case = DeleteMaterialSizeUseCase(db)
+    use_case.execute(
+        company_id=current_user.active_company_id,
+        actor_user_id=current_user.user_id,
+        size_id=size_id,
+    )
+    db.commit()

@@ -7,7 +7,9 @@ import type {
   Material,
   MaterialDocumentAsset,
   MaterialImage,
+  MaterialSize,
   MaterialStatus,
+  MaterialThickness,
   Paginated,
   PriceList,
   PriceListEntry,
@@ -134,6 +136,38 @@ export function uploadMaterialAsset(materialId: string, file: File) {
 
 export function listPricesForMaterial(materialId: string) {
   return apiRequest<{ items: PriceListEntry[] }>(`/api/v1/catalog/materials/${materialId}/prices`);
+}
+
+// --- Material Thickness/Size options (Sprint 4) -------------------------
+
+export function listMaterialThicknesses(materialId: string) {
+  return apiRequest<{ items: MaterialThickness[] }>(`/api/v1/catalog/materials/${materialId}/thicknesses`);
+}
+
+export function addMaterialThickness(materialId: string, input: { thickness_mm: string; sort_order?: number }) {
+  return apiRequest<MaterialThickness>(`/api/v1/catalog/materials/${materialId}/thicknesses`, {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function deleteMaterialThickness(id: string) {
+  return apiRequest<void>(`/api/v1/catalog/material-thicknesses/${id}`, { method: "DELETE" });
+}
+
+export function listMaterialSizes(materialId: string) {
+  return apiRequest<{ items: MaterialSize[] }>(`/api/v1/catalog/materials/${materialId}/sizes`);
+}
+
+export function addMaterialSize(materialId: string, input: { dimensions: string; sort_order?: number }) {
+  return apiRequest<MaterialSize>(`/api/v1/catalog/materials/${materialId}/sizes`, {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function deleteMaterialSize(id: string) {
+  return apiRequest<void>(`/api/v1/catalog/material-sizes/${id}`, { method: "DELETE" });
 }
 
 // --- Warehouses --------------------------------------------------------

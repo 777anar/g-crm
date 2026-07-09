@@ -347,3 +347,16 @@ Sprint 3 ("Project" as the primary business object): Rooms and Project Items are
 Drawings/Photos/the measurement signature all reuse the existing `POST /api/v1/core/documents` upload endpoint (`module=sales`, `related_entity_type` one of `project_item_drawing`\|`project_item_photo`\|`project_item_measurement`) — the same generic Documents pipeline every other module's file attachments already use. That endpoint's content-type allowlist was extended to accept DWG/DXF files.
 
 A rejected signature returns `403` and is still logged (`direction=inbound`, `signature_valid=false`) rather than silently dropped, since a misconfigured secret or a spoofing attempt is itself an operational signal worth surfacing in the Webhook Monitor. A processing error *after* signature verification succeeds never propagates as a 500 to the provider (which would trigger its own retry storm) — it's caught, logged, and the endpoint still returns `200`.
+
+## 17. Material Thickness/Size Endpoints (`/api/v1/catalog/...`, Version 2.12, as actually implemented, extends §5.5)
+
+Sprint 4 (production-ready Material selector): normalized per-Stone option lists, replacing the single free-text `thickness_mm`/`dimensions` pair a Material used to carry. Both ride on the existing `catalog:materials:read`/`catalog:materials:write` permissions (same sub-resource pattern as Material Images/Documents) — no new permission strings.
+
+| Method | Path | Description |
+|---|---|---|
+| GET/POST | `/catalog/materials/{material_id}/thicknesses` | List/add a thickness option for a Stone |
+| DELETE | `/catalog/material-thicknesses/{thickness_id}` | Remove a thickness option |
+| GET/POST | `/catalog/materials/{material_id}/sizes` | List/add a size option for a Stone |
+| DELETE | `/catalog/material-sizes/{size_id}` | Remove a size option |
+
+`sales_project_items` (§16) gained `material_thickness_id`/`material_size_id`, both optional fields on `POST/PATCH /sales/rooms/{room_id}/items` and `/sales/project-items/{item_id}` respectively, recording which specific option an Item was built with. No manufacturer technical specifications are accepted or stored by any of these endpoints — only the thickness/size values themselves.

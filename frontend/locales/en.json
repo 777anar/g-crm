@@ -311,6 +311,7 @@
     "materialsTitle": "Stone Materials",
     "materialsSubtitle": "Every brand, collection, and stone material in your catalog.",
     "createMaterial": "Add Material",
+    "createMaterialHint": "Create the Stone first, then add its Thickness and Size options on the material's page.",
     "searchMaterialsPlaceholder": "Search by name, color, material type, origin...",
     "filterByBrand": "Brand",
     "filterByCollection": "Collection",
@@ -406,7 +407,15 @@
       "noSlabs": "No slabs for this material yet.",
       "prices": "Pricing",
       "noPrices": "Not priced in any price list yet.",
-      "editMaterial": "Edit Material"
+      "editMaterial": "Edit Material",
+      "thicknesses": "Thickness Options",
+      "noThicknesses": "No thickness options yet.",
+      "addThickness": "Add Thickness",
+      "thicknessPlaceholder": "e.g. 12",
+      "sizes": "Size Options",
+      "noSizes": "No size options yet.",
+      "addSize": "Add Size",
+      "sizePlaceholder": "e.g. 3200x1600mm"
     },
     "entityStatus": {
       "active": "Active",
@@ -582,7 +591,12 @@
     "totalRooms": "Total Rooms",
     "totalProjectItems": "Total Items",
     "itemsProduced": "Items Produced",
-    "itemsInstalled": "Items Installed"
+    "itemsInstalled": "Items Installed",
+    "stone": "Stone",
+    "searchStone": "Search Stone",
+    "searchStonePlaceholder": "Type to search by name...",
+    "thickness": "Thickness",
+    "size": "Size"
   },
   "orders": {
     "title": "Orders",

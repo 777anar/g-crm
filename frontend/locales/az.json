@@ -311,6 +311,7 @@
     "materialsTitle": "Daş Materialları",
     "materialsSubtitle": "Kataloqunuzdakı bütün brendlər, kolleksiyalar və daş materialları.",
     "createMaterial": "Material əlavə et",
+    "createMaterialHint": "Əvvəlcə daşı yaradın, sonra onun Qalınlıq və Ölçü seçimlərini materialın səhifəsində əlavə edin.",
     "searchMaterialsPlaceholder": "Ad, rəng, material növü, mənşə üzrə axtarış...",
     "filterByBrand": "Brend",
     "filterByCollection": "Kolleksiya",
@@ -406,7 +407,15 @@
       "noSlabs": "Bu material üçün hələ plitə yoxdur.",
       "prices": "Qiymətləndirmə",
       "noPrices": "Hələ heç bir qiymət siyahısında qiymətləndirilməyib.",
-      "editMaterial": "Materialı redaktə et"
+      "editMaterial": "Materialı redaktə et",
+      "thicknesses": "Qalınlıq seçimləri",
+      "noThicknesses": "Hələ qalınlıq seçimi yoxdur.",
+      "addThickness": "Qalınlıq əlavə et",
+      "thicknessPlaceholder": "məs. 12",
+      "sizes": "Ölçü seçimləri",
+      "noSizes": "Hələ ölçü seçimi yoxdur.",
+      "addSize": "Ölçü əlavə et",
+      "sizePlaceholder": "məs. 3200x1600mm"
     },
     "entityStatus": {
       "active": "Aktiv",
@@ -582,7 +591,12 @@
     "totalRooms": "Ümumi məkanlar",
     "totalProjectItems": "Ümumi məmulatlar",
     "itemsProduced": "İstehsal olunan məmulatlar",
-    "itemsInstalled": "Quraşdırılan məmulatlar"
+    "itemsInstalled": "Quraşdırılan məmulatlar",
+    "stone": "Daş",
+    "searchStone": "Daş axtar",
+    "searchStonePlaceholder": "Ada görə axtarmaq üçün yazın...",
+    "thickness": "Qalınlıq",
+    "size": "Ölçü"
   },
   "orders": {
     "title": "Sifarişlər",

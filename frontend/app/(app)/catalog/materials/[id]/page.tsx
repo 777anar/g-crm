@@ -6,10 +6,16 @@ import { useTranslations } from "next-intl";
 import {
   addMaterialDocument,
   addMaterialImage,
+  addMaterialSize,
+  addMaterialThickness,
+  deleteMaterialSize,
+  deleteMaterialThickness,
   getBrand,
   getMaterial,
   listMaterialDocuments,
   listMaterialImages,
+  listMaterialSizes,
+  listMaterialThicknesses,
   listPricesForMaterial,
   listSlabs,
   updateMaterial,
@@ -18,12 +24,16 @@ import {
 import {
   DOCUMENT_TYPES,
   IMAGE_TYPES,
+  SUGGESTED_SIZES_MM,
+  SUGGESTED_THICKNESSES_MM,
   type Brand,
   type CatalogDocumentType,
   type ImageType,
   type Material,
   type MaterialDocumentAsset,
   type MaterialImage,
+  type MaterialSize,
+  type MaterialThickness,
   type PriceListEntry,
   type Slab,
 } from "@/lib/types";
@@ -32,7 +42,7 @@ import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EntityStatusBadge, SlabStatusBadge } from "@/components/ui/badge";
-import { SelectField } from "@/components/ui/field";
+import { SelectField, TextField } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDocumentTypeLabel, useImageTypeLabel } from "@/lib/i18n/hooks";
 
@@ -51,29 +61,37 @@ export default function MaterialDetailPage() {
   const [documents, setDocuments] = useState<MaterialDocumentAsset[]>([]);
   const [slabs, setSlabs] = useState<Slab[]>([]);
   const [prices, setPrices] = useState<PriceListEntry[]>([]);
+  const [thicknesses, setThicknesses] = useState<MaterialThickness[]>([]);
+  const [sizes, setSizes] = useState<MaterialSize[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageType, setImageType] = useState<ImageType>("gallery");
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [documentType, setDocumentType] = useState<CatalogDocumentType>("technical_pdf");
+  const [newThickness, setNewThickness] = useState("");
+  const [newSize, setNewSize] = useState("");
 
   const reload = useCallback(async () => {
     try {
       const m = await getMaterial(materialId);
       setMaterial(m);
-      const [b, imgs, docs, slabRes, priceRes] = await Promise.all([
+      const [b, imgs, docs, slabRes, priceRes, thicknessRes, sizeRes] = await Promise.all([
         getBrand(m.brand_id),
         listMaterialImages(materialId),
         listMaterialDocuments(materialId),
         listSlabs({ materialId }),
         listPricesForMaterial(materialId),
+        listMaterialThicknesses(materialId),
+        listMaterialSizes(materialId),
       ]);
       setBrand(b);
       setImages(imgs.items);
       setDocuments(docs.items);
       setSlabs(slabRes.items);
       setPrices(priceRes.items);
+      setThicknesses(thicknessRes.items);
+      setSizes(sizeRes.items);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : tDetail("loadFailed"));
     }
@@ -126,6 +144,32 @@ export default function MaterialDetailPage() {
     }
   }
 
+  async function handleAddThickness(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newThickness.trim()) return;
+    await addMaterialThickness(materialId, { thickness_mm: newThickness.trim(), sort_order: thicknesses.length });
+    setNewThickness("");
+    await reload();
+  }
+
+  async function handleDeleteThickness(id: string) {
+    await deleteMaterialThickness(id);
+    await reload();
+  }
+
+  async function handleAddSize(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newSize.trim()) return;
+    await addMaterialSize(materialId, { dimensions: newSize.trim(), sort_order: sizes.length });
+    setNewSize("");
+    await reload();
+  }
+
+  async function handleDeleteSize(id: string) {
+    await deleteMaterialSize(id);
+    await reload();
+  }
+
   if (!material && !error) {
     return (
       <div className="flex flex-col gap-4">
@@ -171,6 +215,78 @@ export default function MaterialDetailPage() {
           <Spec label={t("countryOfOrigin")} value={material.country_of_origin} />
         </dl>
         {material.description && <p className="mt-3 text-sm text-text-secondary">{material.description}</p>}
+      </Card>
+
+      <Card>
+        <CardHeader title={tDetail("thicknesses")} />
+        {thicknesses.length === 0 ? (
+          <p className="text-sm text-text-secondary">{tDetail("noThicknesses")}</p>
+        ) : (
+          <ul className="mb-3 flex flex-wrap gap-2">
+            {thicknesses.map((th) => (
+              <li
+                key={th.id}
+                className="flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-1.5 text-sm text-text-primary"
+              >
+                {th.thickness_mm} mm
+                <button onClick={() => handleDeleteThickness(th.id)} className="text-xs text-danger hover:underline">
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form className="flex items-end gap-2" onSubmit={handleAddThickness}>
+          <TextField
+            label={tDetail("addThickness")}
+            value={newThickness}
+            onChange={(e) => setNewThickness(e.target.value)}
+            list="thickness-suggestions"
+            placeholder={tDetail("thicknessPlaceholder")}
+          />
+          <datalist id="thickness-suggestions">
+            {SUGGESTED_THICKNESSES_MM.map((v) => (
+              <option key={v} value={v} />
+            ))}
+          </datalist>
+          <Button type="submit">{tCommon("save")}</Button>
+        </form>
+      </Card>
+
+      <Card>
+        <CardHeader title={tDetail("sizes")} />
+        {sizes.length === 0 ? (
+          <p className="text-sm text-text-secondary">{tDetail("noSizes")}</p>
+        ) : (
+          <ul className="mb-3 flex flex-wrap gap-2">
+            {sizes.map((sz) => (
+              <li
+                key={sz.id}
+                className="flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-1.5 text-sm text-text-primary"
+              >
+                {sz.dimensions}
+                <button onClick={() => handleDeleteSize(sz.id)} className="text-xs text-danger hover:underline">
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form className="flex items-end gap-2" onSubmit={handleAddSize}>
+          <TextField
+            label={tDetail("addSize")}
+            value={newSize}
+            onChange={(e) => setNewSize(e.target.value)}
+            list="size-suggestions"
+            placeholder={tDetail("sizePlaceholder")}
+          />
+          <datalist id="size-suggestions">
+            {SUGGESTED_SIZES_MM.map((v) => (
+              <option key={v} value={v} />
+            ))}
+          </datalist>
+          <Button type="submit">{tCommon("save")}</Button>
+        </form>
       </Card>
 
       <Card>

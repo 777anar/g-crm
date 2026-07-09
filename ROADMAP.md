@@ -257,6 +257,23 @@ Reports
 
 ---
 
+## Version 2.12.0 — Production-Ready Material Selector
+
+**Theme:** turns Sprint 2/3's Brand → Stone → Thickness → Size *idea* into a real, normalized data model. Previously "thickness" and "dimensions" were two free-text columns on the Material row itself, seeded from a generic suggestion list — one Stone could only ever have one thickness and one size. Now a Stone can offer several of each, and every Project Item records exactly which one it was built with. No new module; entirely inside Catalog (the two new option tables) and Sales (the two new `ProjectItem` FK columns).
+
+| Change | Area | Business value |
+|---|---|---|
+| New `MaterialThickness`/`MaterialSize` tables, each a normalized set of options belonging to one Stone (`catalog_materials`), with full CRUD (add/list/delete) mirroring the existing `MaterialImage`/`MaterialDocument` sub-resource pattern | Backend — Catalog | A single Stone (e.g. Calacatta Gold) can now offer 12mm and 20mm, in 3200x1600mm and 1600x800mm, without duplicating the whole Material row per combination |
+| `ProjectItem` gained `material_thickness_id`/`material_size_id` (nullable FKs to the new tables) | Backend — Sales | Every physical piece records exactly which Thickness/Size option it was built with, not just which Stone |
+| Material creation form no longer collects thickness/dimensions at Stone-creation time; the Material detail page gained "Thickness Options"/"Size Options" cards (list + add + delete) where those options are managed afterward | Frontend — Catalog | Structured, repeatable option management instead of a one-shot free-text pair baked into the Stone itself; the legacy `thickness_mm`/`dimensions` columns are untouched for backward compatibility with existing Materials |
+| Project workspace's "Add Item" form: Brand → **searchable** Stone (debounced server-side search via the existing `search` query param) → Thickness → Size, the latter two populated from the selected Stone's own options | Frontend — Sales | Matches the exact brief: thickness/size choices are scoped to what that specific Stone actually offers, and finding a Stone among hundreds no longer means scrolling a giant dropdown |
+| `SUPPORTED_BRANDS` curated suggestion list (NEOLITH, MARAZZI THE TOP, SAPIENSTONE, INALCO, ANATOLIA, BELENCO, COANTE) added as `<datalist>` suggestions on the Brand creation form | Frontend — Catalog | Recognizes the named supplier brands without hardcoding any manufacturer technical specs or forcing every company to use exactly this list — `Brand.name` stays free text |
+| Sprint 2's `SUGGESTED_THICKNESSES_MM`/`SUGGESTED_SIZES_MM` (previously feeding the now-removed Material-creation dropdowns) repurposed as `<datalist>` suggestions on the new per-Stone Thickness/Size add-forms | Frontend — Catalog | No dead code left behind from the form's redesign |
+
+**Verification:** full backend suite (522/522 passing — 514 prior + 8 new), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes).
+
+---
+
 ## Complexity key
 
 - **S** (Small): a few files, one focused PR, low risk
@@ -282,6 +299,7 @@ Reports
 | 2.9.3 | Production Readiness follow-up — i18n, dark-mode chart colors, breadcrumb consistency across ten detail pages | No | No |
 | 2.10.0 | G-STONE Sprint 2 — simplified 9-section navigation, Layihə-centric project-item types, structured Material entry, 1C-territory pages regrouped into a Settings hub | No (extended `VALID_ITEM_TYPES` vocabulary only) | No |
 | 2.11.0 | Measurement & Room Management — Project → Room → Project Item hierarchy with per-item Material/Measurement revisions/Drawings/Photos, all inside the existing Sales module | Yes (Room, ProjectItem, ProjectItemMeasurement, ProjectItemDrawing, ProjectItemPhoto) | No (extends Sales' existing Project workspace) |
+| 2.12.0 | Production-Ready Material Selector — normalized per-Stone Thickness/Size options, a searchable Stone selector, and named supplier-brand suggestions, preparing the catalog for a future official supplier-catalog import | Yes (MaterialThickness, MaterialSize; ProjectItem gained 2 FK columns) | No (extends Catalog + Sales' existing Project workspace) |
 
 ## Change log
 

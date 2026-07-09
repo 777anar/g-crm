@@ -137,3 +137,17 @@ class AddMaterialDocumentInput(ActorContext):
     material_id: uuid.UUID
     document_id: uuid.UUID
     document_type: str = "technical_pdf"
+
+
+@dataclass
+class AddMaterialThicknessInput(ActorContext):
+    material_id: uuid.UUID
+    thickness_mm: str
+    sort_order: int = 0
+
+
+@dataclass
+class AddMaterialSizeInput(ActorContext):
+    material_id: uuid.UUID
+    dimensions: str
+    sort_order: int = 0

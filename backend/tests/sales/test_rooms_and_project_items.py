@@ -150,6 +150,47 @@ def test_project_item_material_from_catalog(app_client, owner_headers, customer,
     assert resp.json()["material_id"] == str(material.id)
 
 
+def test_project_item_thickness_and_size_from_stone(app_client, owner_headers, customer, material):
+    """Sprint 4: Brand -> Stone -> Thickness -> Size -- the Thickness/Size
+    chosen for an item must be one of that Stone's own normalized options."""
+    thickness = app_client.post(
+        f"/api/v1/catalog/materials/{material.id}/thicknesses",
+        headers=owner_headers,
+        json={"thickness_mm": "20"},
+    ).json()
+    size = app_client.post(
+        f"/api/v1/catalog/materials/{material.id}/sizes",
+        headers=owner_headers,
+        json={"dimensions": "3200x1600mm"},
+    ).json()
+
+    project = _create_project(app_client, owner_headers, customer.id)
+    room = _create_room(app_client, owner_headers, project["id"])
+    resp = app_client.post(
+        f"/api/v1/sales/rooms/{room['id']}/items",
+        headers=owner_headers,
+        json={
+            "item_type": "countertop",
+            "material_id": str(material.id),
+            "material_thickness_id": thickness["id"],
+            "material_size_id": size["id"],
+            "quantity": "1",
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["material_thickness_id"] == thickness["id"]
+    assert body["material_size_id"] == size["id"]
+
+    update_resp = app_client.patch(
+        f"/api/v1/sales/project-items/{body['id']}",
+        headers=owner_headers,
+        json={"material_thickness_id": thickness["id"]},
+    )
+    assert update_resp.status_code == 200
+    assert update_resp.json()["material_thickness_id"] == thickness["id"]
+
+
 def test_update_project_item_status(app_client, owner_headers, customer):
     project = _create_project(app_client, owner_headers, customer.id)
     room = _create_room(app_client, owner_headers, project["id"])

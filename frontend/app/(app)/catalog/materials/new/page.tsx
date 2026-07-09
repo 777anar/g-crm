@@ -4,13 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createMaterial, listBrands, listCollections } from "@/lib/api/catalog";
-import {
-  SUGGESTED_MATERIAL_TYPES,
-  SUGGESTED_SIZES_MM,
-  SUGGESTED_THICKNESSES_MM,
-  type Brand,
-  type Collection,
-} from "@/lib/types";
+import { SUGGESTED_MATERIAL_TYPES, type Brand, type Collection } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -29,10 +23,6 @@ export default function NewMaterialPage() {
   const [materialType, setMaterialType] = useState("");
   const [color, setColor] = useState("");
   const [finish, setFinish] = useState("");
-  const [thickness, setThickness] = useState("");
-  const [thicknessCustom, setThicknessCustom] = useState(false);
-  const [dimensions, setDimensions] = useState("");
-  const [dimensionsCustom, setDimensionsCustom] = useState(false);
   const [countryOfOrigin, setCountryOfOrigin] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -68,8 +58,6 @@ export default function NewMaterialPage() {
         material_type: materialType || undefined,
         color: color || undefined,
         finish: finish || undefined,
-        thickness_mm: thickness || undefined,
-        dimensions: dimensions || undefined,
         country_of_origin: countryOfOrigin || undefined,
         description: description || undefined,
       });
@@ -84,7 +72,7 @@ export default function NewMaterialPage() {
   return (
     <div className="mx-auto max-w-xl">
       <Card>
-        <CardHeader title={t("createMaterial")} />
+        <CardHeader title={t("createMaterial")} subtitle={t("createMaterialHint")} />
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectField label={t("brand")} value={brandId} onChange={(e) => setBrandId(e.target.value)} required>
@@ -117,64 +105,6 @@ export default function NewMaterialPage() {
             </SelectField>
             <TextField label={t("color")} value={color} onChange={(e) => setColor(e.target.value)} />
             <TextField label={t("finish")} value={finish} onChange={(e) => setFinish(e.target.value)} />
-            {thicknessCustom ? (
-              <TextField
-                label={t("thickness")}
-                value={thickness}
-                onChange={(e) => setThickness(e.target.value)}
-                autoFocus
-              />
-            ) : (
-              <SelectField
-                label={t("thickness")}
-                value={thickness}
-                onChange={(e) => {
-                  if (e.target.value === "__custom__") {
-                    setThickness("");
-                    setThicknessCustom(true);
-                  } else {
-                    setThickness(e.target.value);
-                  }
-                }}
-              >
-                <option value="">{tCommon("select")}</option>
-                {SUGGESTED_THICKNESSES_MM.map((value) => (
-                  <option key={value} value={value}>
-                    {value} mm
-                  </option>
-                ))}
-                <option value="__custom__">{t("otherValue")}</option>
-              </SelectField>
-            )}
-            {dimensionsCustom ? (
-              <TextField
-                label={t("dimensions")}
-                value={dimensions}
-                onChange={(e) => setDimensions(e.target.value)}
-                autoFocus
-              />
-            ) : (
-              <SelectField
-                label={t("dimensions")}
-                value={dimensions}
-                onChange={(e) => {
-                  if (e.target.value === "__custom__") {
-                    setDimensions("");
-                    setDimensionsCustom(true);
-                  } else {
-                    setDimensions(e.target.value);
-                  }
-                }}
-              >
-                <option value="">{tCommon("select")}</option>
-                {SUGGESTED_SIZES_MM.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-                <option value="__custom__">{t("otherValue")}</option>
-              </SelectField>
-            )}
             <TextField
               label={t("countryOfOrigin")}
               value={countryOfOrigin}

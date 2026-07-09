@@ -26,10 +26,18 @@ import {
   deleteProjectItemPhoto,
   uploadProjectItemAsset,
 } from "@/lib/api/sales";
-import { getMaterial, listBrands, listMaterials } from "@/lib/api/catalog";
+import {
+  getMaterial,
+  listBrands,
+  listMaterials,
+  listMaterialSizes,
+  listMaterialThicknesses,
+} from "@/lib/api/catalog";
 import type {
   Brand,
   Material,
+  MaterialSize,
+  MaterialThickness,
   Project,
   ProjectItem,
   ProjectItemDrawing,
@@ -48,6 +56,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { formatDate } from "@/lib/format";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { ApiRequestError } from "@/lib/api-client";
 
 const PROD_STATUSES = ["pending", "queued", "cutting", "polishing", "quality_check", "done"];
@@ -80,9 +89,13 @@ export default function ProjectDetailPage() {
   const allItems = Object.values(itemsByRoom).flat();
 
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [materialsByBrand, setMaterialsByBrand] = useState<Record<string, Material[]>>({});
+  const [stoneSearchResults, setStoneSearchResults] = useState<Material[]>([]);
+  const [thicknessOptions, setThicknessOptions] = useState<MaterialThickness[]>([]);
+  const [sizeOptions, setSizeOptions] = useState<MaterialSize[]>([]);
 
   const [materialsById, setMaterialsById] = useState<Record<string, Material>>({});
+  const [thicknessesByMaterial, setThicknessesByMaterial] = useState<Record<string, MaterialThickness[]>>({});
+  const [sizesByMaterial, setSizesByMaterial] = useState<Record<string, MaterialSize[]>>({});
   const [measurementsByItem, setMeasurementsByItem] = useState<Record<string, ProjectItemMeasurement[]>>({});
   const [drawingsByItem, setDrawingsByItem] = useState<Record<string, ProjectItemDrawing[]>>({});
   const [photosByItem, setPhotosByItem] = useState<Record<string, ProjectItemPhoto[]>>({});
@@ -96,9 +109,13 @@ export default function ProjectDetailPage() {
   const [newItemType, setNewItemType] = useState<string>("countertop");
   const [newItemName, setNewItemName] = useState("");
   const [newItemBrandId, setNewItemBrandId] = useState("");
+  const [newItemStoneSearch, setNewItemStoneSearch] = useState("");
   const [newItemMaterialId, setNewItemMaterialId] = useState("");
+  const [newItemThicknessId, setNewItemThicknessId] = useState("");
+  const [newItemSizeId, setNewItemSizeId] = useState("");
   const [newItemQuantity, setNewItemQuantity] = useState("1");
   const [newItemNotes, setNewItemNotes] = useState("");
+  const debouncedStoneSearch = useDebouncedValue(newItemStoneSearch, 300);
 
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -162,13 +179,32 @@ export default function ProjectDetailPage() {
     }
   }, [addingItemToRoom]);
 
+  // Searchable Stone selector: server-side search scoped to the chosen
+  // Brand, debounced so it doesn't fire on every keystroke.
   useEffect(() => {
-    if (newItemBrandId && !materialsByBrand[newItemBrandId]) {
-      listMaterials({ brandId: newItemBrandId }).then((res) =>
-        setMaterialsByBrand((prev) => ({ ...prev, [newItemBrandId]: res.items }))
-      );
+    if (!newItemBrandId) {
+      setStoneSearchResults([]);
+      return;
     }
-  }, [newItemBrandId, materialsByBrand]);
+    listMaterials({ brandId: newItemBrandId, search: debouncedStoneSearch || undefined, limit: 20 }).then((res) =>
+      setStoneSearchResults(res.items)
+    );
+  }, [newItemBrandId, debouncedStoneSearch]);
+
+  // Thickness/Size options depend on the selected Stone.
+  useEffect(() => {
+    if (!newItemMaterialId) {
+      setThicknessOptions([]);
+      setSizeOptions([]);
+      return;
+    }
+    Promise.all([listMaterialThicknesses(newItemMaterialId), listMaterialSizes(newItemMaterialId)]).then(
+      ([thicknessRes, sizeRes]) => {
+        setThicknessOptions(thicknessRes.items);
+        setSizeOptions(sizeRes.items);
+      }
+    );
+  }, [newItemMaterialId]);
 
   useEffect(() => {
     const missing = Array.from(
@@ -179,6 +215,39 @@ export default function ProjectDetailPage() {
       setMaterialsById((prev) => {
         const next = { ...prev };
         materials.forEach((m) => { next[m.id] = m; });
+        return next;
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allItems]);
+
+  // Resolve the specific Thickness/Size chosen per item (not just the
+  // Stone's legacy single thickness_mm/dimensions) for display.
+  useEffect(() => {
+    const materialIds = Array.from(
+      new Set(
+        allItems
+          .filter((i) => i.material_thickness_id || i.material_size_id)
+          .map((i) => i.material_id)
+          .filter((id): id is string => !!id && !thicknessesByMaterial[id])
+      )
+    );
+    if (materialIds.length === 0) return;
+    Promise.all(
+      materialIds.map((materialId) =>
+        Promise.all([listMaterialThicknesses(materialId), listMaterialSizes(materialId)]).then(
+          ([thicknessRes, sizeRes]) => [materialId, thicknessRes.items, sizeRes.items] as const
+        )
+      )
+    ).then((results) => {
+      setThicknessesByMaterial((prev) => {
+        const next = { ...prev };
+        results.forEach(([materialId, items]) => { next[materialId] = items; });
+        return next;
+      });
+      setSizesByMaterial((prev) => {
+        const next = { ...prev };
+        results.forEach(([materialId, , items]) => { next[materialId] = items; });
         return next;
       });
     });
@@ -215,13 +284,18 @@ export default function ProjectDetailPage() {
       item_type: newItemType,
       name: newItemName || undefined,
       material_id: newItemMaterialId || undefined,
+      material_thickness_id: newItemThicknessId || undefined,
+      material_size_id: newItemSizeId || undefined,
       quantity: newItemQuantity,
       notes: newItemNotes || undefined,
     });
     setAddingItemToRoom(null);
     setNewItemName("");
     setNewItemBrandId("");
+    setNewItemStoneSearch("");
     setNewItemMaterialId("");
+    setNewItemThicknessId("");
+    setNewItemSizeId("");
     setNewItemQuantity("1");
     setNewItemNotes("");
     await loadRoomsAndItems();
@@ -248,11 +322,22 @@ export default function ProjectDetailPage() {
     return item.name ? `${typeLabel} — ${item.name}` : typeLabel;
   }
 
-  function materialLabel(materialId: string | null) {
-    if (!materialId) return tCommon("dash");
-    const material = materialsById[materialId];
-    if (!material) return materialId.slice(0, 8);
-    return `${material.name} — ${material.thickness_mm ?? tCommon("dash")}mm — ${material.dimensions ?? tCommon("dash")}`;
+  function materialLabel(item: ProjectItem) {
+    if (!item.material_id) return tCommon("dash");
+    const material = materialsById[item.material_id];
+    if (!material) return item.material_id.slice(0, 8);
+
+    // Prefer the specific Thickness/Size chosen for this item (Sprint 4's
+    // normalized options); fall back to the Stone's legacy single
+    // thickness_mm/dimensions fields for items created before this sprint.
+    const thickness = item.material_thickness_id
+      ? thicknessesByMaterial[item.material_id]?.find((th) => th.id === item.material_thickness_id)?.thickness_mm
+      : material.thickness_mm;
+    const size = item.material_size_id
+      ? sizesByMaterial[item.material_id]?.find((sz) => sz.id === item.material_size_id)?.dimensions
+      : material.dimensions;
+
+    return `${material.name} — ${thickness ?? tCommon("dash")}mm — ${size ?? tCommon("dash")}`;
   }
 
   if (loading) return <TableSkeleton rows={5} columns={5} />;
@@ -406,17 +491,69 @@ export default function ProjectDetailPage() {
                       value={newItemQuantity}
                       onChange={(e) => setNewItemQuantity(e.target.value)}
                     />
-                    <SelectField label={tCatalog("brand")} value={newItemBrandId} onChange={(e) => { setNewItemBrandId(e.target.value); setNewItemMaterialId(""); }}>
+                    <SelectField
+                      label={tCatalog("brand")}
+                      value={newItemBrandId}
+                      onChange={(e) => {
+                        setNewItemBrandId(e.target.value);
+                        setNewItemStoneSearch("");
+                        setNewItemMaterialId("");
+                        setNewItemThicknessId("");
+                        setNewItemSizeId("");
+                      }}
+                    >
                       <option value="">{tCommon("select")}</option>
                       {brands.map((b) => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
                     </SelectField>
-                    <SelectField label={tCatalog("material")} value={newItemMaterialId} onChange={(e) => setNewItemMaterialId(e.target.value)} disabled={!newItemBrandId}>
+                    <TextField
+                      label={t("searchStone")}
+                      value={newItemStoneSearch}
+                      onChange={(e) => setNewItemStoneSearch(e.target.value)}
+                      disabled={!newItemBrandId}
+                      placeholder={t("searchStonePlaceholder")}
+                    />
+                    <SelectField
+                      label={t("stone")}
+                      value={newItemMaterialId}
+                      onChange={(e) => {
+                        setNewItemMaterialId(e.target.value);
+                        setNewItemThicknessId("");
+                        setNewItemSizeId("");
+                      }}
+                      disabled={!newItemBrandId}
+                    >
                       <option value="">{tCommon("select")}</option>
-                      {(materialsByBrand[newItemBrandId] || []).map((m) => (
+                      {stoneSearchResults.map((m) => (
                         <option key={m.id} value={m.id}>
-                          {m.name} — {m.thickness_mm ?? tCommon("dash")}mm — {m.dimensions ?? tCommon("dash")}
+                          {m.name}
+                        </option>
+                      ))}
+                    </SelectField>
+                    <SelectField
+                      label={t("thickness")}
+                      value={newItemThicknessId}
+                      onChange={(e) => setNewItemThicknessId(e.target.value)}
+                      disabled={!newItemMaterialId || thicknessOptions.length === 0}
+                    >
+                      <option value="">{tCommon("select")}</option>
+                      {thicknessOptions.map((th) => (
+                        <option key={th.id} value={th.id}>
+                          {th.thickness_mm} mm
+                        </option>
+                      ))}
+                    </SelectField>
+                    <SelectField
+                      label={t("size")}
+                      value={newItemSizeId}
+                      onChange={(e) => setNewItemSizeId(e.target.value)}
+                      disabled={!newItemMaterialId || sizeOptions.length === 0}
+                    >
+                      <option value="">{tCommon("select")}</option>
+                      {sizeOptions.map((sz) => (
+                        <option key={sz.id} value={sz.id}>
+                          {sz.dimensions}
                         </option>
                       ))}
                     </SelectField>
@@ -436,7 +573,7 @@ export default function ProjectDetailPage() {
                         key={item.id}
                         item={item}
                         label={itemLabel(item)}
-                        materialLabel={materialLabel(item.material_id)}
+                        materialLabel={materialLabel(item)}
                         expanded={expandedItemId === item.id}
                         onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
                         onDelete={() => handleDeleteItem(item.id)}

@@ -7,6 +7,12 @@ from modules.catalog.application.use_cases.material_asset_use_cases import (
     AddMaterialDocumentUseCase,
     AddMaterialImageUseCase,
 )
+from modules.catalog.application.use_cases.material_option_use_cases import (
+    AddMaterialSizeUseCase,
+    AddMaterialThicknessUseCase,
+    DeleteMaterialSizeUseCase,
+    DeleteMaterialThicknessUseCase,
+)
 from modules.catalog.application.use_cases.material_use_cases import CreateMaterialUseCase, UpdateMaterialUseCase
 from modules.catalog.application.use_cases.price_list_use_cases import (
     CreatePriceListUseCase,
@@ -33,4 +39,8 @@ __all__ = [
     "UpsertPriceListEntryUseCase",
     "AddMaterialImageUseCase",
     "AddMaterialDocumentUseCase",
+    "AddMaterialThicknessUseCase",
+    "DeleteMaterialThicknessUseCase",
+    "AddMaterialSizeUseCase",
+    "DeleteMaterialSizeUseCase",
 ]

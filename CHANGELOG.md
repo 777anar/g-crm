@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.12.0] — 2026-07-09 — Production-Ready Material Selector
+
+Normalizes the Brand → Stone → Thickness → Size flow: a Stone can now offer several thickness and size options instead of one free-text pair baked into the Material row, and every Project Item records exactly which option it was built with. Entirely inside the existing Catalog/Sales modules — no new module.
+
+### Added
+- `MaterialThickness`/`MaterialSize` (`catalog_material_thicknesses`/`catalog_material_sizes`): normalized option lists per Stone, full CRUD (add/list/delete), same sub-resource pattern as `MaterialImage`/`MaterialDocument`.
+- `ProjectItem.material_thickness_id`/`material_size_id`: nullable FKs recording the specific option chosen for that item.
+- Material detail page: "Thickness Options"/"Size Options" cards (list + add + delete), with `<datalist>` suggestions repurposed from Sprint 2's now-unused `SUGGESTED_THICKNESSES_MM`/`SUGGESTED_SIZES_MM`.
+- Project workspace's "Add Item" form: Brand → **searchable** Stone (debounced server-side search) → Thickness → Size, the latter two populated from the selected Stone's own options.
+- `SUPPORTED_BRANDS` curated suggestion list (NEOLITH, MARAZZI THE TOP, SAPIENSTONE, INALCO, ANATOLIA, BELENCO, COANTE) as `<datalist>` suggestions on the Brand creation form — `Brand.name` stays free text, no manufacturer specs stored.
+- 8 new backend tests: Thickness/Size CRUD, per-material scoping, audit logging, and `ProjectItem` thickness/size selection.
+
+### Changed
+- Material creation form no longer collects thickness/dimensions at Stone-creation time — those are now added afterward via the detail page's new option cards. The legacy `thickness_mm`/`dimensions` columns on `StoneMaterial` are untouched (backward compatible with existing Materials).
+- Migration adds `sales_project_items`' two new FK columns via a SQLite-safe `batch_alter_table` (SQLite can't `ALTER TABLE ADD CONSTRAINT` directly; verified with a full upgrade/downgrade/upgrade round-trip).
+
+### Verification
+Full backend suite (522/522 passing — 514 prior + 8 new), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes).
+
 ## [2.11.0] — 2026-07-09 — Measurement & Room Management
 
 Makes "Layihə" (Project) genuinely the primary business object: a Project now contains Rooms, each Room contains Project Items (the physical pieces being fabricated), and each Project Item owns its Material, Measurement history, Drawings, and Photos. Built entirely inside the existing Sales module (no new module) — an initial plan to build Measurement/Room as standalone modules was corrected mid-sprint to avoid duplicating the Project/Quote structure that already exists there.

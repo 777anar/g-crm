@@ -41,6 +41,8 @@ class CreateProjectItemUseCase:
             item_type=data.item_type,
             name=data.name,
             material_id=data.material_id,
+            material_thickness_id=data.material_thickness_id,
+            material_size_id=data.material_size_id,
             quantity=Decimal(str(data.quantity)),
             unit=unit,
             notes=data.notes,
@@ -83,6 +85,10 @@ class UpdateProjectItemUseCase:
             item.name = data.name
         if data.material_id is not None:
             item.material_id = data.material_id
+        if data.material_thickness_id is not None:
+            item.material_thickness_id = data.material_thickness_id
+        if data.material_size_id is not None:
+            item.material_size_id = data.material_size_id
         if data.quantity is not None:
             item.quantity = Decimal(str(data.quantity))
         if data.unit is not None:

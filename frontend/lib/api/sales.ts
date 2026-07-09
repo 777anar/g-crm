@@ -274,6 +274,8 @@ export function createProjectItem(
     item_type: string;
     name?: string;
     material_id?: string;
+    material_thickness_id?: string;
+    material_size_id?: string;
     quantity?: string;
     unit?: string;
     notes?: string;

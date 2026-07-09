@@ -635,6 +635,36 @@ _Note: Sprint 3 ("Project" as the primary business object). Deliberately built a
 
 Drawings and Photos both reuse the core `documents` polymorphic store (§3) exactly like `catalog_material_documents`/`catalog_material_images` — the row here is only the link + categorization, the file itself lives in the one shared documents table. `core/storage/router.py`'s upload content-type allowlist was extended to accept DWG/DXF (accepted either by a matching MIME type or, since browsers commonly report `application/octet-stream` for CAD files with no registered MIME type, by filename extension).
 
+## 5.10 Material Thickness/Size Options (Version 2.12 — as actually implemented, extends Catalog §5.5)
+
+_Note: normalizes what used to be a single free-text `thickness_mm`/`dimensions` pair on `catalog_materials` (kept, unchanged, for backward compatibility with existing rows) into real per-Stone option lists — a Stone can now be offered in several thicknesses and sizes. `sales_project_items` (§5.9) gained two nullable FKs recording which specific option each Item was built with._
+
+### 5.10.1 `catalog_material_thicknesses`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| material_id | UUID | NOT NULL, REFERENCES catalog_materials(id), indexed |
+| thickness_mm | TEXT(20) | NOT NULL |
+| sort_order | INTEGER | NOT NULL, default `0` |
+
+### 5.10.2 `catalog_material_sizes`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| material_id | UUID | NOT NULL, REFERENCES catalog_materials(id), indexed |
+| dimensions | TEXT(50) | NOT NULL |
+| sort_order | INTEGER | NOT NULL, default `0` |
+
+### 5.10.3 `sales_project_items` additions
+| Column | Type | Constraints |
+|---|---|---|
+| material_thickness_id | UUID | nullable, REFERENCES catalog_material_thicknesses(id), indexed |
+| material_size_id | UUID | nullable, REFERENCES catalog_material_sizes(id), indexed |
+
+No manufacturer technical specifications (weight, water absorption, finish-per-thickness, etc.) are stored anywhere in this schema — only the thickness/size values themselves, ready to be populated from a future official supplier-catalog import.
+
 ## 6. Future-Phase Module Schemas (conceptual — not migrated in Phase 1)
 
 Kept here only so foreign-key shapes are pre-considered and won't surprise later modules.

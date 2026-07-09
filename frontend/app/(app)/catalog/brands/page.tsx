@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createBrand, listBrands, updateBrand } from "@/lib/api/catalog";
-import type { Brand } from "@/lib/types";
+import { SUPPORTED_BRANDS, type Brand } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -97,8 +97,14 @@ export default function BrandsPage() {
             label={t("name")}
             value={name}
             onChange={(e) => setName(e.target.value)}
+            list="brand-suggestions"
             required
           />
+          <datalist id="brand-suggestions">
+            {SUPPORTED_BRANDS.map((b) => (
+              <option key={b} value={b} />
+            ))}
+          </datalist>
           <TextField label={t("description")} value={description} onChange={(e) => setDescription(e.target.value)} />
           <div className="flex items-end">
             <Button type="submit" disabled={submitting || !name}>

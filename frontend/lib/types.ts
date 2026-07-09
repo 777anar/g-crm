@@ -310,6 +310,37 @@ export type MaterialDocumentAsset = {
   created_at: string;
 };
 
+// Sprint 4: normalized Thickness/Size options per Stone (Material), replacing
+// the single free-text thickness_mm/dimensions columns as the source of
+// truth for the Brand -> Stone -> Thickness -> Size selector.
+export type MaterialThickness = {
+  id: string;
+  material_id: string;
+  thickness_mm: string;
+  sort_order: number;
+  created_at: string;
+};
+
+export type MaterialSize = {
+  id: string;
+  material_id: string;
+  dimensions: string;
+  sort_order: number;
+  created_at: string;
+};
+
+// Curated brand suggestions for the Brand creation form (Sprint 4) --
+// Brand.name stays free text server-side, this is just a starter list.
+export const SUPPORTED_BRANDS = [
+  "NEOLITH",
+  "MARAZZI THE TOP",
+  "SAPIENSTONE",
+  "INALCO",
+  "ANATOLIA",
+  "BELENCO",
+  "COANTE",
+] as const;
+
 // ── Sales module ──────────────────────────────────────────────────────────────
 
 export const PROJECT_STATUSES = ["active", "completed", "cancelled"] as const;
@@ -491,6 +522,8 @@ export type ProjectItem = {
   item_type: string;
   name: string | null;
   material_id: string | null;
+  material_thickness_id: string | null;
+  material_size_id: string | null;
   quantity: string;
   unit: string;
   notes: string | null;

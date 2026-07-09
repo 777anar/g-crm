@@ -28,8 +28,17 @@ class ProjectItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     # Material selection is always Brand -> Stone -> Thickness -> Size via an
-    # existing catalog StoneMaterial (never free text) -- see catalog.
+    # existing catalog StoneMaterial (never free text) -- see catalog. The
+    # Stone (material_id) can offer several thickness/size options (Sprint 4's
+    # normalized catalog_material_thicknesses/catalog_material_sizes); these
+    # two columns record which specific option this Item was built with.
     material_id: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("catalog_materials.id"), nullable=True, index=True)
+    material_thickness_id: Mapped[Optional[str]] = mapped_column(
+        GUID(), ForeignKey("catalog_material_thicknesses.id"), nullable=True, index=True
+    )
+    material_size_id: Mapped[Optional[str]] = mapped_column(
+        GUID(), ForeignKey("catalog_material_sizes.id"), nullable=True, index=True
+    )
 
     quantity: Mapped[Decimal] = mapped_column(Numeric(10, 3), nullable=False, default=Decimal("1"))
     unit: Mapped[str] = mapped_column(String(10), nullable=False, default="unit")

@@ -12,6 +12,8 @@ class ProjectItemCreate(BaseModel):
     item_type: str
     name: Optional[str] = None
     material_id: Optional[uuid.UUID] = None
+    material_thickness_id: Optional[uuid.UUID] = None
+    material_size_id: Optional[uuid.UUID] = None
     quantity: Decimal = Decimal("1")
     unit: Optional[str] = None
     notes: Optional[str] = None
@@ -28,6 +30,8 @@ class ProjectItemUpdate(BaseModel):
     item_type: Optional[str] = None
     name: Optional[str] = None
     material_id: Optional[uuid.UUID] = None
+    material_thickness_id: Optional[uuid.UUID] = None
+    material_size_id: Optional[uuid.UUID] = None
     quantity: Optional[Decimal] = None
     unit: Optional[str] = None
     notes: Optional[str] = None
@@ -44,6 +48,8 @@ class ProjectItemOut(BaseModel):
     item_type: str
     name: Optional[str]
     material_id: Optional[uuid.UUID]
+    material_thickness_id: Optional[uuid.UUID]
+    material_size_id: Optional[uuid.UUID]
     quantity: Decimal
     unit: str
     notes: Optional[str]

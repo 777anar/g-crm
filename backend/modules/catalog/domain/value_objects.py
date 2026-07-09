@@ -90,3 +90,19 @@ SUGGESTED_MATERIAL_TYPES = [
     "Dekton",
     "Ceramic",
 ]
+
+# Sprint 4: named brands the Brand creation form suggests by default. Same
+# "starter vocabulary, not a hard enum" rule as SUGGESTED_MATERIAL_TYPES above
+# -- Brand.name stays free text so any company can add a brand not in this
+# list. Preparing for a future official supplier-catalog import is exactly
+# why this list exists (recognizing these names), not because their
+# technical specs are stored anywhere in this codebase.
+SUGGESTED_BRANDS = [
+    "NEOLITH",
+    "MARAZZI THE TOP",
+    "SAPIENSTONE",
+    "INALCO",
+    "ANATOLIA",
+    "BELENCO",
+    "COANTE",
+]

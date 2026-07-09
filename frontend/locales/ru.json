@@ -311,6 +311,7 @@
     "materialsTitle": "Каменные материалы",
     "materialsSubtitle": "Все бренды, коллекции и каменные материалы вашего каталога.",
     "createMaterial": "Добавить материал",
+    "createMaterialHint": "Сначала создайте камень, затем добавьте варианты толщины и размера на его странице.",
     "searchMaterialsPlaceholder": "Поиск по названию, цвету, типу материала, происхождению...",
     "filterByBrand": "Бренд",
     "filterByCollection": "Коллекция",
@@ -406,7 +407,15 @@
       "noSlabs": "Для этого материала пока нет слэбов.",
       "prices": "Цены",
       "noPrices": "Ещё не указана цена ни в одном прайс-листе.",
-      "editMaterial": "Редактировать материал"
+      "editMaterial": "Редактировать материал",
+      "thicknesses": "Варианты толщины",
+      "noThicknesses": "Пока нет вариантов толщины.",
+      "addThickness": "Добавить толщину",
+      "thicknessPlaceholder": "напр. 12",
+      "sizes": "Варианты размера",
+      "noSizes": "Пока нет вариантов размера.",
+      "addSize": "Добавить размер",
+      "sizePlaceholder": "напр. 3200x1600мм"
     },
     "entityStatus": {
       "active": "Активен",
@@ -582,7 +591,12 @@
     "totalRooms": "Всего помещений",
     "totalProjectItems": "Всего изделий",
     "itemsProduced": "Изделий изготовлено",
-    "itemsInstalled": "Изделий установлено"
+    "itemsInstalled": "Изделий установлено",
+    "stone": "Камень",
+    "searchStone": "Поиск камня",
+    "searchStonePlaceholder": "Введите название для поиска...",
+    "thickness": "Толщина",
+    "size": "Размер"
   },
   "orders": {
     "title": "Заказы",
