@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CustomerArchivedBadge, LeadChannelBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { SectionTabs } from "@/components/ui/section-tabs";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import {
   ColumnResizeHandle,
@@ -39,6 +40,7 @@ type CustomersFilters = {
 export default function CustomersListPage() {
   const t = useTranslations("customers");
   const tCommon = useTranslations("common");
+  const tCrm = useTranslations("crm");
   const statusLabel = useCustomerStatusLabel();
   const router = useRouter();
 
@@ -105,6 +107,14 @@ export default function CustomersListPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <SectionTabs
+        items={[
+          { label: tCrm("tabCustomers"), href: "/crm/customers" },
+          { label: tCrm("tabLeads"), href: "/crm/leads" },
+          { label: tCrm("tabTasks"), href: "/crm/tasks" },
+        ]}
+      />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-text-primary">{t("title")}</h1>

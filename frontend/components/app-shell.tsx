@@ -12,33 +12,43 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { QuickCreateMenu } from "@/components/quick-create-menu";
 import { useCloseOnEscape } from "@/lib/use-outside-click";
 
-// Dashboard is core-platform navigation, always present regardless of which
-// modules are installed. The remaining items mirror each enabled module's
-// navigation contribution -- per UI_UX_GUIDELINES.md section 6.1. This list
-// mirrors each backend/modules/<name>/navigation.py directly. A future phase
-// replaces the module portion with a real GET /nav-config call once
-// per-company enablement matters.
+// Sprint 2 ("Layihə" as the primary business object): the primary sidebar is
+// deliberately reduced to 9 module-level sections per UI_UX_GUIDELINES.md
+// section 6.1 ("Primary sidebar: module-level navigation ... Secondary
+// navigation: within a module, a sub-nav for its sections"). Every page that
+// used to have its own top-level entry still exists and is still linked from
+// somewhere (a SectionTabs bar within its module, or the /settings hub for
+// back-office pages that are out of the daily office workflow) -- nothing
+// was deleted, only regrouped.
 const NAV_ITEMS = [
   { labelKey: "dashboard", href: "/dashboard" },
   { labelKey: "customers", href: "/crm/customers" },
+  { labelKey: "projects", href: "/sales/projects" },
+  { labelKey: "catalog", href: "/catalog/materials" },
+  { labelKey: "production", href: "/production" },
+  { labelKey: "installation", href: "/installation" },
+  { labelKey: "messages", href: "/communication/inbox" },
+  { labelKey: "reports", href: "/reports" },
+  { labelKey: "settings", href: "/settings" },
+] as const;
+
+// Routes that moved out of the primary sidebar but still need the browser
+// tab title / active-section logic in the effect below -- kept as a separate
+// list so NAV_ITEMS above stays exactly the 9 visible sections.
+const SECONDARY_ROUTES = [
   { labelKey: "leads", href: "/crm/leads" },
   { labelKey: "tasks", href: "/crm/tasks" },
-  { labelKey: "inbox", href: "/communication/inbox" },
-  { labelKey: "channels", href: "/communication/channels" },
-  { labelKey: "integrations", href: "/communication/integrations" },
-  { labelKey: "messageTemplates", href: "/communication/templates" },
-  { labelKey: "catalog", href: "/catalog/materials" },
   { labelKey: "brands", href: "/catalog/brands" },
   { labelKey: "slabs", href: "/catalog/slabs" },
   { labelKey: "warehouses", href: "/catalog/warehouses" },
   { labelKey: "priceLists", href: "/catalog/price-lists" },
-  { labelKey: "projects", href: "/sales/projects" },
   { labelKey: "orders", href: "/orders" },
-  { labelKey: "production", href: "/production" },
-  { labelKey: "installation", href: "/installation" },
   { labelKey: "invoices", href: "/finance/invoices" },
   { labelKey: "expenses", href: "/finance/expenses" },
-  { labelKey: "reports", href: "/reports" },
+  { labelKey: "inbox", href: "/communication/inbox" },
+  { labelKey: "channels", href: "/communication/channels" },
+  { labelKey: "integrations", href: "/communication/integrations" },
+  { labelKey: "messageTemplates", href: "/communication/templates" },
   { labelKey: "aiAssistant", href: "/ai/dashboard" },
 ] as const;
 
@@ -86,7 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // (e.g. /crm/customers/[id]) should show their parent section's title.
   useEffect(() => {
     if (!pathname) return;
-    const match = [...NAV_ITEMS]
+    const match = [...NAV_ITEMS, ...SECONDARY_ROUTES]
       .sort((a, b) => b.href.length - a.href.length)
       .find((item) => pathname.startsWith(item.href));
     document.title = match ? `${tNav(match.labelKey)} · ${tCommon("appName")}` : tCommon("appName");

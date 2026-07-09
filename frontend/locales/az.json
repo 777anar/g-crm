@@ -39,7 +39,7 @@
     "dashboard": "İdarə paneli",
     "customers": "Müştərilər",
     "leads": "Potensial müştərilər",
-    "catalog": "Daş Kataloqu",
+    "catalog": "Materiallar",
     "brands": "Brendlər",
     "slabs": "Plitələr",
     "warehouses": "Anbarlar",
@@ -57,7 +57,9 @@
     "channels": "Kanallar",
     "messageTemplates": "Şablonlar",
     "aiAssistant": "AI Köməkçisi",
-    "integrations": "İnteqrasiyalar"
+    "integrations": "İnteqrasiyalar",
+    "messages": "Mesajlar",
+    "settings": "Ayarlar"
   },
   "language": {
     "switchLanguage": "Dil",
@@ -115,6 +117,13 @@
     "noDueDate": "Son tarix yoxdur",
     "notifications": "Bildirişlər",
     "noNotifications": "Bildiriş yoxdur"
+  },
+  "crm": {
+    "title": "Müştərilər",
+    "subtitle": "Müştərilər, potensial müştərilər və əlaqəli tapşırıqlar.",
+    "tabCustomers": "Müştərilər",
+    "tabLeads": "Potensial müştərilər",
+    "tabTasks": "Tapşırıqlar"
   },
   "customers": {
     "title": "Müştərilər",
@@ -294,6 +303,11 @@
     "newTask": "Yeni Tapşırıq"
   },
   "catalog": {
+    "title": "Daş Kataloqu",
+    "subtitle": "Qiymət təklifi üçün materiallar, brendlər və plitələr.",
+    "tabMaterials": "Materiallar",
+    "tabBrands": "Brendlər",
+    "tabSlabs": "Plitələr",
     "materialsTitle": "Daş Materialları",
     "materialsSubtitle": "Kataloqunuzdakı bütün brendlər, kolleksiyalar və daş materialları.",
     "createMaterial": "Material əlavə et",
@@ -362,6 +376,7 @@
     "finish": "Səth",
     "thickness": "Qalınlıq (mm)",
     "dimensions": "Ölçülər",
+    "otherValue": "Digər (əl ilə daxil edin)",
     "countryOfOrigin": "Mənşə Ölkəsi",
     "status": "Status",
     "material": "Material",
@@ -460,6 +475,25 @@
     "items": "Mövqelər",
     "addItem": "Mövqe əlavə et",
     "itemType": "Növ",
+    "itemType_material": "Material",
+    "itemType_wall_cladding": "Divar üzlüyü",
+    "itemType_vanity": "Moydadır",
+    "itemType_backsplash": "Fartuk",
+    "itemType_edge_profile": "Kənar profili",
+    "itemType_sink_cutout": "Lavabo üçün kəsik",
+    "itemType_cooktop_cutout": "Ocaq üçün kəsik",
+    "itemType_faucet_hole": "Batareya üçün dəlik",
+    "itemType_installation": "Quraşdırma",
+    "itemType_transport": "Daşınma",
+    "itemType_crane": "Kran (texnika)",
+    "itemType_other": "Digər",
+    "itemType_countertop": "Mətbəx dəzgahı",
+    "itemType_island": "Ada",
+    "itemType_tv_panel": "TV paneli",
+    "itemType_bathroom_furniture": "Hamam mebeli",
+    "itemType_flooring": "Döşəmə",
+    "itemType_stairs": "Pilləkən",
+    "itemType_table": "Masa",
     "description": "Təsvir",
     "unit": "Vahid",
     "unitPrice": "Vahid qiymət",
@@ -1068,5 +1102,22 @@
     "health_unknown": "Yoxlanılmayıb",
     "health_ok": "Sağlam",
     "health_error": "Xəta"
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "subtitle": "İdarəetmə və konfiqurasiya səhifələri, gündəlik iş axınından kənarda.",
+    "channelsDesc": "WhatsApp, Instagram, Messenger, E-poçt və SMS kanallarını tənzimləyin.",
+    "templatesDesc": "Təkrar istifadə olunan mesaj şablonları və tez cavablar.",
+    "integrationsDesc": "Provayder məlumatları, bağlantı statusu və göndərmə jurnalları.",
+    "warehousesDesc": "Fiziki anbar yerləri. Anbar qalıqları 1C-də izlənilir.",
+    "slabsDesc": "Ayrı-ayrı izlənilən fiziki plitələr. Qalıq sayı 1C-də izlənilir.",
+    "priceListsDesc": "Hər material üzrə şirkətə xas maya dəyəri və satış qiyməti.",
+    "ordersDesc": "Bütün layihələr üzrə sifarişlərə nəzarət üçün siyahı.",
+    "invoicesDesc": "Tamamlanmış sifarişlərdən yaradılan fakturalar.",
+    "expensesDesc": "Şirkət xərcləri jurnalı.",
+    "aiAssistantDesc": "AI tövsiyələri paneli və istifadə statistikası.",
+    "groupMessaging": "Yazışmalar",
+    "groupCatalog": "Material idarəetməsi",
+    "groupOffice": "Ofis"
   }
 }

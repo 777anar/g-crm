@@ -78,6 +78,19 @@ ITEM_TYPE_TRANSPORT = "transport"
 ITEM_TYPE_CRANE = "crane"
 ITEM_TYPE_OTHER = "other"
 
+# Project-item ("piece") types -- Sprint 2 ("Layihə" as the primary business
+# object): each of these is a physical piece a customer orders (a kitchen
+# countertop, an island, ...), as opposed to the billing-only types above
+# (edge_profile, sink_cutout, ..., transport, crane) which are service charges
+# rather than fabricated pieces.
+ITEM_TYPE_COUNTERTOP = "countertop"
+ITEM_TYPE_ISLAND = "island"
+ITEM_TYPE_TV_PANEL = "tv_panel"
+ITEM_TYPE_BATHROOM_FURNITURE = "bathroom_furniture"
+ITEM_TYPE_FLOORING = "flooring"
+ITEM_TYPE_STAIRS = "stairs"
+ITEM_TYPE_TABLE = "table"
+
 VALID_ITEM_TYPES = {
     ITEM_TYPE_MATERIAL,
     ITEM_TYPE_WALL_CLADDING,
@@ -91,10 +104,29 @@ VALID_ITEM_TYPES = {
     ITEM_TYPE_TRANSPORT,
     ITEM_TYPE_CRANE,
     ITEM_TYPE_OTHER,
+    ITEM_TYPE_COUNTERTOP,
+    ITEM_TYPE_ISLAND,
+    ITEM_TYPE_TV_PANEL,
+    ITEM_TYPE_BATHROOM_FURNITURE,
+    ITEM_TYPE_FLOORING,
+    ITEM_TYPE_STAIRS,
+    ITEM_TYPE_TABLE,
 }
 
 # Item types that require a material_id from the Catalog.
-MATERIAL_ITEM_TYPES = {ITEM_TYPE_MATERIAL, ITEM_TYPE_WALL_CLADDING, ITEM_TYPE_VANITY, ITEM_TYPE_BACKSPLASH}
+MATERIAL_ITEM_TYPES = {
+    ITEM_TYPE_MATERIAL,
+    ITEM_TYPE_WALL_CLADDING,
+    ITEM_TYPE_VANITY,
+    ITEM_TYPE_BACKSPLASH,
+    ITEM_TYPE_COUNTERTOP,
+    ITEM_TYPE_ISLAND,
+    ITEM_TYPE_TV_PANEL,
+    ITEM_TYPE_BATHROOM_FURNITURE,
+    ITEM_TYPE_FLOORING,
+    ITEM_TYPE_STAIRS,
+    ITEM_TYPE_TABLE,
+}
 
 # Default unit per item type.
 ITEM_TYPE_DEFAULT_UNIT = {
@@ -110,6 +142,13 @@ ITEM_TYPE_DEFAULT_UNIT = {
     ITEM_TYPE_TRANSPORT: "unit",
     ITEM_TYPE_CRANE: "unit",
     ITEM_TYPE_OTHER: "unit",
+    ITEM_TYPE_COUNTERTOP: "m2",
+    ITEM_TYPE_ISLAND: "m2",
+    ITEM_TYPE_TV_PANEL: "m2",
+    ITEM_TYPE_BATHROOM_FURNITURE: "m2",
+    ITEM_TYPE_FLOORING: "m2",
+    ITEM_TYPE_STAIRS: "m2",
+    ITEM_TYPE_TABLE: "m2",
 }
 
 # Company service-price key per item type.

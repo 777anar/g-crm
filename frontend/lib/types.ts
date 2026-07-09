@@ -198,6 +198,20 @@ export const SUGGESTED_MATERIAL_TYPES = [
   "Ceramic",
 ] as const;
 
+// Common industry-standard slab thicknesses/sizes, offered as a guided
+// dropdown instead of free text so material entry stays structured
+// (Brand -> Stone -> Thickness -> Size) ahead of a future official supplier
+// catalog import -- these are just everyday defaults, not manufacturer specs.
+export const SUGGESTED_THICKNESSES_MM = ["12", "20", "30"] as const;
+
+export const SUGGESTED_SIZES_MM = [
+  "3200x1600mm",
+  "3000x1400mm",
+  "3200x1500mm",
+  "2800x1300mm",
+  "1600x800mm",
+] as const;
+
 export type Brand = {
   id: string;
   name: string;

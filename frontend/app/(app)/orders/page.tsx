@@ -7,6 +7,7 @@ import { listOrders } from "@/lib/api/orders";
 import { ORDER_STATUSES, type Order } from "@/lib/types";
 import { OrderStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SectionTabs } from "@/components/ui/section-tabs";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
 import { SortableHeader } from "@/components/ui/sortable-header";
@@ -17,6 +18,7 @@ import { useDebouncedValue } from "@/lib/use-debounced-value";
 export default function OrdersPage() {
   const t = useTranslations("orders");
   const tCommon = useTranslations("common");
+  const tNav = useTranslations("nav");
   const router = useRouter();
 
   const [orders, setOrders] = useState<Order[] | null>(null);
@@ -39,6 +41,13 @@ export default function OrdersPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <SectionTabs
+        items={[
+          { label: tNav("projects"), href: "/sales/projects" },
+          { label: tNav("orders"), href: "/orders" },
+        ]}
+      />
+
       <div>
         <h1 className="text-xl font-semibold text-text-primary">{t("title")}</h1>
         <p className="text-sm text-text-secondary">{t("subtitle")}</p>

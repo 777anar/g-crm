@@ -10,6 +10,7 @@ import { TASK_PRIORITIES, TASK_STATUSES, type CompanyUser, type Task } from "@/l
 import { TaskPriorityBadge, TaskStatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SectionTabs } from "@/components/ui/section-tabs";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import {
   ColumnResizeHandle,
@@ -40,6 +41,7 @@ type TasksFilters = {
 export default function TasksPage() {
   const t = useTranslations("tasks");
   const tCommon = useTranslations("common");
+  const tCrm = useTranslations("crm");
   const router = useRouter();
 
   const [tasks, setTasks] = useState<Task[] | null>(null);
@@ -118,6 +120,14 @@ export default function TasksPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <SectionTabs
+        items={[
+          { label: tCrm("tabCustomers"), href: "/crm/customers" },
+          { label: tCrm("tabLeads"), href: "/crm/leads" },
+          { label: tCrm("tabTasks"), href: "/crm/tasks" },
+        ]}
+      />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-text-primary">{t("title")}</h1>

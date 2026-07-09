@@ -39,7 +39,7 @@
     "dashboard": "Панель управления",
     "customers": "Клиенты",
     "leads": "Лиды",
-    "catalog": "Каталог камня",
+    "catalog": "Материалы",
     "brands": "Бренды",
     "slabs": "Слэбы",
     "warehouses": "Склады",
@@ -57,7 +57,9 @@
     "channels": "Каналы",
     "messageTemplates": "Шаблоны",
     "aiAssistant": "AI-помощник",
-    "integrations": "Интеграции"
+    "integrations": "Интеграции",
+    "messages": "Сообщения",
+    "settings": "Настройки"
   },
   "language": {
     "switchLanguage": "Язык",
@@ -115,6 +117,13 @@
     "noDueDate": "Без срока",
     "notifications": "Уведомления",
     "noNotifications": "Нет уведомлений"
+  },
+  "crm": {
+    "title": "Клиенты",
+    "subtitle": "Клиенты, лиды и задачи по сопровождению.",
+    "tabCustomers": "Клиенты",
+    "tabLeads": "Лиды",
+    "tabTasks": "Задачи"
   },
   "customers": {
     "title": "Клиенты",
@@ -294,6 +303,11 @@
     "newTask": "Новая задача"
   },
   "catalog": {
+    "title": "Каталог камня",
+    "subtitle": "Материалы, бренды и слэбы для составления коммерческих предложений.",
+    "tabMaterials": "Материалы",
+    "tabBrands": "Бренды",
+    "tabSlabs": "Слэбы",
     "materialsTitle": "Каменные материалы",
     "materialsSubtitle": "Все бренды, коллекции и каменные материалы вашего каталога.",
     "createMaterial": "Добавить материал",
@@ -362,6 +376,7 @@
     "finish": "Отделка",
     "thickness": "Толщина (мм)",
     "dimensions": "Размеры",
+    "otherValue": "Другое (ввести вручную)",
     "countryOfOrigin": "Страна происхождения",
     "status": "Статус",
     "material": "Материал",
@@ -460,6 +475,25 @@
     "items": "Позиции",
     "addItem": "Добавить позицию",
     "itemType": "Тип",
+    "itemType_material": "Материал",
+    "itemType_wall_cladding": "Облицовка стен",
+    "itemType_vanity": "Тумба под раковину",
+    "itemType_backsplash": "Фартук",
+    "itemType_edge_profile": "Кромка",
+    "itemType_sink_cutout": "Вырез под мойку",
+    "itemType_cooktop_cutout": "Вырез под варочную панель",
+    "itemType_faucet_hole": "Отверстие под смеситель",
+    "itemType_installation": "Монтаж",
+    "itemType_transport": "Доставка",
+    "itemType_crane": "Кран (техника)",
+    "itemType_other": "Другое",
+    "itemType_countertop": "Кухонная столешница",
+    "itemType_island": "Остров",
+    "itemType_tv_panel": "ТВ-панель",
+    "itemType_bathroom_furniture": "Мебель для ванной",
+    "itemType_flooring": "Напольное покрытие",
+    "itemType_stairs": "Лестница",
+    "itemType_table": "Стол",
     "description": "Описание",
     "unit": "Ед.",
     "unitPrice": "Цена за ед.",
@@ -1068,5 +1102,22 @@
     "health_unknown": "Не проверено",
     "health_ok": "Исправно",
     "health_error": "Ошибка"
+  },
+  "settings": {
+    "title": "Настройки",
+    "subtitle": "Административные и конфигурационные страницы, вне повседневной работы.",
+    "channelsDesc": "Настройка каналов WhatsApp, Instagram, Messenger, Email и SMS.",
+    "templatesDesc": "Многоразовые шаблоны сообщений и быстрые ответы.",
+    "integrationsDesc": "Учётные данные провайдеров, статус соединения и журналы доставки.",
+    "warehousesDesc": "Физические места хранения. Остатки на складе учитываются в 1С.",
+    "slabsDesc": "Отдельно учитываемые физические слэбы. Остатки учитываются в 1С.",
+    "priceListsDesc": "Себестоимость и цена продажи по каждому материалу для конкретной компании.",
+    "ordersDesc": "Все заказы по всем проектам, для контроля.",
+    "invoicesDesc": "Счета, созданные из завершённых заказов.",
+    "expensesDesc": "Журнал расходов компании.",
+    "aiAssistantDesc": "Панель AI-рекомендаций и статистика использования.",
+    "groupMessaging": "Переписка",
+    "groupCatalog": "Управление материалами",
+    "groupOffice": "Офис"
   }
 }

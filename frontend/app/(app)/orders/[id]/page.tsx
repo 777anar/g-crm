@@ -58,6 +58,7 @@ const inputClasses =
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("orders");
+  const tSales = useTranslations("sales");
   const tCommon = useTranslations("common");
   const tNav = useTranslations("nav");
   const toast = useToast();
@@ -495,7 +496,7 @@ export default function OrderDetailPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="px-2 py-1 text-xs text-text-secondary">{item.item_type}</td>
+                      <td className="px-2 py-1 text-xs text-text-secondary">{tSales(`itemType_${item.item_type}` as any)}</td>
                       <td className="px-2 py-1">{item.description || "—"}</td>
                       <td className="px-2 py-1">{item.quantity}</td>
                       <td className="px-2 py-1">{item.unit}</td>

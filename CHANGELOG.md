@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.10.0] — 2026-07-09 — G-STONE Sprint 2: Simplified Navigation & Layihə-Centric Workflow
+
+A usability restructuring driven by real G-STONE office feedback that the app read like accounting software rather than a gallery workflow tool. Re-anchors the UI around "Layihə" (Project) and its pieces, and pushes 1C's territory (warehouse/stock/accounting) out of daily view. No backend schema changes; nothing was deleted, only regrouped.
+
+### Changed
+- **Primary sidebar reduced from ~20 flat entries to 9 module-level sections**: İdarə Paneli, Müştərilər, Layihələr, Materiallar, İstehsal, Quraşdırma, Mesajlar, Hesabatlar, Ayarlar — the "module-level primary nav, secondary nav within a module" structure `UI_UX_GUIDELINES.md` §6.1 always called for. Everything that used to have its own sidebar entry is still reachable, either via a new `SectionTabs` in-page tab bar (`components/ui/section-tabs.tsx`) on the CRM, Catalog, and Sales/Orders pages, or from the new `/settings` hub below.
+- **New `/settings` hub page** groups back-office pages that don't belong in daily use: Channels/Templates/Integrations (messaging admin), Warehouses/Slabs/Price Lists (Catalog admin), and Orders/Invoices/Expenses/AI Assistant (oversight convenience links). Uses the `settings.*Desc` translation keys added in a prior session but never wired to a page until now.
+- **`nav.catalog` renamed** from "Daş Kataloqu" / "Каталог камня" / "Stone Catalog" to "Materiallar" / "Материалы" / "Materials" in all three locale files — plainer office terminology.
+- **Material creation form** (`catalog/materials/new`): `thickness`/`dimensions` changed from free-text inputs to curated dropdowns (common slab thicknesses/sizes) with a manual "Other" fallback, presenting entry as a Brand → Stone → Thickness → Size cascade ahead of a future supplier-catalog import. No manufacturer spec data was hardcoded — only everyday defaults.
+
+### Added
+- **Seven new Sales `item_type` values** — `countertop`, `island`, `tv_panel`, `bathroom_furniture`, `flooring`, `stairs`, `table` (Mətbəx dəzgahı, Ada, TV paneli, Hamam mebeli, Döşəmə, Pilləkən, Masa) — added to `VALID_ITEM_TYPES` / `MATERIAL_ITEM_TYPES` / `ITEM_TYPE_DEFAULT_UNIT` in `modules/sales/domain/value_objects.py`. Each new type is a physical piece, not a billing-only line, and rides on the existing per-item `material_id`/`production_status`/`installation_status` fields `OrderItem`/`QuoteSectionItem` already had — only the controlled vocabulary grew, no migration needed.
+- Translated labels for every item type (`sales.itemType_*`, all 19 values, in all three locale files) — fixes a pre-existing i18n gap where the Quote builder and Order detail pages rendered the raw English slug (e.g. `wall_cladding`) verbatim instead of a translated label.
+
+### Fixed
+- `crm.title`/`crm.subtitle` keys were present in `ru.json` but missing from `az.json`/`en.json` (a partial addition left over from a prior session); added for parity.
+
+### Verification
+Full backend suite (492/492 passing), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes, including the new `/settings` route).
+
 ## [2.9.3] — 2026-07-08 — Production Readiness follow-up: i18n, dark mode, breadcrumbs
 
 A second pass over the four Phase 3 research findings that landed after 2.9.2 was already committed: an i18n audit, a responsive/dark-mode audit, a navigation/breadcrumb audit, and a CRUD-completeness audit. No new features, no business-logic changes.

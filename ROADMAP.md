@@ -220,6 +220,26 @@ Reports
 
 ---
 
+## Version 2.10.0 — G-STONE Sprint 2 (Simplified Navigation & Layihə-Centric Workflow)
+
+**Theme:** a usability-driven restructuring for G-STONE GALLERY's office staff, not a new module. The prior ~20-item flat sidebar read as an accounting/ERP tool rather than a gallery's day-to-day workflow tool; this sprint re-anchors the UI around "Layihə" (Project) as the object office staff actually think in terms of, and pushes 1C's territory (warehouse/stock/accounting) out of the daily-use surface without deleting any of it.
+
+| Change | Area | Business value |
+|---|---|---|
+| Primary sidebar cut from ~20 flat entries to 9 module-level sections (İdarə Paneli, Müştərilər, Layihələr, Materiallar, İstehsal, Quraşdırma, Mesajlar, Hesabatlar, Ayarlar), per `UI_UX_GUIDELINES.md` §6.1's "module-level primary / sub-nav secondary" navigation model, which the sidebar had never actually followed until now | Frontend — navigation | New office staff can hold the whole app in their head in one glance instead of scanning 20 similarly-styled links |
+| A new `SectionTabs` component provides secondary in-page tabs for everything that used to have its own sidebar entry (Müştərilər/Leads/Tapşırıqlar under CRM; Materiallar/Brendlər under Catalog; Layihələr/Sifarişlər under Sales) | Frontend — navigation | Every page that existed before is still one click away, just regrouped under the section it logically belongs to |
+| A new `/settings` hub page groups everything that's genuinely back-office and out of the daily workflow — Channels, Templates, Integrations (messaging admin), Warehouses, Slabs, Price Lists (Catalog admin), and Orders/Invoices/Expenses/AI Assistant (oversight convenience links) — using translation keys (`settings.*Desc`) that had been added in a prior session but never wired to any page | Frontend — navigation | 1C's territory (warehouse/stock/accounting) is visually deprioritized without removing a single feature; nothing was deleted, only regrouped, so no data or capability was lost |
+| Seven new Sales `item_type` values — countertop (Mətbəx dəzgahı), island (Ada), tv_panel (TV paneli), bathroom_furniture (Hamam mebeli), flooring (Döşəmə), stairs (Pilləkən), table (Masa) — added to `VALID_ITEM_TYPES`/`MATERIAL_ITEM_TYPES`/`ITEM_TYPE_DEFAULT_UNIT` in `modules/sales/domain/value_objects.py`, alongside the pre-existing wall_cladding/vanity/backsplash types | Backend — Sales | Office staff can now record a project as the physical pieces a customer actually ordered (a countertop, an island, a TV panel), each with its own material, production status, and installation status via the existing per-item fields (`OrderItem`/`QuoteSectionItem` already carried `material_id`, `production_status`, `installation_status` — this sprint only extended the controlled vocabulary, no schema change) |
+| Every item-type value across the Quote builder and Order detail pages now renders a real translated label (`sales.itemType_*`) instead of the raw English slug (e.g. `wall_cladding`) that was displayed verbatim before | Frontend — i18n | Fixes a real, previously-shipped i18n gap in the same pass that added the new types |
+| Material creation form: `thickness`/`dimensions` changed from free-text inputs to curated dropdowns (`SUGGESTED_THICKNESSES_MM`, `SUGGESTED_SIZES_MM`) with a manual "Other" override, presenting entry as a Brand → Stone name → Thickness → Size cascade | Frontend — Catalog | Reduces free-text drift ("12mm" vs "12 mm" vs "12") ahead of a future official supplier-catalog import; deliberately does not hardcode real manufacturer spec sheets, only common defaults |
+| `nav.catalog` label changed from "Daş Kataloqu"/"Каталог камня"/"Stone Catalog" to "Materiallar"/"Материалы"/"Materials" across all three locale files | Frontend — i18n | Plainer, less "catalog software" wording for office staff |
+
+**Deliberately not done in this pass** (recorded here rather than silently skipped): no backend schema migration was added to move `OrderMeasurement`/`QuoteSectionMeasurement` (thickness/length/width) to item-level ownership — they remain section-level rows alongside their section's items, which already satisfies the daily workflow (one section per physical piece is the natural usage pattern) without a migration. No Catalog reference tables for standardized Brand→Stone→Thickness→Size were added; the cascade is presented in the UI over the existing free-text-capable `StoneMaterial` columns, ready to be backed by real supplier data later without another UI rewrite. No content beyond navigation labels, item types, and the Material form was reworded — a full copy pass across the ~500 remaining `az.json` keys was out of scope for this sprint.
+
+**Verification:** full backend suite (492/492 passing), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes including the new `/settings` route).
+
+---
+
 ## Complexity key
 
 - **S** (Small): a few files, one focused PR, low risk
@@ -243,6 +263,7 @@ Reports
 | 2.9.1 | Enterprise Polish — production audit across all ten modules: logging, query efficiency, error handling, validation, security, UI/UX consistency | No | No |
 | 2.9.2 | Production Readiness & G-STONE Onboarding — Phase 3 application-wide audit ahead of real daily use: navigation, branding, CRUD completeness, filters/sort/export, permissions, company switching, i18n, dev artifacts | No | No |
 | 2.9.3 | Production Readiness follow-up — i18n, dark-mode chart colors, breadcrumb consistency across ten detail pages | No | No |
+| 2.10.0 | G-STONE Sprint 2 — simplified 9-section navigation, Layihə-centric project-item types, structured Material entry, 1C-territory pages regrouped into a Settings hub | No (extended `VALID_ITEM_TYPES` vocabulary only) | No |
 
 ## Change log
 

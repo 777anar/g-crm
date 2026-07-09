@@ -9,6 +9,7 @@ import { MATERIAL_STATUSES, type Brand, type Collection, type Material, type Mat
 import { Button } from "@/components/ui/button";
 import { EntityStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SectionTabs } from "@/components/ui/section-tabs";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
@@ -86,6 +87,13 @@ export default function MaterialsListPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <SectionTabs
+        items={[
+          { label: t("tabMaterials"), href: "/catalog/materials" },
+          { label: t("tabBrands"), href: "/catalog/brands" },
+        ]}
+      />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-text-primary">{t("materialsTitle")}</h1>

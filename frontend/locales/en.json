@@ -39,7 +39,7 @@
     "dashboard": "Dashboard",
     "customers": "Customers",
     "leads": "Leads",
-    "catalog": "Stone Catalog",
+    "catalog": "Materials",
     "brands": "Brands",
     "slabs": "Slabs",
     "warehouses": "Warehouses",
@@ -57,7 +57,9 @@
     "channels": "Channels",
     "messageTemplates": "Templates",
     "aiAssistant": "AI Assistant",
-    "integrations": "Integrations"
+    "integrations": "Integrations",
+    "messages": "Messages",
+    "settings": "Settings"
   },
   "language": {
     "switchLanguage": "Language",
@@ -115,6 +117,13 @@
     "noDueDate": "No due date",
     "notifications": "Notifications",
     "noNotifications": "No notifications"
+  },
+  "crm": {
+    "title": "Customers",
+    "subtitle": "Customers, leads, and follow-up tasks.",
+    "tabCustomers": "Customers",
+    "tabLeads": "Leads",
+    "tabTasks": "Tasks"
   },
   "customers": {
     "title": "Customers",
@@ -294,6 +303,11 @@
     "newTask": "New Task"
   },
   "catalog": {
+    "title": "Stone Catalog",
+    "subtitle": "Materials, brands, and slabs for quoting.",
+    "tabMaterials": "Materials",
+    "tabBrands": "Brands",
+    "tabSlabs": "Slabs",
     "materialsTitle": "Stone Materials",
     "materialsSubtitle": "Every brand, collection, and stone material in your catalog.",
     "createMaterial": "Add Material",
@@ -362,6 +376,7 @@
     "finish": "Finish",
     "thickness": "Thickness (mm)",
     "dimensions": "Dimensions",
+    "otherValue": "Other (enter manually)",
     "countryOfOrigin": "Country of Origin",
     "status": "Status",
     "material": "Material",
@@ -460,6 +475,25 @@
     "items": "Line Items",
     "addItem": "Add Item",
     "itemType": "Type",
+    "itemType_material": "Material",
+    "itemType_wall_cladding": "Wall Cladding",
+    "itemType_vanity": "Vanity",
+    "itemType_backsplash": "Backsplash",
+    "itemType_edge_profile": "Edge Profile",
+    "itemType_sink_cutout": "Sink Cutout",
+    "itemType_cooktop_cutout": "Cooktop Cutout",
+    "itemType_faucet_hole": "Faucet Hole",
+    "itemType_installation": "Installation",
+    "itemType_transport": "Transport",
+    "itemType_crane": "Crane",
+    "itemType_other": "Other",
+    "itemType_countertop": "Kitchen Countertop",
+    "itemType_island": "Island",
+    "itemType_tv_panel": "TV Panel",
+    "itemType_bathroom_furniture": "Bathroom Furniture",
+    "itemType_flooring": "Flooring",
+    "itemType_stairs": "Stairs",
+    "itemType_table": "Table",
     "description": "Description",
     "unit": "Unit",
     "unitPrice": "Unit Price",
@@ -1068,5 +1102,22 @@
     "health_unknown": "Unverified",
     "health_ok": "Healthy",
     "health_error": "Error"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Administration and configuration pages, out of the daily workflow.",
+    "channelsDesc": "Configure WhatsApp, Instagram, Messenger, Email, and SMS channels.",
+    "templatesDesc": "Reusable message templates and quick replies.",
+    "integrationsDesc": "Provider credentials, connection health, and delivery logs.",
+    "warehousesDesc": "Physical storage locations. Stock levels are tracked in 1C.",
+    "slabsDesc": "Individually tracked physical slabs. Stock counts are tracked in 1C.",
+    "priceListsDesc": "Company-specific cost and sale prices per material.",
+    "ordersDesc": "All orders across every project, for oversight.",
+    "invoicesDesc": "Invoices generated from completed orders.",
+    "expensesDesc": "Company expense log.",
+    "aiAssistantDesc": "AI recommendations dashboard and usage statistics.",
+    "groupMessaging": "Messaging",
+    "groupCatalog": "Materials administration",
+    "groupOffice": "Office"
   }
 }

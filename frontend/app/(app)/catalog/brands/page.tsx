@@ -10,6 +10,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EntityStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TextField } from "@/components/ui/field";
+import { SectionTabs } from "@/components/ui/section-tabs";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
@@ -76,6 +77,13 @@ export default function BrandsPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <SectionTabs
+        items={[
+          { label: t("tabMaterials"), href: "/catalog/materials" },
+          { label: t("tabBrands"), href: "/catalog/brands" },
+        ]}
+      />
+
       <div>
         <h1 className="text-xl font-semibold text-text-primary">{t("brandsTitle")}</h1>
         <p className="text-sm text-text-secondary">{t("brandsSubtitle")}</p>
