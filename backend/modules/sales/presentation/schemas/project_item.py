@@ -38,6 +38,7 @@ class ProjectItemUpdate(BaseModel):
     sort_order: Optional[int] = None
     production_status: Optional[str] = None
     installation_status: Optional[str] = None
+    completion_status: Optional[str] = None
 
 
 class ProjectItemOut(BaseModel):
@@ -55,6 +56,7 @@ class ProjectItemOut(BaseModel):
     notes: Optional[str]
     production_status: Optional[str]
     installation_status: Optional[str]
+    completion_status: Optional[str]
     sort_order: int
     created_at: datetime
     updated_at: datetime

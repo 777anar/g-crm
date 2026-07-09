@@ -274,6 +274,27 @@ Reports
 
 ---
 
+## Version 2.13.0 — The Complete Project Workflow
+
+**Theme:** turns the Project workspace into the full operational workflow G-STONE GALLERY actually runs a job through, end to end. Rooms ("Məkanlar") and Project Items ("Məmulatlar") each get their own dedicated tab (previously only reachable nested inside the Rooms tab); a new Materials rollup tab answers "what Stones does this job actually use"; and "Təhvil" (handover/customer acceptance) becomes a real per-piece status, not just a project-level stat. Entirely inside the existing Sales module — no new module, no new nav entries (this is all within the "Layihələr" workspace from Sprint 2).
+
+| Change | Area | Business value |
+|---|---|---|
+| Project workspace tabs reordered/expanded to 10: Ümumi, Məkanlar, **Məmulatlar** (new), **Materiallar** (new), Ölçülər, Çertyojlar, Fotolar, İstehsal, Quraşdırma, **Təhvil** (renamed from "Completion") | Frontend — Sales | Matches the exact daily workflow office staff actually follow through a job, not just a random tab order |
+| New "Məmulatlar" tab: a flat, project-wide table of every piece across every Room (room, type, stone, quantity, notes) | Frontend — Sales | Answers "what are we making for this whole job" in one screen, without opening every Room card individually |
+| New "Materiallar" tab: pieces grouped by the exact Stone + Thickness + Size combination used, with item count and total quantity per group | Frontend — Sales | Answers "which Stones does this job need, and how much of each" — the question that drives ordering slabs from a supplier |
+| `ProjectItem.completion_status` (new nullable column, `pending`/`delivered`/`accepted`) | Backend — Sales | "Təhvil" (handover to the customer) is now tracked per physical piece, distinct from `production_status` (is it fabricated) and `installation_status` (is it fitted) — a piece can be installed but not yet formally accepted by the customer |
+| "Təhvil" tab rebuilt from four static stat cards into a per-item editable table (same pattern as the existing Production/Installation tabs), plus a small summary row | Frontend — Sales | Matches requirement #8: completion status belongs to each Məmulat, not just a project-wide rollup |
+| Two new Project Item types — `fireplace` (Kamin) and `window_sill` (Pəncərə altlığı) — and two dropped from the curated picker but kept valid for backward compatibility (`sink`, plus `bathroom_furniture`/`vanity` both now offered together) | Backend + Frontend — Sales | Matches Sprint 5's authoritative 12-type "Məmulat" list exactly |
+| Four new Room types — `corridor` (Dəhliz), `balcony` (Eyvan), `facade` (Fasad), `yard` (Həyət) — splitting the old catch-all `exterior`; `staircase`/`exterior` kept valid (not offered in the picker) since staircase work is now modeled as an `ITEM_TYPE_STAIRS` piece within any Room | Backend + Frontend — Sales | Matches Sprint 5's authoritative 8-type "Məkan" list; no Room saved before this sprint stops working |
+| 6 new backend tests (new item/room types accepted, legacy types still accepted, completion_status create/update/default) | Backend — Sales | Confirms the vocabulary expansion is additive, not breaking |
+
+**Deliberately not done in this pass:** no database migration was needed for the new item/room type vocabulary — `item_type`/`room_type` were never DB-level enums, only Pydantic-validated strings, so widening `VALID_ITEM_TYPES`/`VALID_ROOM_TYPES` is a pure code change. Only `completion_status` needed a migration (one nullable column, no FK).
+
+**Verification:** full backend suite (528/528 passing — 522 prior + 6 new), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes).
+
+---
+
 ## Complexity key
 
 - **S** (Small): a few files, one focused PR, low risk
@@ -300,6 +321,7 @@ Reports
 | 2.10.0 | G-STONE Sprint 2 — simplified 9-section navigation, Layihə-centric project-item types, structured Material entry, 1C-territory pages regrouped into a Settings hub | No (extended `VALID_ITEM_TYPES` vocabulary only) | No |
 | 2.11.0 | Measurement & Room Management — Project → Room → Project Item hierarchy with per-item Material/Measurement revisions/Drawings/Photos, all inside the existing Sales module | Yes (Room, ProjectItem, ProjectItemMeasurement, ProjectItemDrawing, ProjectItemPhoto) | No (extends Sales' existing Project workspace) |
 | 2.12.0 | Production-Ready Material Selector — normalized per-Stone Thickness/Size options, a searchable Stone selector, and named supplier-brand suggestions, preparing the catalog for a future official supplier-catalog import | Yes (MaterialThickness, MaterialSize; ProjectItem gained 2 FK columns) | No (extends Catalog + Sales' existing Project workspace) |
+| 2.13.0 | The Complete Project Workflow — 10-tab Project workspace (Ümumi/Məkanlar/Məmulatlar/Materiallar/Ölçülər/Çertyojlar/Fotolar/İstehsal/Quraşdırma/Təhvil), per-item completion ("Təhvil") status, expanded Room/Item type vocabulary | Yes (ProjectItem gained 1 column) | No (extends Sales' existing Project workspace) |
 
 ## Change log
 

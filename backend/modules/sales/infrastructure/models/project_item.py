@@ -46,3 +46,4 @@ class ProjectItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     production_status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     installation_status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    completion_status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)

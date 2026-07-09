@@ -96,6 +96,11 @@ ITEM_TYPE_TABLE = "table"
 # item for cutting a sink hole into an existing countertop piece).
 ITEM_TYPE_SINK = "sink"
 
+# Sprint 5 ("Kamin", "Pəncərə altlığı"): a fireplace surround and a window
+# sill are both fabricated pieces like any other Project Item.
+ITEM_TYPE_FIREPLACE = "fireplace"
+ITEM_TYPE_WINDOW_SILL = "window_sill"
+
 VALID_ITEM_TYPES = {
     ITEM_TYPE_MATERIAL,
     ITEM_TYPE_WALL_CLADDING,
@@ -117,6 +122,8 @@ VALID_ITEM_TYPES = {
     ITEM_TYPE_STAIRS,
     ITEM_TYPE_TABLE,
     ITEM_TYPE_SINK,
+    ITEM_TYPE_FIREPLACE,
+    ITEM_TYPE_WINDOW_SILL,
 }
 
 # Item types that require a material_id from the Catalog.
@@ -133,23 +140,29 @@ MATERIAL_ITEM_TYPES = {
     ITEM_TYPE_STAIRS,
     ITEM_TYPE_TABLE,
     ITEM_TYPE_SINK,
+    ITEM_TYPE_FIREPLACE,
+    ITEM_TYPE_WINDOW_SILL,
 }
 
-# The curated subset offered by the Project workspace's "Project Item" picker
-# (Sprint 3) -- a Room's physical pieces, as opposed to the full item_type
-# vocabulary above (which also includes non-piece billing lines like
-# transport/crane and legacy types like backsplash/bathroom_furniture kept
-# only for backward compatibility with existing Quotes).
+# The curated subset offered by the Project workspace's "Project Item"
+# picker -- a Room's ("Məkan"'s) physical pieces ("Məmulat"), as opposed to
+# the full item_type vocabulary above (which also includes non-piece
+# billing lines like transport/crane, and older types like backsplash/sink
+# kept only for backward compatibility with existing Quotes/Items -- not
+# removed, just no longer offered in the picker). This is Sprint 5's
+# authoritative 12-item list.
 PROJECT_ITEM_TYPES = [
     ITEM_TYPE_COUNTERTOP,
     ITEM_TYPE_ISLAND,
-    ITEM_TYPE_SINK,
-    ITEM_TYPE_TV_PANEL,
     ITEM_TYPE_VANITY,
+    ITEM_TYPE_BATHROOM_FURNITURE,
+    ITEM_TYPE_TV_PANEL,
+    ITEM_TYPE_TABLE,
     ITEM_TYPE_WALL_CLADDING,
     ITEM_TYPE_FLOORING,
     ITEM_TYPE_STAIRS,
-    ITEM_TYPE_TABLE,
+    ITEM_TYPE_FIREPLACE,
+    ITEM_TYPE_WINDOW_SILL,
     ITEM_TYPE_OTHER,
 ]
 
@@ -175,6 +188,8 @@ ITEM_TYPE_DEFAULT_UNIT = {
     ITEM_TYPE_STAIRS: "m2",
     ITEM_TYPE_TABLE: "m2",
     ITEM_TYPE_SINK: "unit",
+    ITEM_TYPE_FIREPLACE: "unit",
+    ITEM_TYPE_WINDOW_SILL: "unit",
 }
 
 # Company service-price key per item type.
@@ -215,6 +230,16 @@ ROOM_TYPE_STAIRCASE = "staircase"
 ROOM_TYPE_EXTERIOR = "exterior"
 ROOM_TYPE_CUSTOM = "custom"
 
+# Sprint 5 ("Dəhliz", "Eyvan", "Fasad", "Həyət"): split the old catch-all
+# "exterior" into the specific outdoor/transitional spaces G-STONE actually
+# quotes. ROOM_TYPE_STAIRCASE/EXTERIOR are kept (not removed) for backward
+# compatibility with Rooms already saved with those types -- staircase work
+# is now modeled as an ITEM_TYPE_STAIRS piece within any Room instead.
+ROOM_TYPE_CORRIDOR = "corridor"
+ROOM_TYPE_BALCONY = "balcony"
+ROOM_TYPE_FACADE = "facade"
+ROOM_TYPE_YARD = "yard"
+
 VALID_ROOM_TYPES = {
     ROOM_TYPE_KITCHEN,
     ROOM_TYPE_BATHROOM,
@@ -222,7 +247,25 @@ VALID_ROOM_TYPES = {
     ROOM_TYPE_STAIRCASE,
     ROOM_TYPE_EXTERIOR,
     ROOM_TYPE_CUSTOM,
+    ROOM_TYPE_CORRIDOR,
+    ROOM_TYPE_BALCONY,
+    ROOM_TYPE_FACADE,
+    ROOM_TYPE_YARD,
 }
+
+# The curated subset offered by the Project workspace's "Məkan" picker --
+# Sprint 5's authoritative 8-item list. ROOM_TYPE_STAIRCASE/EXTERIOR remain
+# valid (see above) but are no longer offered in the picker.
+PROJECT_ROOM_TYPES = [
+    ROOM_TYPE_KITCHEN,
+    ROOM_TYPE_BATHROOM,
+    ROOM_TYPE_LIVING_ROOM,
+    ROOM_TYPE_CORRIDOR,
+    ROOM_TYPE_BALCONY,
+    ROOM_TYPE_FACADE,
+    ROOM_TYPE_YARD,
+    ROOM_TYPE_CUSTOM,
+]
 
 # ── Project Item Drawings ──────────────────────────────────────────────────────
 
@@ -237,3 +280,18 @@ VALID_DRAWING_TYPES = {DRAWING_TYPE_DWG, DRAWING_TYPE_DXF, DRAWING_TYPE_SKETCH, 
 MEASUREMENT_STATUS_DRAFT = "draft"
 MEASUREMENT_STATUS_FINAL = "final"
 VALID_MEASUREMENT_STATUSES = {MEASUREMENT_STATUS_DRAFT, MEASUREMENT_STATUS_FINAL}
+
+# ── Project Item Completion ("Təhvil" -- handover to the customer) ────────────
+# Distinct from production_status (is it fabricated yet) and
+# installation_status (is it fitted on site yet): completion_status tracks
+# whether the finished, installed piece has actually been handed over to and
+# accepted by the customer.
+
+COMPLETION_STATUS_PENDING = "pending"
+COMPLETION_STATUS_DELIVERED = "delivered"
+COMPLETION_STATUS_ACCEPTED = "accepted"
+VALID_COMPLETION_STATUSES = {
+    COMPLETION_STATUS_PENDING,
+    COMPLETION_STATUS_DELIVERED,
+    COMPLETION_STATUS_ACCEPTED,
+}

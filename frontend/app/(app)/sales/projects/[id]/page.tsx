@@ -46,7 +46,7 @@ import type {
   Quote,
   Room,
 } from "@/lib/types";
-import { PROJECT_ITEM_TYPES, ROOM_TYPES } from "@/lib/types";
+import { COMPLETION_STATUSES, PROJECT_ITEM_TYPES, PROJECT_ROOM_TYPES } from "@/lib/types";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -62,7 +62,18 @@ import { ApiRequestError } from "@/lib/api-client";
 const PROD_STATUSES = ["pending", "queued", "cutting", "polishing", "quality_check", "done"];
 const INST_STATUSES = ["pending", "scheduled", "en_route", "in_progress", "done"];
 
-type Tab = "overview" | "rooms" | "measurements" | "drawings" | "photos" | "production" | "installation" | "completion";
+// Ümumi / Məkanlar / Məmulatlar / Materiallar / Ölçülər / Çertyojlar / Fotolar / İstehsal / Quraşdırma / Təhvil
+type Tab =
+  | "overview"
+  | "rooms"
+  | "items"
+  | "materials"
+  | "measurements"
+  | "drawings"
+  | "photos"
+  | "production"
+  | "installation"
+  | "handover";
 
 const inputClasses =
   "rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary";
@@ -307,7 +318,11 @@ export default function ProjectDetailPage() {
     await loadRoomsAndItems();
   }
 
-  async function handleItemStatusChange(itemId: string, field: "production_status" | "installation_status", value: string) {
+  async function handleItemStatusChange(
+    itemId: string,
+    field: "production_status" | "installation_status" | "completion_status",
+    value: string
+  ) {
     await updateProjectItem(itemId, { [field]: value });
     await loadRoomsAndItems();
   }
@@ -315,6 +330,11 @@ export default function ProjectDetailPage() {
   function roomLabel(room: Room) {
     const typeLabel = t(`roomType_${room.room_type}` as any);
     return room.name ? `${typeLabel} — ${room.name}` : typeLabel;
+  }
+
+  function roomLabelForItem(item: ProjectItem) {
+    const room = (rooms || []).find((r) => r.id === item.room_id);
+    return room ? roomLabel(room) : tCommon("dash");
   }
 
   function itemLabel(item: ProjectItem) {
@@ -340,6 +360,18 @@ export default function ProjectDetailPage() {
     return `${material.name} — ${thickness ?? tCommon("dash")}mm — ${size ?? tCommon("dash")}`;
   }
 
+  function groupItemsByMaterial(items: ProjectItem[]) {
+    const groups = new Map<string, ProjectItem[]>();
+    for (const item of items) {
+      if (!item.material_id) continue;
+      const key = `${item.material_id}|${item.material_thickness_id ?? ""}|${item.material_size_id ?? ""}`;
+      const existing = groups.get(key);
+      if (existing) existing.push(item);
+      else groups.set(key, [item]);
+    }
+    return Array.from(groups.entries()).map(([key, groupItems]) => ({ key, items: groupItems }));
+  }
+
   if (loading) return <TableSkeleton rows={5} columns={5} />;
   if (!project) return <p className="text-sm text-text-secondary">{tCommon("notFound")}</p>;
 
@@ -359,7 +391,20 @@ export default function ProjectDetailPage() {
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-border pb-2">
-        {(["overview", "rooms", "measurements", "drawings", "photos", "production", "installation", "completion"] as Tab[]).map(
+        {(
+          [
+            "overview",
+            "rooms",
+            "items",
+            "materials",
+            "measurements",
+            "drawings",
+            "photos",
+            "production",
+            "installation",
+            "handover",
+          ] as Tab[]
+        ).map(
           (key) => (
             <button
               key={key}
@@ -438,7 +483,7 @@ export default function ProjectDetailPage() {
             <Card>
               <form className="grid grid-cols-1 gap-3 sm:grid-cols-3" onSubmit={handleCreateRoom}>
                 <SelectField label={t("roomType")} value={newRoomType} onChange={(e) => setNewRoomType(e.target.value)}>
-                  {ROOM_TYPES.map((rt) => (
+                  {PROJECT_ROOM_TYPES.map((rt) => (
                     <option key={rt} value={rt}>
                       {t(`roomType_${rt}` as any)}
                     </option>
@@ -644,6 +689,34 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
+      {tab === "items" && (
+        <RollupTable
+          items={allItems}
+          rooms={rooms}
+          emptyLabel={t("noProjectItemsYet")}
+          renderRow={(item) => (
+            <tr key={item.id} className="border-b border-border last:border-0">
+              <td className="px-4 py-2 text-text-secondary">{roomLabelForItem(item)}</td>
+              <td className="px-4 py-2 text-text-primary">{itemLabel(item)}</td>
+              <td className="px-4 py-2 text-text-secondary">{materialLabel(item)}</td>
+              <td className="px-4 py-2 text-text-secondary">{item.quantity} {item.unit}</td>
+              <td className="px-4 py-2 text-text-secondary">{item.notes || tCommon("dash")}</td>
+            </tr>
+          )}
+          headers={[t("room"), t("itemType"), t("stone"), t("quantity"), t("notes")]}
+        />
+      )}
+
+      {tab === "materials" && (
+        <MaterialsRollup
+          groups={groupItemsByMaterial(allItems)}
+          rooms={rooms}
+          materialLabel={materialLabel}
+          headers={[t("stone"), t("itemCount"), t("totalQuantity")]}
+          emptyLabel={t("noMaterialsYet")}
+        />
+      )}
+
       {tab === "measurements" && (
         <RollupTable
           items={allItems}
@@ -772,18 +845,51 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      {tab === "completion" && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <CompletionStat label={t("totalRooms")} value={rooms?.length ?? 0} />
-          <CompletionStat label={t("totalProjectItems")} value={allItems.length} />
-          <CompletionStat
-            label={t("itemsProduced")}
-            value={allItems.filter((i) => i.production_status === "done").length}
-          />
-          <CompletionStat
-            label={t("itemsInstalled")}
-            value={allItems.filter((i) => i.installation_status === "done").length}
-          />
+      {tab === "handover" && (
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <CompletionStat label={t("totalRooms")} value={rooms?.length ?? 0} />
+            <CompletionStat label={t("totalProjectItems")} value={allItems.length} />
+            <CompletionStat
+              label={t("itemsAccepted")}
+              value={allItems.filter((i) => i.completion_status === "accepted").length}
+            />
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-border bg-bg text-text-secondary">
+                <tr>
+                  <th className="px-4 py-2 font-medium">{t("room")}</th>
+                  <th className="px-4 py-2 font-medium">{t("itemType")}</th>
+                  <th className="px-4 py-2 font-medium">{t("completionStatus")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allItems.map((item) => (
+                  <tr key={item.id} className="border-b border-border last:border-0">
+                    <td className="px-4 py-2 text-text-secondary">{roomLabelForItem(item)}</td>
+                    <td className="px-4 py-2 text-text-primary">{itemLabel(item)}</td>
+                    <td className="px-2 py-1">
+                      <select
+                        className={inputClasses}
+                        value={item.completion_status ?? ""}
+                        onChange={(e) => handleItemStatusChange(item.id, "completion_status", e.target.value)}
+                      >
+                        <option value="">—</option>
+                        {COMPLETION_STATUSES.map((s) => (
+                          <option key={s} value={s}>{t(`completionStatus_${s}` as any)}</option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+                {allItems.length === 0 && (
+                  <tr><td colSpan={3} className="px-4 py-4"><EmptyState title={t("noProjectItemsYet")} /></td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
@@ -826,6 +932,47 @@ function RollupTable({
           </tr>
         </thead>
         <tbody>{rows}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function MaterialsRollup({
+  groups,
+  rooms,
+  materialLabel,
+  headers,
+  emptyLabel,
+}: {
+  groups: { key: string; items: ProjectItem[] }[];
+  rooms: Room[] | null;
+  materialLabel: (item: ProjectItem) => string;
+  headers: string[];
+  emptyLabel: string;
+}) {
+  if (rooms === null) return <TableSkeleton rows={3} columns={headers.length} />;
+  if (groups.length === 0) return <EmptyState title={emptyLabel} />;
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <table className="w-full text-left text-sm">
+        <thead className="border-b border-border bg-bg text-text-secondary">
+          <tr>
+            {headers.map((h) => (
+              <th key={h} className="px-4 py-2 font-medium">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((group) => (
+            <tr key={group.key} className="border-b border-border last:border-0">
+              <td className="px-4 py-2 text-text-primary">{materialLabel(group.items[0])}</td>
+              <td className="px-4 py-2 text-text-secondary">{group.items.length}</td>
+              <td className="px-4 py-2 text-text-secondary">
+                {group.items.reduce((sum, i) => sum + parseFloat(i.quantity || "0"), 0)} {group.items[0].unit}
+              </td>
+            </tr>
+          ))}
+        </tbody>
       </table>
     </div>
   );

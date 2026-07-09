@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.13.0] — 2026-07-09 — The Complete Project Workflow
+
+Turns the Project workspace into the full operational workflow G-STONE GALLERY runs a job through, end to end. Entirely inside the existing Sales module — no new module, no new nav entries.
+
+### Added
+- Project workspace expanded from 8 to 10 tabs, reordered to: Ümumi, Məkanlar, **Məmulatlar**, **Materiallar**, Ölçülər, Çertyojlar, Fotolar, İstehsal, Quraşdırma, **Təhvil**.
+- "Məmulatlar" tab: a flat, project-wide table of every piece across every Room (room, type, stone, quantity, notes).
+- "Materiallar" tab: pieces grouped by exact Stone + Thickness + Size combination, with item count and total quantity per group.
+- `ProjectItem.completion_status` (new nullable column: `pending`/`delivered`/`accepted`) — "Təhvil" (handover to the customer) tracked per physical piece, distinct from `production_status`/`installation_status`.
+- Two new Project Item types: `fireplace` (Kamin), `window_sill` (Pəncərə altlığı).
+- Four new Room types: `corridor` (Dəhliz), `balcony` (Eyvan), `facade` (Fasad), `yard` (Həyət).
+- 6 new backend tests.
+
+### Changed
+- "Təhvil" tab rebuilt from four static stat cards into a per-item editable status table (same pattern as the existing Production/Installation tabs), plus a small summary row.
+- The curated "Məmulat" type picker now matches Sprint 5's authoritative 12-item list exactly (both `vanity` and `bathroom_furniture` offered together; `sink` no longer offered but stays valid for Items saved before this sprint).
+- The curated "Məkan" type picker now matches Sprint 5's authoritative 8-item list (`staircase`/`exterior` no longer offered but stay valid for Rooms saved before this sprint — staircase work is now modeled as an `ITEM_TYPE_STAIRS` piece within any Room).
+
+### Verification
+Full backend suite (528/528 passing — 522 prior + 6 new), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes).
+
 ## [2.12.0] — 2026-07-09 — Production-Ready Material Selector
 
 Normalizes the Brand → Stone → Thickness → Size flow: a Stone can now offer several thickness and size options instead of one free-text pair baked into the Material row, and every Project Item records exactly which option it was built with. Entirely inside the existing Catalog/Sales modules — no new module.

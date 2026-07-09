@@ -446,6 +446,8 @@ export const QUOTE_ITEM_TYPES = [
   "stairs",
   "table",
   "sink",
+  "fireplace",
+  "window_sill",
 ] as const;
 export type QuoteItemType = (typeof QUOTE_ITEM_TYPES)[number];
 
@@ -482,8 +484,35 @@ export type ServicePrice = {
 
 // ── Project workspace (Sprint 3: Rooms / Project Items / Measurements / Drawings / Photos) ────
 
-export const ROOM_TYPES = ["kitchen", "bathroom", "living_room", "staircase", "exterior", "custom"] as const;
+// Full set of room_type values the backend accepts, including legacy ones
+// (staircase/exterior) kept only for backward compatibility with Rooms
+// saved before Sprint 5 -- not offered in the picker, see PROJECT_ROOM_TYPES.
+export const ROOM_TYPES = [
+  "kitchen",
+  "bathroom",
+  "living_room",
+  "staircase",
+  "exterior",
+  "custom",
+  "corridor",
+  "balcony",
+  "facade",
+  "yard",
+] as const;
 export type RoomType = (typeof ROOM_TYPES)[number];
+
+// The curated set offered by the Project workspace's "Məkan" picker
+// (Sprint 5's authoritative 8-item list).
+export const PROJECT_ROOM_TYPES = [
+  "kitchen",
+  "bathroom",
+  "living_room",
+  "corridor",
+  "balcony",
+  "facade",
+  "yard",
+  "custom",
+] as const;
 
 export type Room = {
   id: string;
@@ -497,19 +526,22 @@ export type Room = {
   updated_at: string;
 };
 
-// The curated set offered by the Project Item picker -- a Room's physical
-// pieces. "sink" is new in Sprint 3; the rest reuse Sprint 2's item_type
-// vocabulary shared with Quote line items.
+// The curated set offered by the Project Item ("Məmulat") picker --
+// Sprint 5's authoritative 12-item list. "sink" (Sprint 3) is no longer
+// offered here but stays valid -- see QUOTE_ITEM_TYPES -- for Items saved
+// before Sprint 5.
 export const PROJECT_ITEM_TYPES = [
   "countertop",
   "island",
-  "sink",
-  "tv_panel",
   "vanity",
+  "bathroom_furniture",
+  "tv_panel",
+  "table",
   "wall_cladding",
   "flooring",
   "stairs",
-  "table",
+  "fireplace",
+  "window_sill",
   "other",
 ] as const;
 export type ProjectItemType = (typeof PROJECT_ITEM_TYPES)[number];
@@ -529,10 +561,15 @@ export type ProjectItem = {
   notes: string | null;
   production_status: string | null;
   installation_status: string | null;
+  completion_status: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
 };
+
+// "Təhvil" -- handover to the customer, distinct from production/installation.
+export const COMPLETION_STATUSES = ["pending", "delivered", "accepted"] as const;
+export type CompletionStatus = (typeof COMPLETION_STATUSES)[number];
 
 export const MEASUREMENT_STATUSES = ["draft", "final"] as const;
 export type MeasurementStatus = (typeof MEASUREMENT_STATUSES)[number];

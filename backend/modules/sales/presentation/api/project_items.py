@@ -95,6 +95,7 @@ def update_project_item(
             sort_order=payload.sort_order,
             production_status=payload.production_status,
             installation_status=payload.installation_status,
+            completion_status=payload.completion_status,
         )
     )
     db.commit()

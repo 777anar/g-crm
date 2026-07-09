@@ -475,3 +475,86 @@ def test_rooms_are_isolated_by_company(app_client, owner_headers, customer, db_s
 
     patch_resp = app_client.patch(f"/api/v1/sales/rooms/{room['id']}", headers=other_headers, json={"name": "Hijacked"})
     assert patch_resp.status_code == 404
+
+
+# ── Sprint 5: expanded vocabulary + completion_status ("Təhvil") ──────────────
+
+
+def test_new_sprint5_room_types_accepted(app_client, owner_headers, customer):
+    project = _create_project(app_client, owner_headers, customer.id)
+    for room_type in ["corridor", "balcony", "facade", "yard"]:
+        resp = app_client.post(
+            f"/api/v1/sales/projects/{project['id']}/rooms",
+            headers=owner_headers,
+            json={"room_type": room_type},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["room_type"] == room_type
+
+
+def test_legacy_room_types_still_accepted(app_client, owner_headers, customer):
+    """staircase/exterior are no longer offered in the picker (PROJECT_ROOM_TYPES)
+    but must remain valid so Rooms saved before Sprint 5 keep working."""
+    project = _create_project(app_client, owner_headers, customer.id)
+    for room_type in ["staircase", "exterior"]:
+        resp = app_client.post(
+            f"/api/v1/sales/projects/{project['id']}/rooms",
+            headers=owner_headers,
+            json={"room_type": room_type},
+        )
+        assert resp.status_code == 200, resp.text
+
+
+def test_new_sprint5_item_types_accepted(app_client, owner_headers, customer):
+    project = _create_project(app_client, owner_headers, customer.id)
+    room = _create_room(app_client, owner_headers, project["id"])
+    for item_type in ["fireplace", "window_sill"]:
+        resp = app_client.post(
+            f"/api/v1/sales/rooms/{room['id']}/items",
+            headers=owner_headers,
+            json={"item_type": item_type, "quantity": "1"},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["item_type"] == item_type
+
+
+def test_legacy_item_type_sink_still_accepted(app_client, owner_headers, customer):
+    """sink is no longer in the curated PROJECT_ITEM_TYPES picker list but
+    must remain valid so Items saved before Sprint 5 keep working."""
+    project = _create_project(app_client, owner_headers, customer.id)
+    room = _create_room(app_client, owner_headers, project["id"])
+    resp = app_client.post(
+        f"/api/v1/sales/rooms/{room['id']}/items",
+        headers=owner_headers,
+        json={"item_type": "sink", "quantity": "1"},
+    )
+    assert resp.status_code == 200, resp.text
+
+
+def test_update_project_item_completion_status(app_client, owner_headers, customer):
+    project = _create_project(app_client, owner_headers, customer.id)
+    room = _create_room(app_client, owner_headers, project["id"])
+    item = _create_item(app_client, owner_headers, room["id"])
+
+    resp = app_client.patch(
+        f"/api/v1/sales/project-items/{item['id']}",
+        headers=owner_headers,
+        json={"completion_status": "delivered"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["completion_status"] == "delivered"
+
+    resp2 = app_client.patch(
+        f"/api/v1/sales/project-items/{item['id']}",
+        headers=owner_headers,
+        json={"completion_status": "accepted"},
+    )
+    assert resp2.status_code == 200
+    assert resp2.json()["completion_status"] == "accepted"
+
+
+def test_new_project_item_has_null_completion_status(app_client, owner_headers, customer):
+    project = _create_project(app_client, owner_headers, customer.id)
+    room = _create_room(app_client, owner_headers, project["id"])
+    item = _create_item(app_client, owner_headers, room["id"])
+    assert item["completion_status"] is None

@@ -209,6 +209,7 @@ class UpdateProjectItemInput(ActorContext):
     sort_order: Optional[int] = None
     production_status: Optional[str] = None
     installation_status: Optional[str] = None
+    completion_status: Optional[str] = None
 
 
 # ── Project Item Measurement ───────────────────────────────────────────────────

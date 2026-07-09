@@ -101,6 +101,8 @@ class UpdateProjectItemUseCase:
             item.production_status = data.production_status
         if data.installation_status is not None:
             item.installation_status = data.installation_status
+        if data.completion_status is not None:
+            item.completion_status = data.completion_status
 
         record_audit(
             self.db, company_id=data.company_id, module=MODULE, actor_user_id=data.actor_user_id,
