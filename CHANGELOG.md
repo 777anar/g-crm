@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.15.0] — 2026-07-10 — Sprint 6: Operational Dashboard Redesign
+
+Replaces the generic CRM stats dashboard (customer/lead counters) with an operations-first view answering "what should our team do today?" — no new module, entirely inside the existing Dashboard page plus one small Sales endpoint to back it.
+
+### Added
+- `GET /api/v1/sales/measurements` — a company-scoped, date-range-filterable list of `ProjectItemMeasurement` rows (`ProjectItemMeasurementRepository.list_for_company`), backing the "measurements today" KPI. 1 new backend test (date-range filtering).
+- Dashboard: time-of-day greeting ("Sabahınız xeyir" / afternoon / evening) using the logged-in user's real first name via `me()`, replacing the generic "Welcome back" + role line.
+- Dashboard: four daily-ops KPI cards — measurements today, work orders in production, installations scheduled tomorrow, overdue work (overdue tasks + overdue orders combined).
+- Dashboard: five new sections — Today's Tasks, Upcoming Installations, Overdue Projects (orders past their scheduled production/installation date), Notifications (merged task + installation notifications, newest first), and Recent Inquiries (replaces the old raw Leads table with the same data reframed as inbound inquiries).
+
+### Changed
+- Dashboard no longer shows raw customer/lead counters (active/archived customers, open/converted leads, leads-by-channel) — that pipeline-counter view is superseded by the daily-ops framing; the underlying Customer/Lead data and CRM screens are unaffected.
+- `frontend/lib/api/sales.ts` gained `listMeasurementsForCompany()`; `az.json`/`ru.json`/`en.json`'s `dashboard` keys were rewritten to match the new sections (old `statActiveCustomers`/`myTasks`/`customersByStatus`-style keys removed, replaced with the new greeting/stat/section keys).
+
+### Verification
+Full backend suite passing, frontend `tsc --noEmit` clean, frontend production build clean.
+
 ## [2.14.0] — 2026-07-10 — UX & Production Polish Sprint
 
 A frontend/wording-only audit pass ahead of daily use by G-STONE GALLERY's office staff — no new module, no business-logic or API changes.
