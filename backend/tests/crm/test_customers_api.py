@@ -210,3 +210,44 @@ def test_customers_are_isolated_by_company(app_client, db_session, owner_headers
 
     response = app_client.get(f"/api/v1/crm/customers/{created['id']}", headers=other_headers)
     assert response.status_code == 404
+
+
+def test_export_customers_returns_csv(app_client, owner_headers):
+    app_client.post(
+        "/api/v1/crm/customers",
+        headers=owner_headers,
+        json={"name": "Export Co", "type": "business", "phone": "+994501112233", "status": "new_inquiry"},
+    )
+
+    response = app_client.get("/api/v1/crm/customers/export", headers=owner_headers)
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert 'filename="customers.csv"' in response.headers["content-disposition"]
+
+    body = response.content.decode("utf-8-sig")
+    lines = body.strip().splitlines()
+    assert lines[0] == "id,name,type,status,assigned_manager_id,lead_source,advertising_campaign,phone,whatsapp,instagram,facebook,email,address,company_name,tags,archived,created_at,updated_at"
+    assert any("Export Co" in line and "+994501112233" in line for line in lines[1:])
+
+
+def test_export_customers_respects_status_filter(app_client, owner_headers):
+    app_client.post(
+        "/api/v1/crm/customers",
+        headers=owner_headers,
+        json={"name": "Completed Deal Co", "type": "business", "status": "completed"},
+    )
+    app_client.post(
+        "/api/v1/crm/customers",
+        headers=owner_headers,
+        json={"name": "New Inquiry Co", "type": "business", "status": "new_inquiry"},
+    )
+
+    response = app_client.get("/api/v1/crm/customers/export", headers=owner_headers, params={"status": "completed"})
+    body = response.content.decode("utf-8-sig")
+    assert "Completed Deal Co" in body
+    assert "New Inquiry Co" not in body
+
+
+def test_export_customers_requires_read_permission(app_client):
+    response = app_client.get("/api/v1/crm/customers/export")
+    assert response.status_code == 401

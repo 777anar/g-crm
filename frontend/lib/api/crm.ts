@@ -1,4 +1,4 @@
-import { apiRequest } from "../api-client";
+import { apiDownload, apiRequest } from "../api-client";
 import type {
   Activity,
   Attachment,
@@ -32,6 +32,27 @@ export function listCustomers(
       limit: params.limit,
       cursor: params.cursor,
     },
+  });
+}
+
+export function exportCustomers(
+  params: {
+    includeArchived?: boolean;
+    status?: CustomerStatus;
+    leadSource?: string;
+    search?: string;
+    sort?: string;
+  } = {}
+) {
+  return apiDownload("/api/v1/crm/customers/export", {
+    searchParams: {
+      include_archived: params.includeArchived,
+      status: params.status,
+      lead_source: params.leadSource,
+      search: params.search || undefined,
+      sort: params.sort,
+    },
+    filename: "customers.csv",
   });
 }
 
@@ -98,6 +119,20 @@ export function listLeads(
       limit: params.limit,
       cursor: params.cursor,
     },
+  });
+}
+
+export function exportLeads(
+  params: { sourceChannel?: string; status?: string; search?: string; sort?: string } = {}
+) {
+  return apiDownload("/api/v1/crm/leads/export", {
+    searchParams: {
+      source_channel: params.sourceChannel,
+      status: params.status,
+      search: params.search || undefined,
+      sort: params.sort,
+    },
+    filename: "leads.csv",
   });
 }
 

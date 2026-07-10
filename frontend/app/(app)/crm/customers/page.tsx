@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { listCustomers, updateCustomer } from "@/lib/api/crm";
+import { exportCustomers, listCustomers, updateCustomer } from "@/lib/api/crm";
 import { CUSTOMER_STATUSES, type Customer, type CustomerStatus } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { CustomerArchivedBadge, LeadChannelBadge } from "@/components/ui/badge";
@@ -51,6 +51,7 @@ export default function CustomersListPage() {
   const [sort, setSort] = useState("-created_at");
   const [error, setError] = useState<string | null>(null);
   const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const search = useDebouncedValue(searchInput, 250);
 
@@ -91,6 +92,18 @@ export default function CustomersListPage() {
     setStatusFilter(filters.statusFilter);
     setSearchInput(filters.search);
     setSort(filters.sort);
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    setError(null);
+    try {
+      await exportCustomers({ includeArchived, status: statusFilter || undefined, search, sort });
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("exportFailed"));
+    } finally {
+      setExporting(false);
+    }
   }
 
   async function handleQuickStatusChange(customerId: string, status: CustomerStatus) {
@@ -164,7 +177,12 @@ export default function CustomersListPage() {
             </select>
           </div>
         </div>
-        <ColumnVisibilityMenu columns={columnDefs} isVisible={isVisible} toggle={toggle} reset={reset} />
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" loading={exporting} onClick={handleExport}>
+            {t("exportCsv")}
+          </Button>
+          <ColumnVisibilityMenu columns={columnDefs} isVisible={isVisible} toggle={toggle} reset={reset} />
+        </div>
       </div>
 
       <SavedFiltersBar

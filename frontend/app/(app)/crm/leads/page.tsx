@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { convertLead, createLead, listLeads } from "@/lib/api/crm";
+import { convertLead, createLead, exportLeads, listLeads } from "@/lib/api/crm";
 import { analyzeLead } from "@/lib/api/ai";
 import { LEAD_SOURCE_CHANNELS, type AIRecommendation, type Lead } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
@@ -58,6 +58,7 @@ export default function LeadsPage() {
   const [sort, setSort] = useState("-created_at");
   const [error, setError] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const search = useDebouncedValue(searchInput, 250);
   const tAi = useTranslations("ai");
@@ -155,6 +156,18 @@ export default function LeadsPage() {
     }));
   }
 
+  async function handleExport() {
+    setExporting(true);
+    setError(null);
+    try {
+      await exportLeads({ sourceChannel: channelFilter || undefined, search, sort });
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("exportFailed"));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function handleConvert(leadId: string) {
     setConvertingId(leadId);
     setError(null);
@@ -240,7 +253,12 @@ export default function LeadsPage() {
             </button>
           ))}
         </div>
-        <ColumnVisibilityMenu columns={columnDefs} isVisible={isVisible} toggle={toggle} reset={reset} />
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" loading={exporting} onClick={handleExport}>
+            {t("exportCsv")}
+          </Button>
+          <ColumnVisibilityMenu columns={columnDefs} isVisible={isVisible} toggle={toggle} reset={reset} />
+        </div>
       </div>
 
       <SavedFiltersBar

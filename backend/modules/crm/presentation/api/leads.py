@@ -1,7 +1,10 @@
+import csv
+import io
 import uuid
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from core.api.errors import ConflictError, NotFoundError
@@ -43,6 +46,69 @@ def list_leads(
     page = items[:limit]
     next_cursor = encode_cursor(offset=offset + limit) if has_more else None
     return LeadListOut(items=[LeadOut.model_validate(lead) for lead in page], next_cursor=next_cursor)
+
+
+LEAD_EXPORT_LIMIT = 10_000
+
+_LEAD_CSV_HEADER = [
+    "id",
+    "full_name",
+    "source_channel",
+    "status",
+    "email",
+    "phone",
+    "campaign",
+    "assigned_manager_id",
+    "converted_customer_id",
+    "created_at",
+]
+
+
+def _lead_csv_row(lead) -> list:
+    return [
+        str(lead.id),
+        lead.full_name,
+        lead.source_channel,
+        lead.status,
+        lead.email or "",
+        lead.phone or "",
+        lead.campaign or "",
+        str(lead.assigned_manager_id) if lead.assigned_manager_id else "",
+        str(lead.converted_customer_id) if lead.converted_customer_id else "",
+        lead.created_at.isoformat() if lead.created_at else "",
+    ]
+
+
+@router.get("/leads/export")
+def export_leads(
+    status: Optional[str] = Query(default=None),
+    source_channel: Optional[str] = Query(default=None),
+    search: Optional[str] = Query(default=None),
+    sort: Optional[str] = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("crm:leads:read")),
+) -> Response:
+    repo = LeadRepository(db)
+    items = repo.list(
+        company_id=current_user.active_company_id,
+        status=status,
+        source_channel=source_channel,
+        search=search,
+        sort=sort,
+        limit=LEAD_EXPORT_LIMIT,
+        offset=0,
+    )
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(_LEAD_CSV_HEADER)
+    for lead in items:
+        writer.writerow(_lead_csv_row(lead))
+    content = ("﻿" + buffer.getvalue()).encode("utf-8")
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="leads.csv"'},
+    )
 
 
 @router.post("/leads", response_model=LeadOut)

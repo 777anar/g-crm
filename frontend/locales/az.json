@@ -146,7 +146,9 @@
     "tablePipelineStatus": "Mərhələ",
     "filterByStatus": "Statusa görə filtr:",
     "allStatuses": "Bütün statuslar",
-    "searchPlaceholder": "Ad, telefon, e-poçt, şirkət üzrə axtar... ( / )"
+    "searchPlaceholder": "Ad, telefon, e-poçt, şirkət üzrə axtar... ( / )",
+    "exportCsv": "CSV ixrac et",
+    "exportFailed": "Müştərilər ixrac edilmədi."
   },
   "customerNew": {
     "title": "Müştəri yarat",
@@ -250,7 +252,9 @@
     "convertFailed": "Potensial müştəri çevrilmədi.",
     "searchPlaceholder": "Ad, telefon, e-poçt, kampaniya üzrə axtar...",
     "leadCreated": "Potensial müştəri qeydə alındı.",
-    "leadConverted": "Potensial müştəri müştəriyə çevrildi."
+    "leadConverted": "Potensial müştəri müştəriyə çevrildi.",
+    "exportCsv": "CSV ixrac et",
+    "exportFailed": "Potensial müştərilər ixrac edilmədi."
   },
   "leadStatus": {
     "new": "Yeni",

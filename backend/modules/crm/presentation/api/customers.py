@@ -1,7 +1,10 @@
+import csv
+import io
 import uuid
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from core.api.errors import ConflictError
@@ -70,6 +73,92 @@ def list_customers(
     page = items[:limit]
     next_cursor = encode_cursor(offset=offset + limit) if has_more else None
     return CustomerListOut(items=[CustomerOut.model_validate(c) for c in page], next_cursor=next_cursor)
+
+
+CUSTOMER_EXPORT_LIMIT = 10_000
+
+_CUSTOMER_CSV_HEADER = [
+    "id",
+    "name",
+    "type",
+    "status",
+    "assigned_manager_id",
+    "lead_source",
+    "advertising_campaign",
+    "phone",
+    "whatsapp",
+    "instagram",
+    "facebook",
+    "email",
+    "address",
+    "company_name",
+    "tags",
+    "archived",
+    "created_at",
+    "updated_at",
+]
+
+
+def _customer_csv_row(customer) -> list:
+    return [
+        str(customer.id),
+        customer.name,
+        customer.type,
+        customer.status,
+        str(customer.assigned_manager_id) if customer.assigned_manager_id else "",
+        customer.lead_source or "",
+        customer.advertising_campaign or "",
+        customer.phone or "",
+        customer.whatsapp or "",
+        customer.instagram or "",
+        customer.facebook or "",
+        customer.email or "",
+        customer.address or "",
+        customer.company_name or "",
+        ";".join(customer.tags or []),
+        "yes" if customer.deleted_at else "no",
+        customer.created_at.isoformat() if customer.created_at else "",
+        customer.updated_at.isoformat() if customer.updated_at else "",
+    ]
+
+
+@router.get("/customers/export")
+def export_customers(
+    include_archived: bool = Query(default=False),
+    assigned_manager_id: Optional[uuid.UUID] = Query(default=None),
+    status: Optional[str] = Query(default=None),
+    lead_source: Optional[str] = Query(default=None),
+    search: Optional[str] = Query(default=None),
+    sort: Optional[str] = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("crm:customers:read")),
+) -> Response:
+    repo = CustomerRepository(db)
+    items = repo.list(
+        company_id=current_user.active_company_id,
+        include_archived=include_archived,
+        assigned_manager_id=assigned_manager_id,
+        status=status,
+        lead_source=lead_source,
+        search=search,
+        sort=sort,
+        limit=CUSTOMER_EXPORT_LIMIT,
+        offset=0,
+    )
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(_CUSTOMER_CSV_HEADER)
+    for customer in items:
+        writer.writerow(_customer_csv_row(customer))
+    # Leading BOM so Excel (the realistic destination for this file)
+    # detects UTF-8 instead of guessing a legacy codepage and mangling
+    # Azerbaijani/Cyrillic characters.
+    content = ("﻿" + buffer.getvalue()).encode("utf-8")
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="customers.csv"'},
+    )
 
 
 @router.post("/customers", response_model=CustomerOut)

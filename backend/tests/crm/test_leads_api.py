@@ -89,3 +89,46 @@ def test_convert_already_converted_lead_returns_conflict(app_client, owner_heade
     response = app_client.post(f"/api/v1/crm/leads/{lead['id']}/convert", headers=owner_headers)
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "CONFLICT"
+
+
+def test_export_leads_returns_csv(app_client, owner_headers):
+    app_client.post(
+        "/api/v1/crm/leads",
+        headers=owner_headers,
+        json={"full_name": "Export Lead", "source_channel": "instagram", "phone": "+994507654321"},
+    )
+
+    response = app_client.get("/api/v1/crm/leads/export", headers=owner_headers)
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert 'filename="leads.csv"' in response.headers["content-disposition"]
+
+    body = response.content.decode("utf-8-sig")
+    lines = body.strip().splitlines()
+    assert lines[0] == "id,full_name,source_channel,status,email,phone,campaign,assigned_manager_id,converted_customer_id,created_at"
+    assert any("Export Lead" in line and "+994507654321" in line for line in lines[1:])
+
+
+def test_export_leads_respects_channel_filter(app_client, owner_headers):
+    app_client.post(
+        "/api/v1/crm/leads",
+        headers=owner_headers,
+        json={"full_name": "Instagram Lead", "source_channel": "instagram"},
+    )
+    app_client.post(
+        "/api/v1/crm/leads",
+        headers=owner_headers,
+        json={"full_name": "Phone Lead", "source_channel": "phone_call"},
+    )
+
+    response = app_client.get(
+        "/api/v1/crm/leads/export", headers=owner_headers, params={"source_channel": "instagram"}
+    )
+    body = response.content.decode("utf-8-sig")
+    assert "Instagram Lead" in body
+    assert "Phone Lead" not in body
+
+
+def test_export_leads_requires_read_permission(app_client):
+    response = app_client.get("/api/v1/crm/leads/export")
+    assert response.status_code == 401

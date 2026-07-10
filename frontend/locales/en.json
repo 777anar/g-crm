@@ -146,7 +146,9 @@
     "tablePipelineStatus": "Pipeline Status",
     "filterByStatus": "Filter by status:",
     "allStatuses": "All statuses",
-    "searchPlaceholder": "Search by name, phone, email, company... ( / )"
+    "searchPlaceholder": "Search by name, phone, email, company... ( / )",
+    "exportCsv": "Export CSV",
+    "exportFailed": "Failed to export customers."
   },
   "customerNew": {
     "title": "Create Customer",
@@ -250,7 +252,9 @@
     "convertFailed": "Failed to convert lead.",
     "searchPlaceholder": "Search by name, phone, email, campaign...",
     "leadCreated": "Lead captured.",
-    "leadConverted": "Lead converted to customer."
+    "leadConverted": "Lead converted to customer.",
+    "exportCsv": "Export CSV",
+    "exportFailed": "Failed to export leads."
   },
   "leadStatus": {
     "new": "New",

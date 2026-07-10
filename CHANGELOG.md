@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.16.0] — 2026-07-10 — CSV Export for Customers & Leads
+
+Closes the last Version 1.2 roadmap item never picked up: a standard CRM expectation (offline reporting, accounting handoff, marketing list pulls) that had been consistently deprioritized in favor of the Version 2.0+ module chain since 2026-07-01.
+
+### Added
+- `GET /api/v1/crm/customers/export` and `GET /api/v1/crm/leads/export` — CSV downloads honoring the exact same filters as their respective list endpoints (status/lead-source/search/sort for customers; status/channel/search/sort for leads), gated by the existing `crm:customers:read`/`crm:leads:read` permissions (no new permission introduced). Output is UTF-8 with a leading BOM so Excel renders Azerbaijani/Cyrillic characters correctly. Capped at 10,000 rows.
+- "Export CSV" button on both the Customers and Leads list pages, next to the column-visibility menu, downloading the currently-filtered view via the existing `apiDownload` blob-download helper (the same mechanism Reports' PDF/Excel export and Sales' Quote PDF already use).
+- 6 new backend tests (CSV shape, filter-respecting content, 401 without auth) across `test_customers_api.py`/`test_leads_api.py`.
+
+### Verification
+Full backend suite passing, frontend `tsc --noEmit` clean, frontend production build clean.
+
 ## [2.15.0] — 2026-07-10 — Sprint 6: Operational Dashboard Redesign
 
 Replaces the generic CRM stats dashboard (customer/lead counters) with an operations-first view answering "what should our team do today?" — no new module, entirely inside the existing Dashboard page plus one small Sales endpoint to back it.

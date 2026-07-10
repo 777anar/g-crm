@@ -146,7 +146,9 @@
     "tablePipelineStatus": "Этап",
     "filterByStatus": "Фильтр по статусу:",
     "allStatuses": "Все статусы",
-    "searchPlaceholder": "Поиск по имени, телефону, эл. почте, компании... ( / )"
+    "searchPlaceholder": "Поиск по имени, телефону, эл. почте, компании... ( / )",
+    "exportCsv": "Экспорт в CSV",
+    "exportFailed": "Не удалось экспортировать клиентов."
   },
   "customerNew": {
     "title": "Создать клиента",
@@ -250,7 +252,9 @@
     "convertFailed": "Не удалось конвертировать лид.",
     "searchPlaceholder": "Поиск по имени, телефону, эл. почте, кампании...",
     "leadCreated": "Лид создан.",
-    "leadConverted": "Лид преобразован в клиента."
+    "leadConverted": "Лид преобразован в клиента.",
+    "exportCsv": "Экспорт в CSV",
+    "exportFailed": "Не удалось экспортировать лиды."
   },
   "leadStatus": {
     "new": "Новый",
