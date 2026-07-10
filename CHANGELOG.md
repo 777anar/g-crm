@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.14.0] — 2026-07-10 — UX & Production Polish Sprint
+
+A frontend/wording-only audit pass ahead of daily use by G-STONE GALLERY's office staff — no new module, no business-logic or API changes.
+
+### Changed
+- The English word "Lead" (used untranslated inside otherwise fully Azerbaijani UI text — page titles, buttons, empty states, toasts, AI recommendation labels) replaced with "Potensial müştəri" consistently across the Dashboard, Leads, Reports, Quick Create, and AI Dashboard sections of `az.json`, matching the term the Leads/CRM tabs already used in a few spots.
+- Generic "CRM" wording removed from the Dashboard subtitle and the Communication inbox's "not yet linked" message in all three locales (`az.json`/`ru.json`/`en.json`), replaced with plain "recent activity" / "customer record" phrasing.
+- Fixed a real mistranslation: `subtotal` in `az.json` (Sales/Orders/Finance) was `"Arayış"` (Azerbaijani for "certificate/reference"), not a subtotal — corrected to `"Aralıq məbləğ"`.
+- `catalog.isDefault` in `az.json` used the untranslated English word "Default" while the equivalent table header already said "Standart" — made consistent.
+- The literal CRM-metaphor translation "Boru Kəməri" ("pipeline" as in oil pipeline) replaced with "proses"/"satış prosesi" wording across the AI Dashboard and Reports subtitle — the office-staff-facing term for "deals in progress," not a literal physical pipeline.
+- Seed script's default owner account full name changed from the placeholder-sounding `"Platform Owner"` to `"G-STONE Admin"` (`backend/scripts/seed.py`) — this name is user-visible (e.g. "Welcome back, ...") the moment anyone signs in with the seeded account.
+- Two English placeholder examples ("Team Alpha" crew name, "tesekkur" — missing diacritics on "təşəkkür") localized/fixed across `az.json`/`ru.json`/`en.json`.
+- Sidebar navigation: every one of the 9 primary sections now has a small inline icon (matching the app's existing hand-drawn line-icon style, no new icon-library dependency) plus a left accent bar and softer highlight on the active item, replacing the flat text-only list.
+
+### Verification
+Full backend suite (528/528 passing, unchanged since only `seed.py`'s literal string changed), frontend `tsc --noEmit` clean, frontend production build clean (all 42 routes). A locale-file audit (every key in `az.json`/`ru.json`/`en.json` read end-to-end) found no remaining "Lead"/"CRM"/"Demo"/"Sample"/"Lorem ipsum"/"Dummy"/"Test" wording, and a repo-wide grep for the same terms plus `TODO`/`FIXME`/"Coming soon" across `frontend/app` and `frontend/components` came back clean.
+
 ## [2.13.0] — 2026-07-09 — The Complete Project Workflow
 
 Turns the Project workspace into the full operational workflow G-STONE GALLERY runs a job through, end to end. Entirely inside the existing Sales module — no new module, no new nav entries.

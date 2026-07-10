@@ -52,10 +52,44 @@ const SECONDARY_ROUTES = [
   { labelKey: "aiAssistant", href: "/ai/dashboard" },
 ] as const;
 
+// Minimal inline line-icons matched to each section, drawn in the same style
+// as the existing hamburger/close icons above (stroke currentColor, no new
+// icon-library dependency -- an icon set was previously deferred as "a real
+// design-system decision"; this keeps that decision small and local instead).
+const NAV_ICONS: Record<(typeof NAV_ITEMS)[number]["labelKey"], React.ReactNode> = {
+  dashboard: (
+    <path d="M2.5 2.5h5v5h-5v-5Zm8 0h5v3.5h-5v-3.5Zm0 6.5h5v6.5h-5v-6.5Zm-8 2h5v4.5h-5v-4.5Z" />
+  ),
+  customers: (
+    <path d="M9 9.25A3.125 3.125 0 1 0 9 3a3.125 3.125 0 0 0 0 6.25Zm0 1.75c-3 0-6 1.5-6 4v.5h12v-.5c0-2.5-3-4-6-4Z" />
+  ),
+  projects: (
+    <path d="M2.5 4.5h4l1.25 1.5H15.5v8.5h-13v-10Z" />
+  ),
+  catalog: (
+    <path d="M2.5 4.5 9 2l6.5 2.5L9 7l-6.5-2.5ZM2.5 8.75 9 11.25l6.5-2.5M2.5 13 9 15.5 15.5 13" />
+  ),
+  production: (
+    <path d="M11.5 2.5 15.5 6.5 13 9l-1.5-1.5-4 4 1 1-2 2-3.5-3.5 2-2 1 1 4-4L8.5 5l3-2.5Z" />
+  ),
+  installation: (
+    <path d="M3 15.5 8 9m-2.5-2 3.5 3.5 5-5-3.5-3.5-5 5Zm7 7 3-3-2-2-3 3 2 2Z" />
+  ),
+  messages: (
+    <path d="M2.5 4h13v8h-8l-3 3v-3h-2v-8Z" />
+  ),
+  reports: (
+    <path d="M3 15.5V9m4 6.5V5.5m4 10V8m4 7.5V2.5" />
+  ),
+  settings: (
+    <path d="M9 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm6.25-2.5a6.3 6.3 0 0 1-.08 1l1.58 1.24-1.5 2.6-1.87-.63a6.3 6.3 0 0 1-1.7 1l-.28 1.98h-3l-.28-1.98a6.3 6.3 0 0 1-1.7-1l-1.87.63-1.5-2.6L4.83 10.5a6.3 6.3 0 0 1 0-2L3.25 7.26l1.5-2.6 1.87.63a6.3 6.3 0 0 1 1.7-1l.28-1.98h3l.28 1.98a6.3 6.3 0 0 1 1.7 1l1.87-.63 1.5 2.6-1.58 1.24c.05.33.08.66.08 1Z" />
+  ),
+};
+
 function NavLinks({ pathname, onNavigate }: { pathname: string | null; onNavigate?: () => void }) {
   const tNav = useTranslations("nav");
   return (
-    <ul className="flex flex-col gap-1">
+    <ul className="flex flex-col gap-0.5">
       {NAV_ITEMS.map((item) => {
         const active = pathname?.startsWith(item.href);
         return (
@@ -64,11 +98,27 @@ function NavLinks({ pathname, onNavigate }: { pathname: string | null; onNavigat
               href={item.href}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
-              className={`block rounded-md px-3 py-2 text-sm font-medium ${
-                active ? "bg-primary text-white" : "text-text-primary hover:bg-bg"
+              className={`flex items-center gap-2.5 rounded-md border-l-2 px-2.5 py-2 text-sm font-medium transition-colors ${
+                active
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-transparent text-text-secondary hover:bg-bg hover:text-text-primary"
               }`}
             >
-              {tNav(item.labelKey)}
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+                className="shrink-0"
+              >
+                {NAV_ICONS[item.labelKey]}
+              </svg>
+              <span className="truncate">{tNav(item.labelKey)}</span>
             </Link>
           </li>
         );

@@ -42,7 +42,7 @@ def seed() -> None:
 
         owner = db.scalar(select(User).where(User.email == OWNER_EMAIL))
         if owner is None:
-            owner = User(email=OWNER_EMAIL, password_hash=hash_password(OWNER_PASSWORD), full_name="Platform Owner")
+            owner = User(email=OWNER_EMAIL, password_hash=hash_password(OWNER_PASSWORD), full_name="G-STONE Admin")
             db.add(owner)
             db.flush()
             print(f"Created owner user: {owner.email} (password: {OWNER_PASSWORD})")
