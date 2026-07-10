@@ -1,4 +1,6 @@
 import uuid
+from datetime import date
+from typing import Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -22,6 +24,19 @@ from modules.sales.presentation.schemas.project_item_measurement import (
 )
 
 router = APIRouter()
+
+
+@router.get("/measurements", response_model=ProjectItemMeasurementListOut)
+def list_measurements_for_company(
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("sales:projects:read")),
+) -> ProjectItemMeasurementListOut:
+    items = ProjectItemMeasurementRepository(db).list_for_company(
+        company_id=current_user.active_company_id, date_from=date_from, date_to=date_to
+    )
+    return ProjectItemMeasurementListOut(items=[ProjectItemMeasurementOut.model_validate(m) for m in items])
 
 
 @router.get("/project-items/{item_id}/measurements", response_model=ProjectItemMeasurementListOut)

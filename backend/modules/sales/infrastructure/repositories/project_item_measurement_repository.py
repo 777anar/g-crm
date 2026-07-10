@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from typing import List, Optional
 
 from sqlalchemy import select
@@ -33,6 +34,17 @@ class ProjectItemMeasurementRepository:
             )
             .order_by(ProjectItemMeasurement.revision_number.desc())
         )
+        return list(self.db.scalars(stmt).all())
+
+    def list_for_company(
+        self, *, company_id: uuid.UUID, date_from: Optional[date] = None, date_to: Optional[date] = None
+    ) -> List[ProjectItemMeasurement]:
+        stmt = select(ProjectItemMeasurement).where(ProjectItemMeasurement.company_id == company_id)
+        if date_from is not None:
+            stmt = stmt.where(ProjectItemMeasurement.measured_at >= date_from)
+        if date_to is not None:
+            stmt = stmt.where(ProjectItemMeasurement.measured_at <= date_to)
+        stmt = stmt.order_by(ProjectItemMeasurement.measured_at.desc())
         return list(self.db.scalars(stmt).all())
 
     def latest_revision_number(self, *, company_id: uuid.UUID, project_item_id: uuid.UUID) -> int:

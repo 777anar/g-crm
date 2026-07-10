@@ -280,6 +280,36 @@ def test_second_measurement_is_a_new_revision(app_client, owner_headers, custome
     assert revisions[0]["revision_number"] == 2
 
 
+def test_list_measurements_for_company_filters_by_date(app_client, owner_headers, customer):
+    project = _create_project(app_client, owner_headers, customer.id)
+    room = _create_room(app_client, owner_headers, project["id"])
+    item = _create_item(app_client, owner_headers, room["id"])
+
+    app_client.post(
+        f"/api/v1/sales/project-items/{item['id']}/measurements",
+        headers=owner_headers,
+        json={"length_mm": "3000", "width_mm": "600", "measurer_name": "Ali", "measured_at": "2026-07-01"},
+    )
+    app_client.post(
+        f"/api/v1/sales/project-items/{item['id']}/measurements",
+        headers=owner_headers,
+        json={"length_mm": "3050", "width_mm": "610", "measurer_name": "Ali", "measured_at": "2026-07-10"},
+    )
+
+    resp = app_client.get(
+        "/api/v1/sales/measurements",
+        headers=owner_headers,
+        params={"date_from": "2026-07-10", "date_to": "2026-07-10"},
+    )
+    assert resp.status_code == 200, resp.text
+    items = resp.json()["items"]
+    assert len(items) == 1
+    assert items[0]["measured_at"] == "2026-07-10"
+
+    resp_all = app_client.get("/api/v1/sales/measurements", headers=owner_headers)
+    assert len(resp_all.json()["items"]) == 2
+
+
 def test_update_measurement_records_customer_signature(app_client, owner_headers, customer):
     project = _create_project(app_client, owner_headers, customer.id)
     room = _create_room(app_client, owner_headers, project["id"])

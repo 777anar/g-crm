@@ -295,6 +295,12 @@ export function deleteProjectItem(id: string) {
 
 // ── Project Item Measurements ──────────────────────────────────────────────────
 
+export function listMeasurementsForCompany(params: { dateFrom?: string; dateTo?: string } = {}) {
+  return apiRequest<{ items: ProjectItemMeasurement[] }>(`${BASE}/measurements`, {
+    searchParams: { date_from: params.dateFrom, date_to: params.dateTo },
+  });
+}
+
 export function listProjectItemMeasurements(itemId: string) {
   return apiRequest<{ items: ProjectItemMeasurement[] }>(`${BASE}/project-items/${itemId}/measurements`);
 }

@@ -5,125 +5,247 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { checkTaskReminders, listCustomers, listLeads, listTaskNotifications, listTasks } from "@/lib/api/crm";
 import { me } from "@/lib/api/auth";
-import { CUSTOMER_STATUSES, type Customer, type Lead, type Task, type TaskNotification } from "@/lib/types";
+import { listOrders } from "@/lib/api/orders";
+import { listWorkOrders } from "@/lib/api/production";
+import { listInstallationJobs, listNotifications as listInstallationNotifications } from "@/lib/api/installation";
+import { listMeasurementsForCompany, listProjects } from "@/lib/api/sales";
+import type {
+  Customer,
+  InstallationJob,
+  InstallationNotification,
+  Lead,
+  Order,
+  Project,
+  ProjectItemMeasurement,
+  Task,
+  TaskNotification,
+  WorkOrder,
+} from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
-import { StatusBarList } from "@/components/ui/charts";
-import { Badge, CustomerStatusBadge, LeadStatusBadge, TaskPriorityBadge } from "@/components/ui/badge";
+import {
+  Badge,
+  InstallationJobStatusBadge,
+  LeadStatusBadge,
+  OrderStatusBadge,
+  TaskPriorityBadge,
+} from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCardSkeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { useCustomerStatusLabel, useLeadChannelLabel } from "@/lib/i18n/hooks";
+import { useLeadChannelLabel } from "@/lib/i18n/hooks";
+
+const ORDER_TERMINAL_STATUSES = new Set(["installed", "completed", "cancelled"]);
+const ORDER_PRODUCTION_STAGE_STATUSES = new Set(["waiting", "measuring", "approved_for_production", "in_production"]);
+const ORDER_INSTALLATION_STAGE_STATUSES = new Set(["ready", "delivered"]);
+const WORK_ORDER_TERMINAL_STATUSES = new Set(["completed", "cancelled"]);
+const INSTALLATION_JOB_TERMINAL_STATUSES = new Set(["completed", "cancelled"]);
+
+function toDateKey(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function daysBetween(from: Date, to: Date): number {
+  return Math.max(1, Math.round((to.getTime() - from.getTime()) / 86_400_000));
+}
+
+type TimelineTone = "neutral" | "info" | "warning" | "danger" | "success";
+
+const DOT_TONE_CLASS: Record<TimelineTone, string> = {
+  neutral: "bg-text-secondary",
+  info: "bg-info",
+  warning: "bg-warning",
+  danger: "bg-danger",
+  success: "bg-success",
+};
+
+function TimelineDot({ tone = "neutral" }: { tone?: TimelineTone }) {
+  return <span className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${DOT_TONE_CLASS[tone]}`} />;
+}
+
+type NotificationItem = {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+  href: string;
+};
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
   const channelLabel = useLeadChannelLabel();
-  const statusLabel = useCustomerStatusLabel();
+
   const [fullName, setFullName] = useState<string | null>(null);
-  const [role, setRole] = useState<string | null>(null);
   const [customers, setCustomers] = useState<Customer[] | null>(null);
+  const [projects, setProjects] = useState<Project[] | null>(null);
+  const [orders, setOrders] = useState<Order[] | null>(null);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[] | null>(null);
+  const [installationJobs, setInstallationJobs] = useState<InstallationJob[] | null>(null);
   const [leads, setLeads] = useState<Lead[] | null>(null);
-  const [myTasks, setMyTasks] = useState<Task[] | null>(null);
-  const [notifications, setNotifications] = useState<TaskNotification[] | null>(null);
+  const [measurementsToday, setMeasurementsToday] = useState<ProjectItemMeasurement[] | null>(null);
+  const [tasks, setTasks] = useState<Task[] | null>(null);
+  const [taskNotifications, setTaskNotifications] = useState<TaskNotification[] | null>(null);
+  const [installationNotifications, setInstallationNotifications] = useState<InstallationNotification[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const todayKey = toDateKey(new Date());
+
     Promise.all([
       me(),
-      listCustomers({ includeArchived: true, limit: 100 }),
+      listCustomers({ limit: 100 }),
+      listProjects({ limit: 100 }),
+      listOrders({ limit: 100 }),
+      listWorkOrders({ limit: 100 }),
+      listInstallationJobs({ dateFrom: todayKey, limit: 100 }),
       listLeads({ limit: 100 }),
+      listMeasurementsForCompany({ dateFrom: todayKey, dateTo: todayKey }),
+      listTasks({ excludeTerminal: true, sort: "due_date", limit: 100 }),
     ])
-      .then(([profile, customerRes, leadRes]) => {
-        setFullName(profile.full_name);
-        setRole(profile.role);
-        setCustomers(customerRes.items);
-        setLeads(leadRes.items);
+      .then(
+        ([profile, customerRes, projectRes, orderRes, workOrderRes, installationRes, leadRes, measurementRes, taskRes]) => {
+          setFullName(profile.full_name);
+          setCustomers(customerRes.items);
+          setProjects(projectRes.items);
+          setOrders(orderRes.items);
+          setWorkOrders(workOrderRes.items);
+          setInstallationJobs(installationRes.items);
+          setLeads(leadRes.items);
+          setMeasurementsToday(measurementRes.items);
+          setTasks(taskRes.items);
 
-        // Surfaces newly-due reminders/overdue tasks the moment the
-        // Dashboard loads -- see checkTaskReminders' doc comment for why
-        // this is a pull rather than a scheduled push.
-        checkTaskReminders()
-          .catch(() => {})
-          .then(() =>
-            Promise.all([
-              listTasks({ assignedTo: profile.id, excludeTerminal: true, sort: "due_date", limit: 100 }),
-              listTaskNotifications({ unreadOnly: true }),
-            ])
-          )
-          .then((result) => {
-            if (!result) return;
-            const [taskRes, notificationRes] = result;
-            setMyTasks(taskRes.items);
-            setNotifications(notificationRes.items);
-          })
-          .catch(() => {
-            setMyTasks([]);
-            setNotifications([]);
-          });
-      })
+          // Surfaces newly-due reminders/overdue tasks the moment the
+          // Dashboard loads -- see checkTaskReminders' doc comment for why
+          // this is a pull rather than a scheduled push.
+          checkTaskReminders()
+            .catch(() => {})
+            .then(() =>
+              Promise.all([
+                listTaskNotifications({ unreadOnly: true }),
+                listInstallationNotifications({ unreadOnly: true }),
+              ])
+            )
+            .then((result) => {
+              if (!result) return;
+              const [taskNotifRes, installationNotifRes] = result;
+              setTaskNotifications(taskNotifRes.items);
+              setInstallationNotifications(installationNotifRes.items);
+            })
+            .catch(() => {
+              setTaskNotifications([]);
+              setInstallationNotifications([]);
+            });
+        }
+      )
       .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
   }, [t]);
 
-  const loading = customers === null || leads === null;
+  const loading = customers === null || orders === null;
 
-  // Memoized so re-renders triggered by unrelated state (locale/theme
-  // toggles, sibling component updates) don't re-run these O(n) filters/
-  // sorts over the full customers/leads/tasks arrays every time.
-  const { overdueTasks, dueTodayTasks, upcomingTasks } = useMemo(() => {
-    const tasks = myTasks ?? [];
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    const key = hour >= 5 && hour < 12 ? "greetingMorning" : hour >= 12 && hour < 18 ? "greetingAfternoon" : "greetingEvening";
+    return fullName ? t(key, { name: fullName.split(" ")[0] }) : t("title");
+  }, [fullName, t]);
+
+  const customerNameById = useMemo(() => new Map((customers ?? []).map((c) => [c.id, c.name])), [customers]);
+  const projectNameById = useMemo(() => new Map((projects ?? []).map((p) => [p.id, p.name])), [projects]);
+  const orderById = useMemo(() => new Map((orders ?? []).map((o) => [o.id, o])), [orders]);
+
+  // Memoized so re-renders triggered by unrelated state don't re-run these
+  // O(n) filters/sorts over the full tasks/orders/installation-jobs arrays.
+  const { overdueTasks, dueTodayTasks } = useMemo(() => {
+    const list = tasks ?? [];
     const now = Date.now();
-    const today = new Date();
+    const todayStr = new Date().toDateString();
     return {
-      overdueTasks: tasks.filter((task) => task.due_date && new Date(task.due_date).getTime() < now),
-      dueTodayTasks: tasks.filter((task) => task.due_date && new Date(task.due_date).toDateString() === today.toDateString()),
-      upcomingTasks: [...tasks]
-        .sort((a, b) => {
-          if (!a.due_date) return 1;
-          if (!b.due_date) return -1;
-          return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-        })
+      overdueTasks: list.filter((task) => task.due_date && new Date(task.due_date).getTime() < now),
+      dueTodayTasks: [...list]
+        .filter((task) => task.due_date && new Date(task.due_date).toDateString() === todayStr)
+        .sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime()),
+    };
+  }, [tasks]);
+
+  const inProductionWorkOrders = useMemo(
+    () => (workOrders ?? []).filter((wo) => !WORK_ORDER_TERMINAL_STATUSES.has(wo.status)),
+    [workOrders]
+  );
+
+  const { installationsTomorrow, upcomingInstallations } = useMemo(() => {
+    const activeJobs = (installationJobs ?? []).filter(
+      (job) => !INSTALLATION_JOB_TERMINAL_STATUSES.has(job.status) && job.scheduled_date
+    );
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowKey = toDateKey(tomorrow);
+    return {
+      installationsTomorrow: activeJobs.filter((job) => job.scheduled_date === tomorrowKey),
+      upcomingInstallations: [...activeJobs]
+        .sort((a, b) => (a.scheduled_date as string).localeCompare(b.scheduled_date as string))
         .slice(0, 5),
     };
-  }, [myTasks]);
+  }, [installationJobs]);
 
-  const activeCustomers = useMemo(() => customers?.filter((c) => c.deleted_at === null) ?? [], [customers]);
-
-  const { customersByStatus, newInquiries, inProduction, lostCustomers, recentCustomers } = useMemo(() => {
-    return {
-      customersByStatus: CUSTOMER_STATUSES.map((status) => ({
-        status,
-        count: activeCustomers.filter((c) => c.status === status).length,
-      })),
-      newInquiries: activeCustomers.filter((c) => c.status === "new_inquiry").length,
-      inProduction: activeCustomers.filter(
-        (c) => c.status === "in_production" || c.status === "installation_scheduled"
-      ).length,
-      lostCustomers: activeCustomers.filter((c) => c.status === "lost").length,
-      recentCustomers: [...activeCustomers]
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5),
-    };
-  }, [activeCustomers]);
+  const overdueOrders = useMemo(() => {
+    const todayKey = toDateKey(new Date());
+    return (orders ?? [])
+      .filter((order) => !ORDER_TERMINAL_STATUSES.has(order.status))
+      .map((order) => {
+        let referenceDate: string | null = null;
+        if (
+          ORDER_PRODUCTION_STAGE_STATUSES.has(order.status) &&
+          order.scheduled_production_date &&
+          order.scheduled_production_date < todayKey
+        ) {
+          referenceDate = order.scheduled_production_date;
+        } else if (
+          ORDER_INSTALLATION_STAGE_STATUSES.has(order.status) &&
+          order.scheduled_installation_date &&
+          order.scheduled_installation_date < todayKey
+        ) {
+          referenceDate = order.scheduled_installation_date;
+        }
+        return referenceDate ? { order, referenceDate } : null;
+      })
+      .filter((entry): entry is { order: Order; referenceDate: string } => entry !== null)
+      .sort((a, b) => a.referenceDate.localeCompare(b.referenceDate));
+  }, [orders]);
 
   const recentLeads = useMemo(
-    () =>
-      [...(leads ?? [])]
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5),
+    () => [...(leads ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5),
     [leads]
   );
+
+  const notifications = useMemo<NotificationItem[]>(() => {
+    const fromTasks = (taskNotifications ?? []).map((n) => ({
+      id: `task-${n.id}`,
+      title: n.title,
+      message: n.message,
+      created_at: n.created_at,
+      href: `/crm/tasks/${n.task_id}`,
+    }));
+    const fromInstallation = (installationNotifications ?? []).map((n) => ({
+      id: `installation-${n.id}`,
+      title: n.title,
+      message: n.message,
+      created_at: n.created_at,
+      href: n.installation_job_id ? `/installation/jobs/${n.installation_job_id}` : "/installation",
+    }));
+    return [...fromTasks, ...fromInstallation]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 8);
+  }, [taskNotifications, installationNotifications]);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">
-            {fullName ? t("welcomeBack", { name: fullName.split(" ")[0] }) : t("title")}
-          </h1>
-          <p className="text-sm text-text-secondary">{role ? t("signedInAs", { role }) : t("overview")}</p>
+          <h1 className="text-xl font-semibold text-text-primary">{greeting}</h1>
+          <p className="text-sm text-text-secondary">{t("subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Link href="/crm/leads">
@@ -151,43 +273,44 @@ export default function DashboardPage() {
       {!loading && (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label={t("statActiveCustomers")} value={activeCustomers.length} tone="primary" />
-            <StatCard label={statusLabel("new_inquiry")} value={newInquiries} tone="info" />
-            <StatCard label={t("statInProduction")} value={inProduction} tone="warning" />
-            <StatCard label={statusLabel("lost")} value={lostCustomers} tone="danger" />
+            <StatCard label={t("statMeasurementsToday")} value={(measurementsToday ?? []).length} tone="info" />
+            <StatCard label={t("statInProduction")} value={inProductionWorkOrders.length} tone="warning" />
+            <StatCard label={t("statInstallationsTomorrow")} value={installationsTomorrow.length} tone="info" />
+            <StatCard
+              label={t("statOverdueWork")}
+              value={overdueTasks.length + overdueOrders.length}
+              tone="danger"
+            />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard label={t("statMyOpenTasks")} value={(myTasks ?? []).length} tone="primary" />
-            <StatCard label={t("statOverdueTasks")} value={overdueTasks.length} tone="danger" />
-            <StatCard label={t("statDueToday")} value={dueTodayTasks.length} tone="warning" />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Card>
               <CardHeader
-                title={t("myTasks")}
+                title={t("sectionTodayTasks")}
                 action={
                   <Link href="/crm/tasks" className="text-sm text-primary hover:underline">
                     {tCommon("viewAll")}
                   </Link>
                 }
               />
-              {upcomingTasks.length === 0 ? (
-                <EmptyState title={t("noTasksYet")} description={t("noTasksDesc")} />
+              {dueTodayTasks.length === 0 ? (
+                <EmptyState title={t("noTasksToday")} description={t("noTasksTodayDesc")} />
               ) : (
-                <ul className="flex flex-col divide-y divide-border">
-                  {upcomingTasks.map((task) => (
-                    <li key={task.id} className="flex items-center justify-between py-2">
-                      <div>
-                        <Link href={`/crm/tasks/${task.id}`} className="font-medium text-primary hover:underline">
-                          {task.title}
-                        </Link>
-                        <p className="text-xs text-text-secondary">
-                          {task.due_date ? formatDateTime(task.due_date) : t("noDueDate")}
-                        </p>
+                <ul className="flex flex-col gap-3">
+                  {dueTodayTasks.slice(0, 6).map((task) => (
+                    <li key={task.id} className="flex items-start gap-3">
+                      <TimelineDot tone={task.priority === "urgent" || task.priority === "high" ? "danger" : "warning"} />
+                      <div className="flex flex-1 items-center justify-between gap-2">
+                        <div>
+                          <Link href={`/crm/tasks/${task.id}`} className="font-medium text-primary hover:underline">
+                            {task.title}
+                          </Link>
+                          <p className="text-xs text-text-secondary">
+                            {task.due_date ? formatDateTime(task.due_date) : t("noDueDate")}
+                          </p>
+                        </div>
+                        <TaskPriorityBadge priority={task.priority} />
                       </div>
-                      <TaskPriorityBadge priority={task.priority} />
                     </li>
                   ))}
                 </ul>
@@ -195,67 +318,102 @@ export default function DashboardPage() {
             </Card>
 
             <Card>
-              <CardHeader title={t("notifications")} />
-              {(notifications ?? []).length === 0 ? (
-                <EmptyState title={t("noNotifications")} />
+              <CardHeader
+                title={t("sectionUpcomingInstallations")}
+                action={
+                  <Link href="/installation/calendar" className="text-sm text-primary hover:underline">
+                    {tCommon("viewAll")}
+                  </Link>
+                }
+              />
+              {upcomingInstallations.length === 0 ? (
+                <EmptyState title={t("noInstallationsUpcoming")} description={t("noInstallationsUpcomingDesc")} />
               ) : (
-                <ul className="flex flex-col divide-y divide-border">
-                  {(notifications ?? []).map((notification) => (
-                    <li key={notification.id} className="py-2">
-                      <Link href={`/crm/tasks/${notification.task_id}`} className="text-sm font-medium text-primary hover:underline">
-                        {notification.title}
-                      </Link>
-                      <p className="text-xs text-text-secondary">{notification.message}</p>
-                    </li>
-                  ))}
+                <ul className="flex flex-col gap-3">
+                  {upcomingInstallations.map((job) => {
+                    const order = orderById.get(job.order_id);
+                    const customerName = order ? customerNameById.get(order.customer_id) : undefined;
+                    const projectName = order ? projectNameById.get(order.project_id) : undefined;
+                    return (
+                      <li key={job.id} className="flex items-start gap-3">
+                        <TimelineDot tone="info" />
+                        <div className="flex flex-1 items-center justify-between gap-2">
+                          <div>
+                            <Link href={`/installation/jobs/${job.id}`} className="font-medium text-primary hover:underline">
+                              {projectName ?? job.job_number}
+                            </Link>
+                            <p className="text-xs text-text-secondary">
+                              {customerName ? `${customerName} · ` : ""}
+                              {job.scheduled_date ? t("scheduledOn", { date: formatDate(job.scheduled_date) }) : t("noDueDate")}
+                            </p>
+                          </div>
+                          <InstallationJobStatusBadge status={job.status} />
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
-              <CardHeader
-                title={t("recentCustomers")}
-                action={
-                  <Link href="/crm/customers" className="text-sm text-primary hover:underline">
-                    {tCommon("viewAll")}
-                  </Link>
-                }
-              />
-              {recentCustomers.length === 0 ? (
-                <EmptyState title={t("noCustomersYet")} description={t("noCustomersDesc")} />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader title={t("sectionOverdueProjects")} />
+              {overdueOrders.length === 0 ? (
+                <EmptyState title={t("noOverdueProjects")} description={t("noOverdueProjectsDesc")} />
               ) : (
-                <ul className="flex flex-col divide-y divide-border">
-                  {recentCustomers.map((customer) => (
-                    <li key={customer.id} className="flex items-center justify-between py-2">
-                      <div>
-                        <Link href={`/crm/customers/${customer.id}`} className="font-medium text-primary hover:underline">
-                          {customer.name}
-                        </Link>
-                        <p className="text-xs text-text-secondary">
-                          {t("createdOn", { date: formatDate(customer.created_at) })}
-                        </p>
-                      </div>
-                      <CustomerStatusBadge status={customer.status} />
-                    </li>
-                  ))}
+                <ul className="flex flex-col gap-3">
+                  {overdueOrders.slice(0, 6).map(({ order, referenceDate }) => {
+                    const customerName = customerNameById.get(order.customer_id);
+                    const days = daysBetween(new Date(referenceDate), new Date());
+                    return (
+                      <li key={order.id} className="flex items-start gap-3">
+                        <TimelineDot tone="danger" />
+                        <div className="flex flex-1 items-center justify-between gap-2">
+                          <div>
+                            <Link href={`/orders/${order.id}`} className="font-medium text-primary hover:underline">
+                              {projectNameById.get(order.project_id) ?? order.order_number}
+                            </Link>
+                            <p className="text-xs text-text-secondary">
+                              {customerName ? `${customerName} · ` : ""}
+                              {t("overdueBy", { days })}
+                            </p>
+                          </div>
+                          <OrderStatusBadge status={order.status} />
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </Card>
 
             <Card>
-              <CardHeader title={t("customersByStatus")} />
-              <StatusBarList
-                data={customersByStatus.map(({ status, count }) => ({ label: statusLabel(status), count }))}
-                emptyLabel={t("noCustomersYet")}
-              />
+              <CardHeader title={t("sectionNotifications")} />
+              {notifications.length === 0 ? (
+                <EmptyState title={t("noNotifications")} />
+              ) : (
+                <ul className="flex flex-col gap-3">
+                  {notifications.map((n) => (
+                    <li key={n.id} className="flex items-start gap-3">
+                      <TimelineDot tone="info" />
+                      <div>
+                        <Link href={n.href} className="text-sm font-medium text-primary hover:underline">
+                          {n.title}
+                        </Link>
+                        <p className="text-xs text-text-secondary">{n.message}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Card>
           </div>
 
           <Card>
             <CardHeader
-              title={t("recentLeads")}
+              title={t("sectionRecentInquiries")}
               action={
                 <Link href="/crm/leads" className="text-sm text-primary hover:underline">
                   {tCommon("viewAll")}
@@ -263,7 +421,7 @@ export default function DashboardPage() {
               }
             />
             {recentLeads.length === 0 ? (
-              <EmptyState title={t("noLeadsYet")} description={t("noLeadsDesc")} />
+              <EmptyState title={t("noInquiriesYet")} description={t("noInquiriesYetDesc")} />
             ) : (
               <div className="overflow-x-auto rounded-md border border-border">
                 <table className="w-full text-left text-sm">
