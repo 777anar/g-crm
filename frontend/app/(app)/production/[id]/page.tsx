@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { getWorkOrder, listWorkOrderItems, updateWorkOrderStatus } from "@/lib/api/production";
+import { getOrder } from "@/lib/api/orders";
 import type { WorkOrder, WorkOrderItem } from "@/lib/types";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ export default function WorkOrderDetailPage() {
   const toast = useToast();
 
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [items, setItems] = useState<WorkOrderItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [transitioning, setTransitioning] = useState(false);
@@ -41,6 +43,7 @@ export default function WorkOrderDetailPage() {
   const reload = useCallback(async () => {
     const [wo, itemsRes] = await Promise.all([getWorkOrder(id), listWorkOrderItems(id)]);
     setWorkOrder(wo);
+    getOrder(wo.order_id).then((o) => setOrderNumber(o.order_number)).catch(() => {});
     setItems(itemsRes.items);
     setLoading(false);
   }, [id]);
@@ -93,7 +96,7 @@ export default function WorkOrderDetailPage() {
           <p className="mt-1 text-xs text-text-secondary">
             {t("forOrder")}:{" "}
             <Link href={`/orders/${workOrder.order_id}`} className="text-primary hover:underline">
-              {workOrder.order_id}
+              {orderNumber ?? tCommon("loading")}
             </Link>
           </p>
         </div>
@@ -104,9 +107,11 @@ export default function WorkOrderDetailPage() {
                 {transitioning ? t("saving") : `→ ${t(nextStatus as any)}`}
               </Button>
             )}
-            <Button variant="secondary" onClick={() => setCancelMode(!cancelMode)}>
-              {t("markCancelled")}
-            </Button>
+            {!cancelMode && (
+              <Button variant="secondary" onClick={() => setCancelMode(true)}>
+                {t("markCancelled")}
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -117,6 +122,7 @@ export default function WorkOrderDetailPage() {
           <textarea
             className="mb-2 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
             rows={2}
+            aria-label={t("cancelReason")}
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
           />

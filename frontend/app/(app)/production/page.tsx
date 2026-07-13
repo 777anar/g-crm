@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { listWorkOrders } from "@/lib/api/production";
+import { getOrder } from "@/lib/api/orders";
 import { WORK_ORDER_STATUSES, type WorkOrder } from "@/lib/types";
 import { WorkOrderStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -19,6 +20,7 @@ export default function ProductionPage() {
   const router = useRouter();
 
   const [workOrders, setWorkOrders] = useState<WorkOrder[] | null>(null);
+  const [orderNumbers, setOrderNumbers] = useState<Record<string, string>>({});
   const [statusFilter, setStatusFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,20 @@ export default function ProductionPage() {
 
   const load = useCallback(() => {
     listWorkOrders({ status: statusFilter || undefined, search: search || undefined })
-      .then((r) => setWorkOrders(r.items))
+      .then((r) => {
+        setWorkOrders(r.items);
+        const uniqueOrderIds = Array.from(new Set(r.items.map((wo) => wo.order_id)));
+        Promise.all(
+          uniqueOrderIds.map((id) =>
+            getOrder(id)
+              .then((o) => [id, o.order_number] as const)
+              .catch(() => null)
+          )
+        ).then((pairs) => {
+          const resolved = pairs.filter((p): p is readonly [string, string] => p !== null);
+          setOrderNumbers(Object.fromEntries(resolved));
+        });
+      })
       .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
   }, [statusFilter, search, t]);
 
@@ -90,7 +105,7 @@ export default function ProductionPage() {
                 >
                   <td className="px-4 py-2 font-mono font-medium text-text-primary">{wo.work_order_number}</td>
                   <td className="px-4 py-2"><WorkOrderStatusBadge status={wo.status} /></td>
-                  <td className="px-4 py-2 text-text-secondary">{wo.order_id}</td>
+                  <td className="px-4 py-2 text-text-secondary">{orderNumbers[wo.order_id] ?? tCommon("loading")}</td>
                   <td className="px-4 py-2 text-text-secondary">{formatDate(wo.created_at)}</td>
                 </tr>
               ))}

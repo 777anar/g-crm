@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.18.0] — 2026-07-13 — Full-App UX Audit
+
+A from-scratch audit of every visible screen from a real G-STONE office employee's perspective — six parallel research passes covering every page and locale key. Frontend-only; no new module, no business-logic changes.
+
+### Fixed
+- **Global**: every date in the app rendered in English regardless of locale (`lib/format.ts` hardcoded `"en-US"`) — now reads the active locale via a new `activeDateLocale()` helper. Same fix applied to the Installation Calendar's month header and `charts.tsx`'s tooltip number formatting.
+- Reports' `CategoryBarChart`/`TrendChart` showed raw English "No data for this period." on any empty date range across all five Reports pages — added the `emptyLabel` prop `StatusBarList` already had.
+- Illegible dark-mode section headers (`bg-text-primary` + `text-white`, near-white-on-white) on CRM Task, Finance Invoice, Order, and Sales Quote builder detail pages — switched to `bg-primary`.
+- Orders/Production/Installation/Finance Invoice detail pages each had a toggle button and confirm button sharing the exact same cancel-action label — the toggle now hides once the confirm card is open.
+- Silent failures on write actions across the Sales Project workspace, Quote builder, Installation Kanban, and Installation Crews — none of these had `try/catch`, unlike every page Version 2.9.1 already covered. All now surface errors via toast/inline error.
+- Raw UUIDs shown instead of names/numbers: Orders list, Order/Work-Order/Invoice detail pages, and the Material Prices table (which also had the wrong data under a mismatched "Currency" header) — resolved via client-side lookups against existing `GET`-by-id endpoints.
+- ~30 untranslated English strings on the Communication Integrations page (credential field labels, provider dropdown, Queue/Diagnostics table values).
+- Real mistranslations: Leads' `qualified` status, a Sales item type ("Moydadır" → "Lavabo dolabısı"), `projectType_stairs`/`itemType_stairs` inconsistency, Tasks' `recurrenceInterval`.
+- Finance Expense/Invoice due-date fields used free-text inputs with an English placeholder instead of native date pickers; Expense category filter reused the generic "all statuses" key instead of a dedicated one.
+- Material creation form's Material Type dropdown showed raw English options inside an Azerbaijani form.
+- Customer detail page's two note boxes shared identical placeholder text; Customer profile's "Layihələr" tile was mislabeled "via Production"; Dashboard's "Gecikən layihələr" section linked to Orders, not Projects (renamed to match); login's company-role badges showed a raw backend role string; Tasks list wasn't sortable/searchable like its sibling pages; a Task's "Related to" link showed the generic word "Customer" instead of the actual name.
+
+### Removed
+- Dead/orphaned translation keys across all three locale files: `customerNew.type`/`customerProfile.type`/`customers.tableType`/the `customerType` namespace (closing a Version 1.1 backlog item verbatim), `dashboard.notifications`, `catalog.title`/`subtitle`/`tabSlabs`, `nav.quotes`, `orders.prodStatus_unassigned`/`instStatus_unassigned`, `tasks.relatedCustomer`.
+
+### Deferred
+Sales Photos tab shows captions only (no image thumbnails); Material detail has no inline spec editing; Slabs/Price-List material pickers aren't searchable; Reports KPI cards show no currency unit; Installation's tab bar isn't the shared `SectionTabs` component; per-channel badge colors — each recorded as out of proportion for this pass or in conflict with an existing convention, not silently skipped.
+
+### Verification
+Full backend suite passing (537/537, unchanged — no backend files touched), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes), live smoke test against the real dev database and running backend.
+
 ## [2.17.0] — 2026-07-13 — Assigned Manager Picker
 
 Closes the highest-priority remaining Version 1.1 item: the Customer form/profile had no real way to assign a manager, despite the backend fully validating the field since Phase 2.

@@ -75,6 +75,7 @@ export default function InstallationAnalyticsPage() {
               <TrendChart
                 data={data.daily_installations.map((r) => ({ month: r.date, count: r.count }))}
                 series={[{ key: "count", label: t("dailyInstallations"), ...TREND_COLORS.revenue }]}
+                emptyLabel={t("noDataPeriod")}
               />
             </Card>
             <Card>

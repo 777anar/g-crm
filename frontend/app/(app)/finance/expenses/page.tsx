@@ -83,9 +83,9 @@ export default function ExpensesPage() {
           />
           <TextField
             label={t("expenseDate")}
+            type="date"
             value={form.expense_date}
             onChange={(e) => setForm({ ...form, expense_date: e.target.value })}
-            placeholder="YYYY-MM-DD"
           />
           <TextField
             label={t("description")}
@@ -105,7 +105,7 @@ export default function ExpensesPage() {
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
         >
-          <option value="">{tCommon("allStatuses")}</option>
+          <option value="">{t("allCategories")}</option>
           {EXPENSE_CATEGORIES.map((c) => (
             <option key={c} value={c}>{t(`expenseCategory_${c}` as any)}</option>
           ))}

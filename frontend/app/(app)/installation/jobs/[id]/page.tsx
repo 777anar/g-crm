@@ -210,7 +210,9 @@ export default function InstallationJobDetailPage() {
             {job.status === "in_progress" && (
               <Button onClick={() => setCompleteMode(!completeMode)}>{t("completeJob")}</Button>
             )}
-            <Button variant="secondary" onClick={() => setCancelMode(!cancelMode)}>{t("markCancelled")}</Button>
+            {!cancelMode && (
+              <Button variant="secondary" onClick={() => setCancelMode(true)}>{t("markCancelled")}</Button>
+            )}
           </div>
         )}
       </div>
@@ -248,6 +250,7 @@ export default function InstallationJobDetailPage() {
           <textarea
             className="mb-2 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
             rows={2}
+            aria-label={t("cancelReason")}
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
           />

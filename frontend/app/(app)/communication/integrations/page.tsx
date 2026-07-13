@@ -23,7 +23,7 @@ import {
 } from "@/lib/types";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge, ChannelTypeBadge } from "@/components/ui/badge";
 import { TextField, SelectField } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -32,48 +32,48 @@ import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 
-type FieldDef = { key: string; label: string; secret?: boolean; type?: string };
+type FieldDef = { key: string; labelKey: string; secret?: boolean; type?: string };
 
 const PROVIDER_FIELDS: Record<ProviderName, FieldDef[]> = {
   meta_whatsapp: [
-    { key: "phone_number_id", label: "Phone Number ID" },
-    { key: "access_token", label: "Access Token", secret: true },
-    { key: "app_secret", label: "App Secret", secret: true },
-    { key: "verify_token", label: "Verify Token" },
+    { key: "phone_number_id", labelKey: "field_phone_number_id" },
+    { key: "access_token", labelKey: "field_access_token", secret: true },
+    { key: "app_secret", labelKey: "field_app_secret", secret: true },
+    { key: "verify_token", labelKey: "field_verify_token" },
   ],
   meta_instagram: [
-    { key: "ig_user_id", label: "Instagram User ID" },
-    { key: "access_token", label: "Access Token", secret: true },
-    { key: "app_secret", label: "App Secret", secret: true },
-    { key: "verify_token", label: "Verify Token" },
+    { key: "ig_user_id", labelKey: "field_ig_user_id" },
+    { key: "access_token", labelKey: "field_access_token", secret: true },
+    { key: "app_secret", labelKey: "field_app_secret", secret: true },
+    { key: "verify_token", labelKey: "field_verify_token" },
   ],
   meta_messenger: [
-    { key: "page_id", label: "Page ID" },
-    { key: "page_access_token", label: "Page Access Token", secret: true },
-    { key: "app_secret", label: "App Secret", secret: true },
-    { key: "verify_token", label: "Verify Token" },
+    { key: "page_id", labelKey: "field_page_id" },
+    { key: "page_access_token", labelKey: "field_page_access_token", secret: true },
+    { key: "app_secret", labelKey: "field_app_secret", secret: true },
+    { key: "verify_token", labelKey: "field_verify_token" },
   ],
   smtp: [
-    { key: "smtp_host", label: "SMTP Host" },
-    { key: "smtp_port", label: "SMTP Port" },
-    { key: "smtp_username", label: "SMTP Username" },
-    { key: "smtp_password", label: "SMTP Password", secret: true },
-    { key: "smtp_encryption", label: "Encryption (starttls/ssl/none)" },
-    { key: "from_address", label: "From Address" },
-    { key: "imap_host", label: "IMAP Host" },
-    { key: "imap_port", label: "IMAP Port" },
-    { key: "imap_username", label: "IMAP Username" },
-    { key: "imap_password", label: "IMAP Password", secret: true },
-    { key: "imap_folder", label: "IMAP Folder" },
+    { key: "smtp_host", labelKey: "field_smtp_host" },
+    { key: "smtp_port", labelKey: "field_smtp_port" },
+    { key: "smtp_username", labelKey: "field_smtp_username" },
+    { key: "smtp_password", labelKey: "field_smtp_password", secret: true },
+    { key: "smtp_encryption", labelKey: "field_smtp_encryption" },
+    { key: "from_address", labelKey: "field_from_address" },
+    { key: "imap_host", labelKey: "field_imap_host" },
+    { key: "imap_port", labelKey: "field_imap_port" },
+    { key: "imap_username", labelKey: "field_imap_username" },
+    { key: "imap_password", labelKey: "field_imap_password", secret: true },
+    { key: "imap_folder", labelKey: "field_imap_folder" },
   ],
   twilio_sms: [
-    { key: "account_sid", label: "Account SID" },
-    { key: "auth_token", label: "Auth Token", secret: true },
-    { key: "from_number", label: "From Number" },
+    { key: "account_sid", labelKey: "field_account_sid" },
+    { key: "auth_token", labelKey: "field_auth_token", secret: true },
+    { key: "from_number", labelKey: "field_from_number" },
   ],
   webhook: [
-    { key: "outbound_url", label: "Outbound URL" },
-    { key: "secret", label: "Shared Secret", secret: true },
+    { key: "outbound_url", labelKey: "field_outbound_url" },
+    { key: "secret", labelKey: "field_shared_secret", secret: true },
   ],
 };
 
@@ -237,8 +237,8 @@ export default function IntegrationsPage() {
               <div key={channel.id} className="rounded-md border border-border p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="font-medium text-text-primary">
-                      {channel.display_name} <span className="text-xs text-text-secondary">({channel.channel_type})</span>
+                    <p className="flex items-center gap-2 font-medium text-text-primary">
+                      {channel.display_name} <ChannelTypeBadge channelType={channel.channel_type} />
                     </p>
                     {credential && (
                       <div className="mt-1 flex items-center gap-2 text-xs text-text-secondary">
@@ -292,7 +292,7 @@ export default function IntegrationsPage() {
                         onChange={(e) => setSelectedProvider(e.target.value as ProviderName)}
                       >
                         {providers.map((p) => (
-                          <option key={p} value={p}>{p}</option>
+                          <option key={p} value={p}>{t(`provider_${p}` as any)}</option>
                         ))}
                       </SelectField>
                     )}
@@ -301,7 +301,7 @@ export default function IntegrationsPage() {
                         {PROVIDER_FIELDS[selectedProvider].map((field) => (
                           <TextField
                             key={field.key}
-                            label={field.label}
+                            label={t(field.labelKey as any)}
                             type={field.secret ? "password" : "text"}
                             value={form[field.key] ?? ""}
                             onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
@@ -352,7 +352,7 @@ export default function IntegrationsPage() {
                   <tr key={entry.id} className="border-b border-border last:border-0">
                     <td className="px-3 py-2">
                       <Badge tone={entry.status === "sent" ? "success" : entry.status === "failed" ? "danger" : "warning"}>
-                        {entry.status}
+                        {t(`queueStatus_${entry.status}` as any)}
                       </Badge>
                     </td>
                     <td className="px-3 py-2 text-text-secondary">{entry.attempts}/{entry.max_attempts}</td>
@@ -401,9 +401,11 @@ export default function IntegrationsPage() {
               <tbody>
                 {logs.map((entry) => (
                   <tr key={entry.id} className="border-b border-border last:border-0">
-                    <td className="px-3 py-2 text-text-secondary">{entry.direction}</td>
-                    <td className="px-3 py-2 text-text-secondary">{entry.provider}</td>
-                    <td className="px-3 py-2 text-text-secondary">{entry.action}</td>
+                    <td className="px-3 py-2 text-text-secondary">
+                      {entry.direction === "outbound" ? t("outbound") : t("inboundWebhookMonitor")}
+                    </td>
+                    <td className="px-3 py-2 text-text-secondary">{t(`provider_${entry.provider}` as any)}</td>
+                    <td className="px-3 py-2 text-text-secondary">{t(`action_${entry.action}` as any)}</td>
                     <td className="px-3 py-2">
                       <Badge tone={entry.success ? "success" : "danger"}>
                         {entry.success ? t("success") : t("failure")}

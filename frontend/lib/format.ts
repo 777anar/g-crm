@@ -1,9 +1,20 @@
+const BCP47_BY_LOCALE: Record<string, string> = { az: "az", ru: "ru", en: "en-US" };
+
+/** Reads the same localStorage key lib/i18n/locale-context.tsx persists the
+ * active locale under, so plain (non-React) formatting helpers render dates
+ * in the language the user actually has selected instead of always English. */
+export function activeDateLocale(): string {
+  if (typeof window === "undefined") return "az";
+  const stored = window.localStorage.getItem("g_erp_locale");
+  return (stored && BCP47_BY_LOCALE[stored]) || "az";
+}
+
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString(activeDateLocale(), { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("en-US", {
+  return new Date(iso).toLocaleString(activeDateLocale(), {
     year: "numeric",
     month: "short",
     day: "numeric",

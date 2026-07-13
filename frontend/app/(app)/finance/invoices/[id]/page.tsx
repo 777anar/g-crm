@@ -12,6 +12,7 @@ import {
   updateInvoice,
   updateInvoiceStatus,
 } from "@/lib/api/finance";
+import { getOrder } from "@/lib/api/orders";
 import { PAYMENT_METHODS, type Invoice, type InvoiceLine, type Payment } from "@/lib/types";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export default function InvoiceDetailPage() {
   const toast = useToast();
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [lines, setLines] = useState<InvoiceLine[] | null>(null);
   const [payments, setPayments] = useState<Payment[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,7 @@ export default function InvoiceDetailPage() {
     const inv = await getInvoice(id);
     setInvoice(inv);
     setForm({ due_date: inv.due_date ?? "", notes: inv.notes ?? "" });
+    getOrder(inv.order_id).then((o) => setOrderNumber(o.order_number)).catch(() => {});
     const [linesRes, paymentsRes] = await Promise.all([listInvoiceLines(id), listInvoicePayments(id)]);
     setLines(linesRes.items);
     setPayments(paymentsRes.items);
@@ -140,7 +143,7 @@ export default function InvoiceDetailPage() {
             <InvoiceStatusBadge status={invoice.status} />
           </div>
           <p className="mt-1 text-xs text-text-secondary">
-            {t("forOrder")}: <Link href={`/orders/${invoice.order_id}`} className="text-primary hover:underline">{invoice.order_id}</Link>
+            {t("forOrder")}: <Link href={`/orders/${invoice.order_id}`} className="text-primary hover:underline">{orderNumber ?? tCommon("loading")}</Link>
           </p>
         </div>
         <div className="flex gap-2">
@@ -153,7 +156,9 @@ export default function InvoiceDetailPage() {
               {invoice.status === "sent" && (
                 <Button variant="secondary" onClick={handleMarkOverdue} disabled={busy}>{t("markOverdue")}</Button>
               )}
-              <Button variant="destructive" onClick={() => setCancelMode(!cancelMode)}>{t("cancelInvoice")}</Button>
+              {!cancelMode && (
+                <Button variant="destructive" onClick={() => setCancelMode(true)}>{t("cancelInvoice")}</Button>
+              )}
             </>
           )}
         </div>
@@ -165,6 +170,7 @@ export default function InvoiceDetailPage() {
           <textarea
             className={`${inputClasses} mb-2 w-full`}
             rows={2}
+            aria-label={t("cancelReason")}
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
           />
@@ -199,10 +205,10 @@ export default function InvoiceDetailPage() {
             <div>
               <label className="text-xs text-text-secondary">{t("dueDate")}</label>
               <input
+                type="date"
                 className={`${inputClasses} mt-0.5 w-full`}
                 value={form.due_date}
                 onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-                placeholder="YYYY-MM-DD"
               />
             </div>
             <div>
@@ -233,7 +239,7 @@ export default function InvoiceDetailPage() {
       </Card>
 
       <Card className="p-0 overflow-hidden">
-        <div className="flex items-center justify-between bg-text-primary px-4 py-3 text-white">
+        <div className="flex items-center justify-between bg-primary px-4 py-3 text-white">
           <h2 className="font-semibold">{t("lineItems")}</h2>
         </div>
         <div className="overflow-x-auto">

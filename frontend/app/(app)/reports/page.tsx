@@ -74,6 +74,7 @@ export default function ExecutiveDashboardPage() {
                   { key: "revenue", label: t("kpiRevenue"), ...TREND_COLORS.revenue },
                   { key: "profit", label: t("kpiProfit"), ...TREND_COLORS.profit },
                 ]}
+                emptyLabel={t("noDataPeriod")}
               />
             </Card>
 

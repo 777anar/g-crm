@@ -52,14 +52,20 @@ export default function CrewsPage() {
       await createCrew({ name: newCrewName.trim() });
       setNewCrewName("");
       loadCrews();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
     } finally {
       setCreating(false);
     }
   }
 
   async function handleToggleStatus(crew: Crew) {
-    await updateCrew(crew.id, { status: crew.status === "active" ? "inactive" : "active" });
-    loadCrews();
+    try {
+      await updateCrew(crew.id, { status: crew.status === "active" ? "inactive" : "active" });
+      loadCrews();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    }
   }
 
   async function handleExpand(crewId: string) {
@@ -70,20 +76,32 @@ export default function CrewsPage() {
     }
     setExpandedCrewId(crewId);
     setMembers(null);
-    const res = await listCrewMembers(crewId);
-    setMembers(res.items);
+    try {
+      const res = await listCrewMembers(crewId);
+      setMembers(res.items);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    }
   }
 
   async function handleAddMember(crewId: string) {
     if (!selectedUserId) return;
-    await addCrewMember(crewId, { user_id: selectedUserId });
-    setSelectedUserId("");
-    setMembers((await listCrewMembers(crewId)).items);
+    try {
+      await addCrewMember(crewId, { user_id: selectedUserId });
+      setSelectedUserId("");
+      setMembers((await listCrewMembers(crewId)).items);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    }
   }
 
   async function handleRemoveMember(crewId: string, memberId: string) {
-    await removeCrewMember(crewId, memberId);
-    setMembers((await listCrewMembers(crewId)).items);
+    try {
+      await removeCrewMember(crewId, memberId);
+      setMembers((await listCrewMembers(crewId)).items);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    }
   }
 
   return (

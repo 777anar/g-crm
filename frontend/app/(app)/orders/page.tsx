@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { listOrders } from "@/lib/api/orders";
+import { getProject } from "@/lib/api/sales";
 import { ORDER_STATUSES, type Order } from "@/lib/types";
 import { OrderStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -22,6 +23,7 @@ export default function OrdersPage() {
   const router = useRouter();
 
   const [orders, setOrders] = useState<Order[] | null>(null);
+  const [projectNames, setProjectNames] = useState<Record<string, string>>({});
   const [statusFilter, setStatusFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [sort, setSort] = useState("-created_at");
@@ -30,7 +32,20 @@ export default function OrdersPage() {
 
   const load = useCallback(() => {
     listOrders({ status: statusFilter || undefined, search: search || undefined, sort })
-      .then((r) => setOrders(r.items))
+      .then((r) => {
+        setOrders(r.items);
+        const uniqueProjectIds = Array.from(new Set(r.items.map((o) => o.project_id)));
+        Promise.all(
+          uniqueProjectIds.map((id) =>
+            getProject(id)
+              .then((p) => [id, p.name] as const)
+              .catch(() => null)
+          )
+        ).then((pairs) => {
+          const resolved = pairs.filter((p): p is readonly [string, string] => p !== null);
+          setProjectNames(Object.fromEntries(resolved));
+        });
+      })
       .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
   }, [statusFilter, search, sort, t]);
 
@@ -103,7 +118,7 @@ export default function OrdersPage() {
                 >
                   <td className="px-4 py-2 font-mono font-medium text-text-primary">{o.order_number}</td>
                   <td className="px-4 py-2"><OrderStatusBadge status={o.status} /></td>
-                  <td className="px-4 py-2 text-text-secondary">{o.project_id}</td>
+                  <td className="px-4 py-2 text-text-secondary">{projectNames[o.project_id] ?? tCommon("loading")}</td>
                   <td className="px-4 py-2 text-text-primary">{o.currency} {parseFloat(o.total_final).toFixed(2)}</td>
                   <td className="px-4 py-2 text-text-secondary">
                     {o.scheduled_production_date ? formatDate(o.scheduled_production_date) : tCommon("dash")}

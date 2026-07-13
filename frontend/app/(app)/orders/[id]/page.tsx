@@ -16,6 +16,7 @@ import {
 import { createWorkOrder, getWorkOrderForOrder } from "@/lib/api/production";
 import { createInstallationJob, getInstallationJobForOrder } from "@/lib/api/installation";
 import { createInvoice, getInvoiceForOrder } from "@/lib/api/finance";
+import { getQuote } from "@/lib/api/sales";
 import type { Order, OrderItem, OrderMeasurement, OrderSection, WorkOrder, InstallationJob, Invoice } from "@/lib/types";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,7 @@ export default function OrderDetailPage() {
   const toast = useToast();
 
   const [order, setOrder] = useState<Order | null>(null);
+  const [quoteNumber, setQuoteNumber] = useState<string | null>(null);
   const [sectionData, setSectionData] = useState<SectionData[] | null>(null);
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [installationJob, setInstallationJob] = useState<InstallationJob | null>(null);
@@ -88,6 +90,7 @@ export default function OrderDetailPage() {
   const reload = useCallback(async () => {
     const o = await getOrder(id);
     setOrder(o);
+    getQuote(o.quote_id).then((q) => setQuoteNumber(q.quote_number)).catch(() => {});
     setForm({
       notes: o.notes ?? "",
       production_notes: o.production_notes ?? "",
@@ -252,7 +255,7 @@ export default function OrderDetailPage() {
             <h1 className="font-mono text-xl font-semibold text-text-primary">{order.order_number}</h1>
             <OrderStatusBadge status={order.status} />
           </div>
-          <p className="mt-1 text-xs text-text-secondary">{t("fromQuote")}: {order.quote_id}</p>
+          <p className="mt-1 text-xs text-text-secondary">{t("fromQuote")}: {quoteNumber ?? tCommon("loading")}</p>
         </div>
         {!isTerminal && (
           <div className="flex gap-2">
@@ -261,9 +264,11 @@ export default function OrderDetailPage() {
                 {transitioning ? t("saving") : `→ ${t(nextStatus as any)}`}
               </Button>
             )}
-            <Button variant="secondary" onClick={() => setCancelMode(!cancelMode)}>
-              {t("markCancelled")}
-            </Button>
+            {!cancelMode && (
+              <Button variant="secondary" onClick={() => setCancelMode(true)}>
+                {t("markCancelled")}
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -274,6 +279,7 @@ export default function OrderDetailPage() {
           <textarea
             className={`${inputClasses} mb-2 w-full`}
             rows={2}
+            aria-label={t("cancelReason")}
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
           />
@@ -414,7 +420,7 @@ export default function OrderDetailPage() {
       {/* Sections */}
       {sectionData?.map(({ section, items, measurements }) => (
         <Card key={section.id} className="p-0 overflow-hidden">
-          <div className="flex items-center justify-between bg-text-primary px-4 py-3 text-white">
+          <div className="flex items-center justify-between bg-primary px-4 py-3 text-white">
             <h2 className="font-semibold">{section.name}</h2>
             <span className="text-sm">{order.currency} {parseFloat(section.subtotal_sale).toFixed(2)}</span>
           </div>

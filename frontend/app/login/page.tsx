@@ -105,7 +105,7 @@ export default function LoginPage() {
                 className="justify-between"
               >
                 <span>{c.name}</span>
-                <span className="text-xs text-text-secondary">{c.role}</span>
+                <span className="text-xs text-text-secondary">{t(`role_${c.role}` as any)}</span>
               </Button>
             ))}
             {error && <p className="text-sm text-danger">{error}</p>}

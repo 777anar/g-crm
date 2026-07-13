@@ -92,6 +92,7 @@ export function RecommendationCard({
 
       {editing && (
         <div className="flex flex-col gap-2">
+          <p className="text-xs text-text-secondary">{t("editJsonHint")}</p>
           <textarea
             value={editText}
             onChange={(e) => setEditText(e.target.value)}

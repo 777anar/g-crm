@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -22,9 +22,11 @@ import {
   useResizableColumns,
   useSavedFilters,
 } from "@/components/ui/data-table";
+import { SortableHeader } from "@/components/ui/sortable-header";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { useListShortcuts } from "@/lib/use-list-shortcuts";
 
 const TABLE_ID = "crm-tasks";
 
@@ -55,6 +57,9 @@ export default function TasksPage() {
   const [sort, setSort] = useState("due_date");
   const [error, setError] = useState<string | null>(null);
   const search = useDebouncedValue(searchInput, 250);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useListShortcuts({ searchInputRef, onCreate: () => router.push("/crm/tasks/new") });
 
   const columnDefs = [
     { id: "title", label: t("tableTitle") },
@@ -141,10 +146,11 @@ export default function TasksPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <input
+            ref={searchInputRef}
             type="search"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={tCommon("search")}
+            placeholder={t("searchPlaceholder")}
             className="w-full max-w-xs rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
           />
           <select
@@ -233,22 +239,34 @@ export default function TasksPage() {
             <thead className={stickyTheadClass}>
               <tr>
                 {isVisible("title") && (
-                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("title") }}>
-                    {t("tableTitle")}
-                    <ColumnResizeHandle onMouseDown={startResize("title")} />
-                  </th>
+                  <SortableHeader
+                    field="title"
+                    label={t("tableTitle")}
+                    sort={sort}
+                    onSortChange={setSort}
+                    width={widthOf("title")}
+                    resizeHandle={<ColumnResizeHandle onMouseDown={startResize("title")} />}
+                  />
                 )}
                 {isVisible("status") && (
-                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("status") }}>
-                    {t("tableStatus")}
-                    <ColumnResizeHandle onMouseDown={startResize("status")} />
-                  </th>
+                  <SortableHeader
+                    field="status"
+                    label={t("tableStatus")}
+                    sort={sort}
+                    onSortChange={setSort}
+                    width={widthOf("status")}
+                    resizeHandle={<ColumnResizeHandle onMouseDown={startResize("status")} />}
+                  />
                 )}
                 {isVisible("priority") && (
-                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("priority") }}>
-                    {t("tablePriority")}
-                    <ColumnResizeHandle onMouseDown={startResize("priority")} />
-                  </th>
+                  <SortableHeader
+                    field="priority"
+                    label={t("tablePriority")}
+                    sort={sort}
+                    onSortChange={setSort}
+                    width={widthOf("priority")}
+                    resizeHandle={<ColumnResizeHandle onMouseDown={startResize("priority")} />}
+                  />
                 )}
                 {isVisible("assignee") && (
                   <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("assignee") }}>
@@ -257,10 +275,14 @@ export default function TasksPage() {
                   </th>
                 )}
                 {isVisible("dueDate") && (
-                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("dueDate") }}>
-                    {t("tableDueDate")}
-                    <ColumnResizeHandle onMouseDown={startResize("dueDate")} />
-                  </th>
+                  <SortableHeader
+                    field="due_date"
+                    label={t("tableDueDate")}
+                    sort={sort}
+                    onSortChange={setSort}
+                    width={widthOf("dueDate")}
+                    resizeHandle={<ColumnResizeHandle onMouseDown={startResize("dueDate")} />}
+                  />
                 )}
                 {isVisible("tags") && (
                   <th className="px-4 py-2 font-medium" style={{ width: widthOf("tags") }}>

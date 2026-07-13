@@ -76,12 +76,14 @@ export default function SalesAnalyticsPage() {
                   label: tSales(`projectType_${r.project_type}` as any),
                   value: parseFloat(r.revenue),
                 }))}
+                emptyLabel={t("noDataPeriod")}
               />
             </Card>
             <Card>
               <CardHeader title={t("topCustomers")} />
               <CategoryBarChart
                 data={data.top_customers.map((r) => ({ label: r.customer_name, value: parseFloat(r.revenue) }))}
+                emptyLabel={t("noDataPeriod")}
               />
             </Card>
           </div>
@@ -89,7 +91,7 @@ export default function SalesAnalyticsPage() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader title={t("quoteTrend")} />
-              <TrendChart data={data.monthly_trend} series={trendSeries} />
+              <TrendChart data={data.monthly_trend} series={trendSeries} emptyLabel={t("noDataPeriod")} />
             </Card>
             <Card>
               <CardHeader title={t("quotesByStatus")} />

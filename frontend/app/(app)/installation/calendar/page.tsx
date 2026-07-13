@@ -8,6 +8,7 @@ import type { InstallationJob } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiRequestError } from "@/lib/api-client";
+import { activeDateLocale } from "@/lib/format";
 
 const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
@@ -67,7 +68,7 @@ export default function InstallationCalendarPage() {
     setMonth(now.getMonth());
   }
 
-  const monthLabel = firstOfMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const monthLabel = firstOfMonth.toLocaleDateString(activeDateLocale(), { month: "long", year: "numeric" });
   const cells: (number | null)[] = [
     ...Array.from({ length: leadingBlanks }, () => null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),

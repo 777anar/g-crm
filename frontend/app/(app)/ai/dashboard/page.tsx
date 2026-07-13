@@ -11,6 +11,7 @@ import { StatusBarList } from "@/components/ui/charts";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCardSkeleton, TableSkeleton } from "@/components/ui/skeleton";
+import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
 import { RecommendationCard } from "@/components/recommendation-card";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
@@ -109,7 +110,7 @@ export default function AIDashboardPage() {
         <CardHeader title={t("runAnalysis")} />
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="text-xs text-text-secondary">{t("analyzeLead")}</label>
+            <label className="text-xs text-text-secondary">{t("leadFieldLabel")}</label>
             <select
               value={selectedLeadId}
               onChange={(e) => setSelectedLeadId(e.target.value)}
@@ -212,9 +213,9 @@ export default function AIDashboardPage() {
         {dashboard.recent_activity.length === 0 ? (
           <EmptyState title={t("noActivityYet")} />
         ) : (
-          <div className="overflow-x-auto">
+          <div className={tableScrollShellClass}>
             <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 z-10 border-b border-border bg-surface text-text-secondary">
+              <thead className={stickyTheadClass}>
                 <tr>
                   <th className="px-2 py-1 font-medium">{t("tableType")}</th>
                   <th className="px-2 py-1 font-medium">{t("tableSummary")}</th>

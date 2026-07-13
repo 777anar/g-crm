@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createMaterial, listBrands, listCollections } from "@/lib/api/catalog";
 import { SUGGESTED_MATERIAL_TYPES, type Brand, type Collection } from "@/lib/types";
+
+function materialTypeKey(type: string): string {
+  return `materialType_${type.toLowerCase().replace(/ /g, "_")}`;
+}
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -99,7 +103,7 @@ export default function NewMaterialPage() {
               <option value="">{tCommon("dash")}</option>
               {SUGGESTED_MATERIAL_TYPES.map((type) => (
                 <option key={type} value={type}>
-                  {type}
+                  {t(materialTypeKey(type) as any)}
                 </option>
               ))}
             </SelectField>

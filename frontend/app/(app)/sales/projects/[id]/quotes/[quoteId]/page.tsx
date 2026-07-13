@@ -113,6 +113,8 @@ export default function QuoteBuilderPage() {
       await createSection(quoteId, { name: newSectionName.trim(), sort_order: (sectionData?.length ?? 0) });
       setNewSectionName("");
       await reload();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
     } finally {
       setAddingSection(false);
     }
@@ -129,8 +131,12 @@ export default function QuoteBuilderPage() {
   }
 
   async function handleAddItem(sectionId: string, itemType: string) {
-    await createItem(sectionId, { item_type: itemType, quantity: "1", unit_sale_price: "0" });
-    await reload();
+    try {
+      await createItem(sectionId, { item_type: itemType, quantity: "1", unit_sale_price: "0" });
+      await reload();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    }
   }
 
   async function handleUpdateItemPrice(
@@ -138,30 +144,50 @@ export default function QuoteBuilderPage() {
     field: "unit_sale_price" | "unit_cost_price" | "quantity",
     value: string
   ) {
-    await updateItem(itemId, { [field]: value });
-    await reload();
+    try {
+      await updateItem(itemId, { [field]: value });
+      await reload();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    }
   }
 
   async function handleDeleteItem(itemId: string) {
-    await deleteItem(itemId);
-    await reload();
+    try {
+      await deleteItem(itemId);
+      await reload();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    }
   }
 
   async function handleAddMeasurement(sectionId: string) {
-    await createMeasurement(sectionId, { quantity: 1, waste_pct: "10" });
-    await reload();
+    try {
+      await createMeasurement(sectionId, { quantity: 1, waste_pct: "10" });
+      await reload();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    }
   }
 
   async function handleDeleteMeasurement(measurementId: string) {
-    await deleteMeasurement(measurementId);
-    await reload();
+    try {
+      await deleteMeasurement(measurementId);
+      await reload();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    }
   }
 
   async function handleStatusChange(status: string) {
-    const newQuote = await updateQuoteStatus(quoteId, status);
-    setQuote(newQuote);
-    if (newQuote.id !== quoteId) {
-      router.replace(`/sales/projects/${id}/quotes/${newQuote.id}`);
+    try {
+      const newQuote = await updateQuoteStatus(quoteId, status);
+      setQuote(newQuote);
+      if (newQuote.id !== quoteId) {
+        router.replace(`/sales/projects/${id}/quotes/${newQuote.id}`);
+      }
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
     }
   }
 
@@ -331,10 +357,10 @@ export default function QuoteBuilderPage() {
       {/* Sections */}
       {sectionData?.map(({ section, items, measurements }) => (
         <Card key={section.id} className="p-0 overflow-hidden">
-          <div className="flex items-center justify-between bg-text-primary px-4 py-3 text-white">
+          <div className="flex items-center justify-between bg-primary px-4 py-3 text-white">
             <h2 className="font-semibold">{section.name}</h2>
             <div className="flex items-center gap-4 text-sm">
-              <span>{t("subtotal")}: {parseFloat(section.subtotal_sale).toFixed(2)}</span>
+              <span>{t("subtotal")}: {quote.currency} {parseFloat(section.subtotal_sale).toFixed(2)}</span>
               {isEditable && (
                 <button onClick={() => handleDeleteSection(section.id)} className="text-white/60 hover:text-white">
                   ✕

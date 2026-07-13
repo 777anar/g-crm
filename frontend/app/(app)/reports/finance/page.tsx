@@ -71,12 +71,14 @@ export default function FinanceAnalyticsPage() {
                   { key: "cost", label: t("kpiCost"), ...TREND_COLORS.cost },
                   { key: "profit", label: t("kpiProfit"), ...TREND_COLORS.profit },
                 ]}
+                emptyLabel={t("noDataPeriod")}
               />
             </Card>
             <Card>
               <CardHeader title={t("revenueByCurrency")} />
               <CategoryBarChart
                 data={data.revenue_by_currency.map((r) => ({ label: r.currency, value: parseFloat(r.revenue) }))}
+                emptyLabel={t("noDataPeriod")}
               />
             </Card>
           </div>

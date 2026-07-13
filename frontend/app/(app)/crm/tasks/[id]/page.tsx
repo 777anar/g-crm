@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   deleteTask,
+  getCustomer,
   getTask,
   listTaskSeries,
   updateTask,
@@ -39,6 +40,7 @@ export default function TaskDetailPage() {
   const [task, setTask] = useState<Task | null>(null);
   const [series, setSeries] = useState<Task[] | null>(null);
   const [users, setUsers] = useState<CompanyUser[]>([]);
+  const [relatedCustomerName, setRelatedCustomerName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [cancelMode, setCancelMode] = useState(false);
@@ -73,6 +75,12 @@ export default function TaskDetailPage() {
       setSeries(null);
     }
 
+    if (fetched.related_entity_type === "customer" && fetched.related_entity_id) {
+      getCustomer(fetched.related_entity_id).then((c) => setRelatedCustomerName(c.name)).catch(() => {});
+    } else {
+      setRelatedCustomerName(null);
+    }
+
     setLoading(false);
   }, [id]);
 
@@ -88,23 +96,34 @@ export default function TaskDetailPage() {
       await updateTaskStatus(id, status, reason);
       setCancelMode(false);
       await reload();
+      toast.success(t("statusUpdated"));
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setBusy(false);
     }
   }
 
   async function handleSave() {
-    await updateTask(id, {
-      title: form.title,
-      description: form.description || undefined,
-      priority: form.priority,
-      due_date: fromDatetimeLocalValue(form.due_date),
-      remind_at: fromDatetimeLocalValue(form.remind_at),
-      assigned_to: form.assigned_to || undefined,
-      tags: form.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
-    });
-    setEditMode(false);
-    await reload();
+    setBusy(true);
+    try {
+      await updateTask(id, {
+        title: form.title,
+        description: form.description || undefined,
+        priority: form.priority,
+        due_date: fromDatetimeLocalValue(form.due_date),
+        remind_at: fromDatetimeLocalValue(form.remind_at),
+        assigned_to: form.assigned_to || undefined,
+        tags: form.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+      });
+      setEditMode(false);
+      await reload();
+      toast.success(t("taskUpdated"));
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleDelete() {
@@ -137,7 +156,7 @@ export default function TaskDetailPage() {
             <p className="mt-1 text-xs text-text-secondary">
               {t("relatedTo")}:{" "}
               <Link href={`/crm/customers/${task.related_entity_id}`} className="text-primary hover:underline">
-                {t("relatedCustomer")}
+                {relatedCustomerName ?? tCommon("loading")}
               </Link>
             </p>
           )}
@@ -254,7 +273,7 @@ export default function TaskDetailPage() {
 
       {series && series.length > 0 && (
         <Card className="p-0 overflow-hidden">
-          <div className="bg-text-primary px-4 py-3 text-white">
+          <div className="bg-primary px-4 py-3 text-white">
             <h2 className="font-semibold">{t("series")}</h2>
           </div>
           <div className="overflow-x-auto">

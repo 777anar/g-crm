@@ -178,7 +178,7 @@ export default function CustomerProfilePage() {
   const { customer, attachments, timeline, projects, quotes, orders, payments } = profile;
 
   const crossModuleSections = [
-    { label: t("projects"), count: projects.length, module: t("viaProduction") },
+    { label: t("projects"), count: projects.length, module: t("viaSales") },
     { label: t("quotes"), count: quotes.length, module: t("viaSales") },
     { label: t("orders"), count: orders.length, module: t("viaSales") },
     { label: t("payments"), count: payments.length, module: t("viaFinance") },
@@ -329,7 +329,7 @@ export default function CustomerProfilePage() {
               label={t("notes")}
               value={customerNotes}
               onChange={(e) => setCustomerNotes(e.target.value)}
-              placeholder={t("addNotePlaceholder")}
+              placeholder={t("generalNotePlaceholder")}
             />
             <div className="mt-2 flex justify-end">
               <Button

@@ -16,6 +16,7 @@ import {
   listMaterialImages,
   listMaterialSizes,
   listMaterialThicknesses,
+  listPriceLists,
   listPricesForMaterial,
   listSlabs,
   updateMaterial,
@@ -34,6 +35,7 @@ import {
   type MaterialImage,
   type MaterialSize,
   type MaterialThickness,
+  type PriceList,
   type PriceListEntry,
   type Slab,
 } from "@/lib/types";
@@ -61,6 +63,7 @@ export default function MaterialDetailPage() {
   const [documents, setDocuments] = useState<MaterialDocumentAsset[]>([]);
   const [slabs, setSlabs] = useState<Slab[]>([]);
   const [prices, setPrices] = useState<PriceListEntry[]>([]);
+  const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [thicknesses, setThicknesses] = useState<MaterialThickness[]>([]);
   const [sizes, setSizes] = useState<MaterialSize[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +79,7 @@ export default function MaterialDetailPage() {
     try {
       const m = await getMaterial(materialId);
       setMaterial(m);
-      const [b, imgs, docs, slabRes, priceRes, thicknessRes, sizeRes] = await Promise.all([
+      const [b, imgs, docs, slabRes, priceRes, thicknessRes, sizeRes, priceListRes] = await Promise.all([
         getBrand(m.brand_id),
         listMaterialImages(materialId),
         listMaterialDocuments(materialId),
@@ -84,6 +87,7 @@ export default function MaterialDetailPage() {
         listPricesForMaterial(materialId),
         listMaterialThicknesses(materialId),
         listMaterialSizes(materialId),
+        listPriceLists({ includeHidden: true }),
       ]);
       setBrand(b);
       setImages(imgs.items);
@@ -92,6 +96,7 @@ export default function MaterialDetailPage() {
       setPrices(priceRes.items);
       setThicknesses(thicknessRes.items);
       setSizes(sizeRes.items);
+      setPriceLists(priceListRes.items);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : tDetail("loadFailed"));
     }
@@ -293,7 +298,7 @@ export default function MaterialDetailPage() {
         <CardHeader title={tDetail("images")} />
         <div className="mb-3 flex flex-wrap items-end gap-3">
           <SelectField
-            label={tDetail("images")}
+            label={tDetail("imageTypeLabel")}
             value={imageType}
             onChange={(e) => setImageType(e.target.value as ImageType)}
           >
@@ -329,7 +334,7 @@ export default function MaterialDetailPage() {
         <CardHeader title={tDetail("documents")} />
         <div className="mb-3 flex flex-wrap items-end gap-3">
           <SelectField
-            label={tDetail("documents")}
+            label={tDetail("documentTypeLabel")}
             value={documentType}
             onChange={(e) => setDocumentType(e.target.value as CatalogDocumentType)}
           >
@@ -367,19 +372,24 @@ export default function MaterialDetailPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border text-text-secondary">
               <tr>
-                <th className="py-1.5 font-medium">{t("currency")}</th>
+                <th className="py-1.5 font-medium">{tDetail("priceList")}</th>
                 <th className="py-1.5 font-medium">{t("costPrice")}</th>
                 <th className="py-1.5 font-medium">{t("salePrice")}</th>
               </tr>
             </thead>
             <tbody>
-              {prices.map((entry) => (
-                <tr key={entry.id} className="border-b border-border last:border-0">
-                  <td className="py-1.5 text-text-secondary">{entry.price_list_id.slice(0, 8)}</td>
-                  <td className="py-1.5 text-text-primary">{entry.cost_price}</td>
-                  <td className="py-1.5 text-text-primary">{entry.sale_price}</td>
-                </tr>
-              ))}
+              {prices.map((entry) => {
+                const priceList = priceLists.find((pl) => pl.id === entry.price_list_id);
+                return (
+                  <tr key={entry.id} className="border-b border-border last:border-0">
+                    <td className="py-1.5 text-text-secondary">
+                      {priceList ? `${priceList.name} (${priceList.currency})` : tCommon("loading")}
+                    </td>
+                    <td className="py-1.5 text-text-primary">{entry.cost_price}</td>
+                    <td className="py-1.5 text-text-primary">{entry.sale_price}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           </div>

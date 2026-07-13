@@ -84,7 +84,7 @@ export default function PriceListDetailPage() {
       />
 
       <Card>
-        <CardHeader title={t("priceListsTitle")} />
+        <CardHeader title={t("addUpdatePriceTitle")} />
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-4" onSubmit={handleUpsert}>
           <SelectField label={t("material")} value={materialId} onChange={(e) => setMaterialId(e.target.value)} required>
             {materials.map((m) => (

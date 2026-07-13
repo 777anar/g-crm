@@ -55,6 +55,7 @@ import { ProjectStatusBadge, QuoteStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { ApiRequestError } from "@/lib/api-client";
@@ -87,6 +88,7 @@ export default function ProjectDetailPage() {
   const tNav = useTranslations("nav");
   const router = useRouter();
   const confirm = useConfirm();
+  const toast = useToast();
 
   const [tab, setTab] = useState<Tab>("overview");
 
@@ -270,6 +272,8 @@ export default function ProjectDetailPage() {
     try {
       const q = await createQuote(id);
       router.push(`/sales/projects/${id}/quotes/${q.id}`);
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
     } finally {
       setCreatingQuote(false);
     }
@@ -277,45 +281,61 @@ export default function ProjectDetailPage() {
 
   async function handleCreateRoom(e: React.FormEvent) {
     e.preventDefault();
-    await createRoom(id, { room_type: newRoomType, name: newRoomName || undefined });
-    setAddingRoom(false);
-    setNewRoomName("");
-    await loadRoomsAndItems();
+    try {
+      await createRoom(id, { room_type: newRoomType, name: newRoomName || undefined });
+      setAddingRoom(false);
+      setNewRoomName("");
+      await loadRoomsAndItems();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
   }
 
   async function handleDeleteRoom(roomId: string) {
     if (!(await confirm(tCommon("confirmDelete")))) return;
-    await deleteRoom(roomId);
-    await loadRoomsAndItems();
+    try {
+      await deleteRoom(roomId);
+      await loadRoomsAndItems();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
   }
 
   async function handleCreateItem(e: React.FormEvent, roomId: string) {
     e.preventDefault();
-    await createProjectItem(roomId, {
-      item_type: newItemType,
-      name: newItemName || undefined,
-      material_id: newItemMaterialId || undefined,
-      material_thickness_id: newItemThicknessId || undefined,
-      material_size_id: newItemSizeId || undefined,
-      quantity: newItemQuantity,
-      notes: newItemNotes || undefined,
-    });
-    setAddingItemToRoom(null);
-    setNewItemName("");
-    setNewItemBrandId("");
-    setNewItemStoneSearch("");
-    setNewItemMaterialId("");
-    setNewItemThicknessId("");
-    setNewItemSizeId("");
-    setNewItemQuantity("1");
-    setNewItemNotes("");
-    await loadRoomsAndItems();
+    try {
+      await createProjectItem(roomId, {
+        item_type: newItemType,
+        name: newItemName || undefined,
+        material_id: newItemMaterialId || undefined,
+        material_thickness_id: newItemThicknessId || undefined,
+        material_size_id: newItemSizeId || undefined,
+        quantity: newItemQuantity,
+        notes: newItemNotes || undefined,
+      });
+      setAddingItemToRoom(null);
+      setNewItemName("");
+      setNewItemBrandId("");
+      setNewItemStoneSearch("");
+      setNewItemMaterialId("");
+      setNewItemThicknessId("");
+      setNewItemSizeId("");
+      setNewItemQuantity("1");
+      setNewItemNotes("");
+      await loadRoomsAndItems();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
   }
 
   async function handleDeleteItem(itemId: string) {
     if (!(await confirm(tCommon("confirmDelete")))) return;
-    await deleteProjectItem(itemId);
-    await loadRoomsAndItems();
+    try {
+      await deleteProjectItem(itemId);
+      await loadRoomsAndItems();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
   }
 
   async function handleItemStatusChange(
@@ -323,8 +343,12 @@ export default function ProjectDetailPage() {
     field: "production_status" | "installation_status" | "completion_status",
     value: string
   ) {
-    await updateProjectItem(itemId, { [field]: value });
-    await loadRoomsAndItems();
+    try {
+      await updateProjectItem(itemId, { [field]: value });
+      await loadRoomsAndItems();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
   }
 
   function roomLabel(room: Room) {
@@ -345,7 +369,7 @@ export default function ProjectDetailPage() {
   function materialLabel(item: ProjectItem) {
     if (!item.material_id) return tCommon("dash");
     const material = materialsById[item.material_id];
-    if (!material) return item.material_id.slice(0, 8);
+    if (!material) return tCommon("loading");
 
     // Prefer the specific Thickness/Size chosen for this item (Sprint 4's
     // normalized options); fall back to the Stone's legacy single
@@ -602,7 +626,9 @@ export default function ProjectDetailPage() {
                         </option>
                       ))}
                     </SelectField>
-                    <TextAreaField label={t("notes")} value={newItemNotes} onChange={(e) => setNewItemNotes(e.target.value)} />
+                    <div className="sm:col-span-3">
+                      <TextAreaField label={t("notes")} value={newItemNotes} onChange={(e) => setNewItemNotes(e.target.value)} />
+                    </div>
                     <div className="flex items-end sm:col-span-3">
                       <Button type="submit">{tCommon("save")}</Button>
                     </div>
@@ -637,48 +663,76 @@ export default function ProjectDetailPage() {
                           setPhotosByItem((prev) => ({ ...prev, [item.id]: p.items }));
                         }}
                         onAddMeasurement={async (data) => {
-                          await createProjectItemMeasurement(item.id, data);
-                          const m = await listProjectItemMeasurements(item.id);
-                          setMeasurementsByItem((prev) => ({ ...prev, [item.id]: m.items }));
+                          try {
+                            await createProjectItemMeasurement(item.id, data);
+                            const m = await listProjectItemMeasurements(item.id);
+                            setMeasurementsByItem((prev) => ({ ...prev, [item.id]: m.items }));
+                          } catch (err) {
+                            toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+                          }
                         }}
                         onAttachSignature={async (measurementId, file) => {
-                          const doc = await uploadProjectItemAsset(item.id, "project_item_measurement", file);
-                          await updateProjectItemMeasurement(measurementId, {
-                            status: "final",
-                            customer_signature_document_id: doc.id,
-                          });
-                          const m = await listProjectItemMeasurements(item.id);
-                          setMeasurementsByItem((prev) => ({ ...prev, [item.id]: m.items }));
+                          try {
+                            const doc = await uploadProjectItemAsset(item.id, "project_item_measurement", file);
+                            await updateProjectItemMeasurement(measurementId, {
+                              status: "final",
+                              customer_signature_document_id: doc.id,
+                            });
+                            const m = await listProjectItemMeasurements(item.id);
+                            setMeasurementsByItem((prev) => ({ ...prev, [item.id]: m.items }));
+                          } catch (err) {
+                            toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+                          }
                         }}
                         onDeleteMeasurement={async (measurementId) => {
                           if (!(await confirm(tCommon("confirmDelete")))) return;
-                          await deleteProjectItemMeasurement(measurementId);
-                          const m = await listProjectItemMeasurements(item.id);
-                          setMeasurementsByItem((prev) => ({ ...prev, [item.id]: m.items }));
+                          try {
+                            await deleteProjectItemMeasurement(measurementId);
+                            const m = await listProjectItemMeasurements(item.id);
+                            setMeasurementsByItem((prev) => ({ ...prev, [item.id]: m.items }));
+                          } catch (err) {
+                            toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+                          }
                         }}
                         onAddDrawing={async (file, drawingType) => {
-                          const doc = await uploadProjectItemAsset(item.id, "project_item_drawing", file);
-                          await addProjectItemDrawing(item.id, { document_id: doc.id, drawing_type: drawingType });
-                          const d = await listProjectItemDrawings(item.id);
-                          setDrawingsByItem((prev) => ({ ...prev, [item.id]: d.items }));
+                          try {
+                            const doc = await uploadProjectItemAsset(item.id, "project_item_drawing", file);
+                            await addProjectItemDrawing(item.id, { document_id: doc.id, drawing_type: drawingType });
+                            const d = await listProjectItemDrawings(item.id);
+                            setDrawingsByItem((prev) => ({ ...prev, [item.id]: d.items }));
+                          } catch (err) {
+                            toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+                          }
                         }}
                         onDeleteDrawing={async (drawingId) => {
                           if (!(await confirm(tCommon("confirmDelete")))) return;
-                          await deleteProjectItemDrawing(drawingId);
-                          const d = await listProjectItemDrawings(item.id);
-                          setDrawingsByItem((prev) => ({ ...prev, [item.id]: d.items }));
+                          try {
+                            await deleteProjectItemDrawing(drawingId);
+                            const d = await listProjectItemDrawings(item.id);
+                            setDrawingsByItem((prev) => ({ ...prev, [item.id]: d.items }));
+                          } catch (err) {
+                            toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+                          }
                         }}
                         onAddPhoto={async (file, caption) => {
-                          const doc = await uploadProjectItemAsset(item.id, "project_item_photo", file);
-                          await addProjectItemPhoto(item.id, { document_id: doc.id, caption });
-                          const p = await listProjectItemPhotos(item.id);
-                          setPhotosByItem((prev) => ({ ...prev, [item.id]: p.items }));
+                          try {
+                            const doc = await uploadProjectItemAsset(item.id, "project_item_photo", file);
+                            await addProjectItemPhoto(item.id, { document_id: doc.id, caption });
+                            const p = await listProjectItemPhotos(item.id);
+                            setPhotosByItem((prev) => ({ ...prev, [item.id]: p.items }));
+                          } catch (err) {
+                            toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+                          }
                         }}
                         onDeletePhoto={async (photoId) => {
                           if (!(await confirm(tCommon("confirmDelete")))) return;
-                          await deleteProjectItemPhoto(photoId);
-                          const p = await listProjectItemPhotos(item.id);
-                          setPhotosByItem((prev) => ({ ...prev, [item.id]: p.items }));
+                          try {
+                            await deleteProjectItemPhoto(photoId);
+                            const p = await listProjectItemPhotos(item.id);
+                            setPhotosByItem((prev) => ({ ...prev, [item.id]: p.items }));
+                          } catch (err) {
+                            toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+                          }
                         }}
                       />
                     ))}

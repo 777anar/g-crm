@@ -136,6 +136,7 @@ export default function NewTaskPage() {
                 value={recurrenceEndDate}
                 onChange={(e) => setRecurrenceEndDate(e.target.value)}
               />
+              <p className="text-xs text-text-secondary sm:col-span-3">{t("recurrenceHint")}</p>
             </div>
           )}
 

@@ -67,6 +67,8 @@ export default function InstallationKanbanPage() {
     try {
       await updateInstallationJobStatus(job.id, next);
       load();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
     } finally {
       setAdvancingId(null);
     }

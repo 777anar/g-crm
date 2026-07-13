@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
+import { activeDateLocale } from "@/lib/format";
 
 /** The app's semantic tones, validated as a categorical palette (fixed order,
  * CVD-safe adjacent pairs) -- see UI_UX_GUIDELINES.md / tailwind.config.ts.
@@ -22,7 +23,7 @@ function niceMax(value: number): number {
 function compactNumber(value: number): string {
   if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  return value.toLocaleString(activeDateLocale(), { maximumFractionDigits: 0 });
 }
 
 // ── Status / ordinal bar list ─────────────────────────────────────────────────
@@ -71,10 +72,12 @@ export function CategoryBarChart({
   data,
   height = 200,
   valueFormatter = compactNumber,
+  emptyLabel,
 }: {
   data: { label: string; value: number }[];
   height?: number;
   valueFormatter?: (value: number) => string;
+  emptyLabel?: string;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const max = niceMax(Math.max(...data.map((d) => d.value), 0));
@@ -82,7 +85,7 @@ export function CategoryBarChart({
   const barWidth = Math.min(barSlot * 0.6, 20);
 
   if (data.length === 0) {
-    return <p className="text-sm text-text-secondary">No data for this period.</p>;
+    return <p className="text-sm text-text-secondary">{emptyLabel ?? "—"}</p>;
   }
 
   return (
@@ -136,11 +139,13 @@ export function TrendChart({
   series,
   height = 240,
   valueFormatter = compactNumber,
+  emptyLabel,
 }: {
   data: Record<string, number | string>[];
   series: TrendSeries[];
   height?: number;
   valueFormatter?: (value: number) => string;
+  emptyLabel?: string;
 }) {
   const clipId = useId();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
@@ -151,7 +156,7 @@ export function TrendChart({
   );
 
   if (data.length === 0) {
-    return <p className="text-sm text-text-secondary">No data for this period.</p>;
+    return <p className="text-sm text-text-secondary">{emptyLabel ?? "—"}</p>;
   }
 
   const plotH = height - 24;

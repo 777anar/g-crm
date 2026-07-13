@@ -72,7 +72,7 @@ export default function ProjectsPage() {
   }
 
   function customerName(id: string) {
-    return customers.find((c) => c.id === id)?.name ?? id;
+    return customers.find((c) => c.id === id)?.name ?? tCommon("loading");
   }
 
   return (
