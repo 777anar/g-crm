@@ -173,7 +173,9 @@
     "address": "Address",
     "companyName": "Company",
     "notes": "Notes",
-    "status": "Customer Status"
+    "status": "Customer Status",
+    "assignedManager": "Assigned Manager",
+    "unassigned": "Unassigned"
   },
   "customerProfile": {
     "subtitle": "Profile, contacts, notes, and activity for this customer.",
@@ -213,6 +215,10 @@
     "addNote": "Add Note",
     "saving": "Saving...",
     "noteFailed": "Failed to add note.",
+    "noteAdded": "Note added.",
+    "statusUpdated": "Status updated.",
+    "managerUpdated": "Manager updated.",
+    "notesSaved": "Notes saved.",
     "activityTimeline": "Activity Timeline",
     "noActivity": "No activity yet",
     "phone": "Phone",

@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createCustomer } from "@/lib/api/crm";
+import { listCompanyUsers } from "@/lib/api/companies";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SelectField, TextAreaField, TextField } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { CUSTOMER_STATUSES, LEAD_SOURCE_CHANNELS } from "@/lib/types";
+import { CUSTOMER_STATUSES, LEAD_SOURCE_CHANNELS, type CompanyUser } from "@/lib/types";
 import { useCustomerStatusLabel, useLeadChannelLabel } from "@/lib/i18n/hooks";
 
 export default function NewCustomerPage() {
@@ -31,9 +32,15 @@ export default function NewCustomerPage() {
   const [leadSource, setLeadSource] = useState("");
   const [campaign, setCampaign] = useState("");
   const [status, setStatus] = useState<string>(CUSTOMER_STATUSES[0]);
+  const [assignedManagerId, setAssignedManagerId] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [users, setUsers] = useState<CompanyUser[]>([]);
+
+  useEffect(() => {
+    listCompanyUsers().then(setUsers).catch(() => {});
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,6 +60,7 @@ export default function NewCustomerPage() {
         lead_source: leadSource || undefined,
         advertising_campaign: campaign || undefined,
         status: status as (typeof CUSTOMER_STATUSES)[number],
+        assigned_manager_id: assignedManagerId || undefined,
         notes: notes || undefined,
       });
       toast.success(t("customerCreated"));
@@ -95,6 +103,18 @@ export default function NewCustomerPage() {
               {CUSTOMER_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {statusLabel(s)}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              label={t("assignedManager")}
+              value={assignedManagerId}
+              onChange={(e) => setAssignedManagerId(e.target.value)}
+            >
+              <option value="">{t("unassigned")}</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name}
                 </option>
               ))}
             </SelectField>

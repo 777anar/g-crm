@@ -173,7 +173,9 @@
     "address": "Ünvan",
     "companyName": "Şirkət",
     "notes": "Qeydlər",
-    "status": "Müştəri statusu"
+    "status": "Müştəri statusu",
+    "assignedManager": "Təyin edilmiş menecer",
+    "unassigned": "Təyin edilməyib"
   },
   "customerProfile": {
     "subtitle": "Bu müştərinin profili, əlaqələri, qeydləri və fəaliyyəti.",
@@ -213,6 +215,10 @@
     "addNote": "Qeyd əlavə et",
     "saving": "Yadda saxlanılır...",
     "noteFailed": "Qeyd əlavə edilmədi.",
+    "noteAdded": "Qeyd əlavə edildi.",
+    "statusUpdated": "Status yeniləndi.",
+    "managerUpdated": "Menecer yeniləndi.",
+    "notesSaved": "Qeydlər yadda saxlanıldı.",
     "activityTimeline": "Fəaliyyət lenti",
     "noActivity": "Hələ fəaliyyət yoxdur",
     "phone": "Telefon",

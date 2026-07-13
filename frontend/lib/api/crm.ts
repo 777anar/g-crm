@@ -67,6 +67,7 @@ export function getCustomerProfile(id: string) {
 export type CreateCustomerInput = {
   name: string;
   type: "individual" | "business";
+  assigned_manager_id?: string | null;
   lead_source?: string;
   advertising_campaign?: string;
   phone?: string;

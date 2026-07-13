@@ -138,13 +138,15 @@ class UpdateCustomerUseCase:
         if data.name is not None and data.name != customer.name:
             diff["name"] = {"old": customer.name, "new": data.name}
             customer.name = data.name
-        if data.assigned_manager_id is not None and data.assigned_manager_id != customer.assigned_manager_id:
-            _ensure_manager_belongs_to_company(
-                self.db, company_id=data.company_id, manager_id=data.assigned_manager_id
-            )
+        manager_update_requested = data.clear_assigned_manager or data.assigned_manager_id is not None
+        if manager_update_requested and data.assigned_manager_id != customer.assigned_manager_id:
+            if data.assigned_manager_id is not None:
+                _ensure_manager_belongs_to_company(
+                    self.db, company_id=data.company_id, manager_id=data.assigned_manager_id
+                )
             diff["assigned_manager_id"] = {
                 "old": str(customer.assigned_manager_id) if customer.assigned_manager_id else None,
-                "new": str(data.assigned_manager_id),
+                "new": str(data.assigned_manager_id) if data.assigned_manager_id else None,
             }
             customer.assigned_manager_id = data.assigned_manager_id
         if data.lead_source is not None and data.lead_source != customer.lead_source:

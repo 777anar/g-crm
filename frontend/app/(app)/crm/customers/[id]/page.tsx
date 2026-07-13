@@ -10,7 +10,8 @@ import {
   updateCustomer,
   uploadCustomerAttachment,
 } from "@/lib/api/crm";
-import { CUSTOMER_STATUSES, type CustomerProfile, type CustomerStatus } from "@/lib/types";
+import { listCompanyUsers } from "@/lib/api/companies";
+import { CUSTOMER_STATUSES, type CompanyUser, type CustomerProfile, type CustomerStatus } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TextAreaField } from "@/components/ui/field";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 import { formatDateTime } from "@/lib/format";
 import { useCustomerStatusLabel } from "@/lib/i18n/hooks";
 
@@ -32,6 +34,7 @@ export default function CustomerProfilePage() {
   const tActivityType = useTranslations("activityType");
   const statusLabel = useCustomerStatusLabel();
   const confirm = useConfirm();
+  const toast = useToast();
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +43,10 @@ export default function CustomerProfilePage() {
   const [archiving, setArchiving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [updatingManager, setUpdatingManager] = useState(false);
   const [customerNotes, setCustomerNotes] = useState("");
   const [savingCustomerNotes, setSavingCustomerNotes] = useState(false);
+  const [users, setUsers] = useState<CompanyUser[]>([]);
 
   async function reload() {
     try {
@@ -58,14 +63,20 @@ export default function CustomerProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId]);
 
+  useEffect(() => {
+    listCompanyUsers().then(setUsers).catch(() => {});
+  }, []);
+
   async function handleAddNote(e: React.FormEvent) {
     e.preventDefault();
     if (!noteBody.trim()) return;
     setSavingNote(true);
+    setError(null);
     try {
       await addCustomerNote(customerId, noteBody);
       setNoteBody("");
       await reload();
+      toast.success(t("noteAdded"));
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("noteFailed"));
     } finally {
@@ -92,10 +103,25 @@ export default function CustomerProfilePage() {
     try {
       await updateCustomer(customerId, { status });
       await reload();
+      toast.success(t("statusUpdated"));
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
     } finally {
       setUpdatingStatus(false);
+    }
+  }
+
+  async function handleManagerChange(managerId: string) {
+    setUpdatingManager(true);
+    setError(null);
+    try {
+      await updateCustomer(customerId, { assigned_manager_id: managerId || null });
+      await reload();
+      toast.success(t("managerUpdated"));
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    } finally {
+      setUpdatingManager(false);
     }
   }
 
@@ -105,6 +131,7 @@ export default function CustomerProfilePage() {
     try {
       await updateCustomer(customerId, { notes: customerNotes });
       await reload();
+      toast.success(t("notesSaved"));
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("noteFailed"));
     } finally {
@@ -231,7 +258,21 @@ export default function CustomerProfilePage() {
               </div>
               <div>
                 <dt className="text-text-secondary">{t("assignedManager")}</dt>
-                <dd className="text-text-primary">{customer.assigned_manager_id ?? t("unassigned")}</dd>
+                <dd className="text-text-primary">
+                  <select
+                    value={customer.assigned_manager_id ?? ""}
+                    disabled={updatingManager}
+                    onChange={(e) => handleManagerChange(e.target.value)}
+                    className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary disabled:opacity-50"
+                  >
+                    <option value="">{t("unassigned")}</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name}
+                      </option>
+                    ))}
+                  </select>
+                </dd>
               </div>
               <div>
                 <dt className="text-text-secondary">{t("leadSource")}</dt>

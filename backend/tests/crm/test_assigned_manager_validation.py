@@ -51,6 +51,39 @@ def test_update_customer_accepts_real_company_member_as_manager(app_client, owne
     assert response.json()["assigned_manager_id"] == str(owner_user.id)
 
 
+def test_update_customer_can_explicitly_unassign_manager(app_client, owner_headers, owner_user):
+    created = app_client.post(
+        "/api/v1/crm/customers",
+        headers=owner_headers,
+        json={"name": "Unassign Target Co", "type": "business", "assigned_manager_id": str(owner_user.id)},
+    ).json()
+    assert created["assigned_manager_id"] == str(owner_user.id)
+
+    response = app_client.patch(
+        f"/api/v1/crm/customers/{created['id']}",
+        headers=owner_headers,
+        json={"assigned_manager_id": None},
+    )
+    assert response.status_code == 200
+    assert response.json()["assigned_manager_id"] is None
+
+
+def test_update_customer_omitting_manager_field_leaves_it_unchanged(app_client, owner_headers, owner_user):
+    created = app_client.post(
+        "/api/v1/crm/customers",
+        headers=owner_headers,
+        json={"name": "Untouched Manager Co", "type": "business", "assigned_manager_id": str(owner_user.id)},
+    ).json()
+
+    response = app_client.patch(
+        f"/api/v1/crm/customers/{created['id']}",
+        headers=owner_headers,
+        json={"notes": "unrelated update"},
+    )
+    assert response.status_code == 200
+    assert response.json()["assigned_manager_id"] == str(owner_user.id)
+
+
 def test_assigned_manager_from_another_company_is_rejected(app_client, owner_headers, db_session):
     from core.auth.models import ROLE_OWNER, User, UserCompanyRole
     from core.auth.security import hash_password

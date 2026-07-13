@@ -227,6 +227,8 @@ def update_customer(
             customer_id=customer_id,
             name=payload.name,
             assigned_manager_id=payload.assigned_manager_id,
+            clear_assigned_manager="assigned_manager_id" in payload.model_fields_set
+            and payload.assigned_manager_id is None,
             lead_source=payload.lead_source,
             advertising_campaign=payload.advertising_campaign,
             phone=payload.phone,

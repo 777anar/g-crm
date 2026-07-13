@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.17.0] — 2026-07-13 — Assigned Manager Picker
+
+Closes the highest-priority remaining Version 1.1 item: the Customer form/profile had no real way to assign a manager, despite the backend fully validating the field since Phase 2.
+
+### Added
+- "Assigned Manager" dropdown (backed by `GET /api/v1/core/companies/users`) on the Customer creation form.
+- The Customer profile page's manager field is now an editable dropdown instead of a raw UUID string.
+- Toast confirmations on the Customer detail page for status change, manager change, note add, and the profile-notes save — the page previously had no `useToast` calls at all.
+- 2 new backend tests covering explicit manager un-assignment and confirming an unrelated field update doesn't clear an existing assignment.
+
+### Fixed
+- `UpdateCustomerUseCase` (backend) could never actually clear `assigned_manager_id` — a PATCH body with `assigned_manager_id: null` was indistinguishable from the field being omitted entirely, since both read as Python `None`. A `clear_assigned_manager` flag, derived from `"assigned_manager_id" in payload.model_fields_set`, now makes "explicitly cleared" distinguishable from "not sent" for this one field, without changing PATCH-omission semantics for any other Customer field. Found via a live smoke test against the running dev API, not the automated suite.
+
+### Verification
+Full backend suite passing (537/537), frontend `tsc --noEmit` clean, frontend production build clean, live smoke test against the real dev database and running backend.
+
 ## [2.16.0] — 2026-07-10 — CSV Export for Customers & Leads
 
 Closes the last Version 1.2 roadmap item never picked up: a standard CRM expectation (offline reporting, accounting handoff, marketing list pulls) that had been consistently deprioritized in favor of the Version 2.0+ module chain since 2026-07-01.
