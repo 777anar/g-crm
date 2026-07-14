@@ -48,9 +48,12 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenResp
 
 
 @router.post("/logout")
-def logout() -> dict:
-    # Stateless JWT: logout is a client-side token discard. A refresh-token
-    # denylist can be added here later without changing this endpoint's contract.
+def logout(payload: RefreshRequest) -> dict:
+    # Revokes every refresh token issued to this user before now (see
+    # core/auth/token_denylist.py) -- logout-everywhere, not just a
+    # client-side token discard. The access token already in the client's
+    # hands keeps working until its own short (15-minute default) expiry.
+    service.logout_everywhere(refresh_token=payload.refresh_token)
     return {"status": "ok"}
 
 

@@ -41,9 +41,16 @@ def create_access_token(
     return _create_token(payload, timedelta(minutes=settings.access_token_expire_minutes), "access")
 
 
-def create_refresh_token(*, user_id: uuid.UUID) -> str:
+def create_refresh_token(*, user_id: uuid.UUID, generation: int = 0) -> str:
+    # `gen` pins this token to the user's revocation generation at issue
+    # time -- refresh_access_token rejects it once that generation is stale
+    # (see core/auth/token_denylist.py). A monotonic counter avoids the
+    # same-second race a wall-clock revocation cutoff would have against a
+    # token issued (e.g. by an immediate re-login) within the same second.
     return _create_token(
-        {"sub": str(user_id)}, timedelta(days=settings.refresh_token_expire_days), "refresh"
+        {"sub": str(user_id), "gen": generation},
+        timedelta(days=settings.refresh_token_expire_days),
+        "refresh",
     )
 
 

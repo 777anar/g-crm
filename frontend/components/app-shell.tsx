@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { clearAccessToken } from "@/lib/session";
+import { clearAccessToken, getRefreshToken } from "@/lib/session";
+import { logout as logoutRequest } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { CompanySwitcher } from "@/components/company-switcher";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -136,6 +137,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useCloseOnEscape(mobileNavOpen, () => setMobileNavOpen(false));
 
   function handleLogout() {
+    const refreshToken = getRefreshToken();
+    if (refreshToken) {
+      // Best-effort: revoke server-side even though the client already
+      // discards its own tokens and redirects regardless of the outcome.
+      logoutRequest(refreshToken).catch(() => {});
+    }
     clearAccessToken();
     router.push("/login");
   }

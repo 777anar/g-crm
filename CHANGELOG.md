@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.22.0] — 2026-07-14 — Refresh-Token Revocation
+
+Closes the last open Version 1.1 item (RELEASE_CHECKLIST.md M7): `POST /auth/logout` was a literal no-op since Phase 1, and the frontend never even called it — a leaked refresh token stayed valid for its full 30-day lifetime with no server-side kill switch.
+
+### Added
+- `core/auth/token_denylist.py` — refresh-token revocation via a per-user monotonic generation counter (not a per-token or timestamp-based denylist). Every refresh token is stamped with a `gen` claim at issue time; logging out bumps the user's generation; the refresh endpoint rejects any token stamped with a stale generation. One integer per user invalidates every refresh token ever issued to them — genuine "logout everywhere."
+- Backed by Redis when reachable (first real use of the previously declared-but-unused `REDIS_URL` setting), with an automatic fallback to a single-process in-memory store if Redis is unreachable, mirroring `core/rbac/rate_limit.py`'s existing tradeoff — login/refresh is never blocked by Redis being down.
+- Frontend `logout()` API call (`lib/api/auth.ts`), now actually invoked by `AppShell.handleLogout` with the stored refresh token before clearing local storage and redirecting.
+- 7 new backend tests (`tests/test_refresh_token_revocation.py`) plus an autouse conftest fixture resetting the denylist singleton between tests.
+
+### Changed
+- `POST /auth/logout` now takes `{refresh_token}` in its body (reusing the existing `RefreshRequest` schema) instead of no body.
+
+### Fixed
+- A wall-clock revocation-timestamp cutoff was considered and rejected during implementation: JWT timestamps have only second granularity, so a token issued immediately after a logout (e.g. an instant re-login) could land in the same wall-clock second as the logout and be wrongly rejected. The generation-counter design has no such ambiguity — covered by a dedicated regression test.
+
+### Verification
+Full backend suite passing (544/544 — 537 prior + 7 new), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes), and live end-to-end verification against the real dev database and both running servers: a live API sequence (login → refresh succeeds → logout → refresh now 401s → fresh login still succeeds), and a live Playwright test of the actual "Log out" button confirming the old refresh token is provably dead afterward — zero console errors.
+
 ## [2.21.0] — 2026-07-14 — Bulk Actions on the Customer List
 
 Closes the next Version 1.1 item per the roadmap's own sequencing (pagination in 2.19.0, filter persistence in 2.20.0, bulk actions here): multi-select archive and multi-select status change for the Customers list. Frontend-only — no new backend endpoint; implemented as N calls to the existing single-Customer `PATCH`/`DELETE` endpoints.

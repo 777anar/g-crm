@@ -12,6 +12,7 @@ from core.auth.security import (
     decode_token,
     verify_password,
 )
+from core.auth.token_denylist import token_denylist
 from core.companies.models import Company
 
 
@@ -34,7 +35,8 @@ def get_user_company_memberships(db: Session, *, user_id: uuid.UUID):
 def issue_login_tokens(db: Session, *, user: User):
     memberships = get_user_company_memberships(db, user_id=user.id)
     access_token = create_access_token(user_id=user.id, active_company_id=None, role=None)
-    refresh_token = create_refresh_token(user_id=user.id)
+    generation = token_denylist.current_generation(str(user.id))
+    refresh_token = create_refresh_token(user_id=user.id, generation=generation)
     return access_token, refresh_token, memberships
 
 
@@ -63,10 +65,34 @@ def refresh_access_token(db: Session, *, refresh_token: str) -> str:
     if payload.get("type") != "refresh":
         raise UnauthenticatedError("Token is not a refresh token")
     user_id = uuid.UUID(payload["sub"])
+    if token_denylist.is_revoked(str(user_id), int(payload.get("gen", 0))):
+        raise UnauthenticatedError("Refresh token has been revoked")
     user = db.get(User, user_id)
     if user is None or not user.is_active:
         raise UnauthenticatedError("User no longer active")
     return create_access_token(user_id=user.id, active_company_id=None, role=None)
+
+
+def logout_everywhere(*, refresh_token: str) -> None:
+    """Invalidates every refresh token issued to this user until they log
+    in again, including ones the server has never seen since (see
+    core/auth/token_denylist.py). Access tokens already in a client's hands
+    keep working until their own short expiry -- consistent with the
+    standard "revoke the refresh token, let the access token just expire"
+    pattern given its 15-minute default TTL.
+
+    Best-effort by design: an already-invalid/expired/malformed refresh
+    token has nothing meaningful to revoke (it's already unusable, or
+    natural expiry already handles it), so this silently no-ops rather
+    than raising -- logout must never fail from the client's perspective,
+    since the client always discards its local tokens regardless."""
+    try:
+        payload = decode_token(refresh_token)
+    except ValueError:
+        return
+    if payload.get("type") != "refresh":
+        return
+    token_denylist.revoke_all(payload["sub"])
 
 
 def get_user_or_404(db: Session, user_id: uuid.UUID) -> User:

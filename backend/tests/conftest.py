@@ -62,6 +62,21 @@ def _reset_login_rate_limiter():
     login_rate_limiter.reset()
 
 
+@pytest.fixture(autouse=True)
+def _reset_token_denylist():
+    """core.auth.token_denylist.token_denylist is a module-level singleton
+    like the rate limiter above; in this test environment (no Redis server
+    running) it resolves to InMemoryTokenDenylist, which needs the same
+    per-test reset so revocations from one test don't leak into the next."""
+    from core.auth.token_denylist import token_denylist
+
+    if hasattr(token_denylist, "reset"):
+        token_denylist.reset()
+    yield
+    if hasattr(token_denylist, "reset"):
+        token_denylist.reset()
+
+
 @pytest.fixture()
 def app_client(monkeypatch, test_engine, db_session):
     import core.db.session as session_module
