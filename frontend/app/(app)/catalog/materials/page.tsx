@@ -32,7 +32,6 @@ export default function MaterialsListPage() {
   const [statusFilter, setStatusFilter] = useState<MaterialStatus | "">("");
   const [searchInput, setSearchInput] = useState("");
   const [sort, setSort] = useState("name");
-  const [cursor, setCursor] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -47,31 +46,28 @@ export default function MaterialsListPage() {
   }, [brandFilter]);
 
   const reload = useCallback(
-    (append = false) => {
+    (options: { append?: boolean; cursor?: string } = {}) => {
       listMaterials({
         brandId: brandFilter || undefined,
         collectionId: collectionFilter || undefined,
         status: statusFilter || undefined,
         search,
         sort,
-        cursor: append ? cursor || undefined : undefined,
+        cursor: options.cursor,
       })
         .then((res) => {
-          setMaterials((prev) => (append && prev ? [...prev, ...res.items] : res.items));
+          setMaterials((prev) => (options.append && prev ? [...prev, ...res.items] : res.items));
           setNextCursor(res.next_cursor);
         })
         .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [brandFilter, collectionFilter, statusFilter, search, sort, t]
   );
 
   useEffect(() => {
     setMaterials(null);
-    setCursor(null);
-    reload(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandFilter, collectionFilter, statusFilter, search, sort]);
+    reload();
+  }, [reload]);
 
   useListShortcuts({ searchInputRef, onCreate: () => router.push("/catalog/materials/new") });
 
@@ -81,8 +77,7 @@ export default function MaterialsListPage() {
 
   function handleLoadMore() {
     if (!nextCursor) return;
-    setCursor(nextCursor);
-    reload(true);
+    reload({ append: true, cursor: nextCursor });
   }
 
   return (

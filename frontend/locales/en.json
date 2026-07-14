@@ -33,7 +33,8 @@
     "filterNamePlaceholder": "Filter name",
     "saveCurrentFilters": "Save current filters",
     "dismiss": "Dismiss",
-    "actionFailed": "Action failed. Please try again."
+    "actionFailed": "Action failed. Please try again.",
+    "loadMore": "Load more"
   },
   "nav": {
     "dashboard": "Dashboard",

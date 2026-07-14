@@ -33,7 +33,8 @@
     "filterNamePlaceholder": "Filtrin adı",
     "saveCurrentFilters": "Cari filtrləri saxla",
     "dismiss": "Bağla",
-    "actionFailed": "Əməliyyat uğursuz oldu. Yenidən cəhd edin."
+    "actionFailed": "Əməliyyat uğursuz oldu. Yenidən cəhd edin.",
+    "loadMore": "Daha çox yüklə"
   },
   "nav": {
     "dashboard": "İdarə paneli",

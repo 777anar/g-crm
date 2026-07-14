@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.19.0] — 2026-07-14 — "Load More" Pagination for Customers & Leads
+
+Closes the last open Medium-priority Version 1.1 item: `GET /crm/customers`/`GET /crm/leads` have had a correct cursor-pagination contract all along, but neither list page ever consumed it — both silently capped at the default `limit=25`. Frontend-only, no backend changes.
+
+### Added
+- "Load more" button on the Customers and Leads list pages, wired to the existing `next_cursor`/`cursor` contract.
+- Shared `common.loadMore` translation key across all three locale files (previously only existed under the `catalog` namespace).
+
+### Fixed
+- **Real bug found via live Playwright testing, not by reading code**: the "Load more" pattern being copied from the existing Catalog Materials page had a stale-closure bug — `reload`'s `useCallback` read a `cursor` state variable deliberately excluded from its dependency array, so `reload` was never recreated when `cursor` changed. Clicking "Load more" always re-fetched page one and appended it again, duplicating all rows forever and never reaching page two. This bug had already shipped, unnoticed, on the Materials page itself. Fixed at the root in all three pages (Customers, Leads, Materials): removed the redundant `cursor` state and changed `reload` to accept the cursor as an explicit call-time argument instead of reading it from a closure.
+
+### Verification
+Full backend suite passing (537/537, unchanged — no backend files touched), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes), and a live Playwright smoke test against a freshly seeded dev database (30 customers, 30 leads, 30 materials) confirming the fix on all three pages — reproduced failing before the fix (duplicate rows, React key warnings) and passing after.
+
 ## [2.18.0] — 2026-07-13 — Full-App UX Audit
 
 A from-scratch audit of every visible screen from a real G-STONE office employee's perspective — six parallel research passes covering every page and locale key. Frontend-only; no new module, no business-logic changes.

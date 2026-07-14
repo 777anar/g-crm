@@ -49,6 +49,7 @@ export default function CustomersListPage() {
   const [statusFilter, setStatusFilter] = useState<CustomerStatus | "">("");
   const [searchInput, setSearchInput] = useState("");
   const [sort, setSort] = useState("-created_at");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -74,16 +75,33 @@ export default function CustomersListPage() {
   });
   const savedFilters = useSavedFilters<CustomersFilters>(TABLE_ID);
 
-  const reload = useCallback(() => {
-    listCustomers({ includeArchived, status: statusFilter || undefined, search, sort })
-      .then((res) => setCustomers(res.items))
-      .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
-  }, [includeArchived, statusFilter, search, sort, t]);
+  const reload = useCallback(
+    (options: { append?: boolean; cursor?: string } = {}) => {
+      listCustomers({
+        includeArchived,
+        status: statusFilter || undefined,
+        search,
+        sort,
+        cursor: options.cursor,
+      })
+        .then((res) => {
+          setCustomers((prev) => (options.append && prev ? [...prev, ...res.items] : res.items));
+          setNextCursor(res.next_cursor);
+        })
+        .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
+    },
+    [includeArchived, statusFilter, search, sort, t]
+  );
 
   useEffect(() => {
     setCustomers(null);
     reload();
   }, [reload]);
+
+  function handleLoadMore() {
+    if (!nextCursor) return;
+    reload({ append: true, cursor: nextCursor });
+  }
 
   useListShortcuts({ searchInputRef, onCreate: () => router.push("/crm/customers/new") });
 
@@ -209,6 +227,7 @@ export default function CustomersListPage() {
       )}
 
       {customers && customers.length > 0 && (
+        <>
         <div className={tableScrollShellClass}>
           <table className="w-full text-left text-sm">
             <thead className={stickyTheadClass}>
@@ -317,6 +336,14 @@ export default function CustomersListPage() {
             </tbody>
           </table>
         </div>
+        {nextCursor && (
+          <div className="flex justify-center">
+            <Button variant="secondary" onClick={handleLoadMore}>
+              {tCommon("loadMore")}
+            </Button>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

@@ -56,6 +56,7 @@ export default function LeadsPage() {
   const [channelFilter, setChannelFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [sort, setSort] = useState("-created_at");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -85,19 +86,33 @@ export default function LeadsPage() {
   });
   const savedFilters = useSavedFilters<LeadsFilters>(TABLE_ID);
 
-  const reload = useCallback(async () => {
-    try {
-      const res = await listLeads({ sourceChannel: channelFilter || undefined, search, sort });
-      setLeads(res.items);
-    } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
-    }
-  }, [channelFilter, search, sort, t]);
+  const reload = useCallback(
+    async (options: { append?: boolean; cursor?: string } = {}) => {
+      try {
+        const res = await listLeads({
+          sourceChannel: channelFilter || undefined,
+          search,
+          sort,
+          cursor: options.cursor,
+        });
+        setLeads((prev) => (options.append && prev ? [...prev, ...res.items] : res.items));
+        setNextCursor(res.next_cursor);
+      } catch (err) {
+        setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+      }
+    },
+    [channelFilter, search, sort, t]
+  );
 
   useEffect(() => {
     setLeads(null);
     reload();
   }, [reload]);
+
+  function handleLoadMore() {
+    if (!nextCursor) return;
+    reload({ append: true, cursor: nextCursor });
+  }
 
   useListShortcuts({
     searchInputRef,
@@ -275,6 +290,7 @@ export default function LeadsPage() {
       {leads && leads.length === 0 && <EmptyState title={t("noLeadsYet")} description={t("noLeadsDesc")} />}
 
       {leads && leads.length > 0 && (
+        <>
         <div className={tableScrollShellClass}>
           <table className="w-full text-left text-sm">
             <thead className={stickyTheadClass}>
@@ -397,6 +413,14 @@ export default function LeadsPage() {
             </tbody>
           </table>
         </div>
+        {nextCursor && (
+          <div className="flex justify-center">
+            <Button variant="secondary" onClick={handleLoadMore}>
+              {tCommon("loadMore")}
+            </Button>
+          </div>
+        )}
+        </>
       )}
     </div>
   );
