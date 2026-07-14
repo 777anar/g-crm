@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.21.0] — 2026-07-14 — Bulk Actions on the Customer List
+
+Closes the next Version 1.1 item per the roadmap's own sequencing (pagination in 2.19.0, filter persistence in 2.20.0, bulk actions here): multi-select archive and multi-select status change for the Customers list. Frontend-only — no new backend endpoint; implemented as N calls to the existing single-Customer `PATCH`/`DELETE` endpoints.
+
+### Added
+- Row checkboxes and a header "select all" checkbox on the Customers list (scoped to currently loaded rows).
+- Bulk action bar (shown when ≥1 row selected): live selected count, "Clear selection", bulk status change (dropdown + Apply), and a destructive "Archive selected" button gated behind the existing `useConfirm` dialog.
+- Success/partial-failure toasts for both bulk actions via the existing `useToast` primitive.
+- New translation keys under `customers.*` in all three locale files.
+
+### Changed
+- Selection is cleared automatically when the filtered result set changes or after a bulk action completes.
+
+### Verification
+Full backend suite passing (537/537, unchanged — no backend files touched), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes), and a live Playwright smoke test (bulk status change, bulk archive with confirm dialog, select-all) against a freshly seeded dev database — zero console errors.
+
 ## [2.20.0] — 2026-07-14 — Shareable/Persisted List Filters
 
 Closes the next Version 1.1 item per the roadmap's own sequencing (pagination in 2.19.0, filter persistence here): Customers and Leads filter state (status/channel, search, sort) lived only in component state, so a filtered view could never be bookmarked or shared via URL. Frontend-only, no backend changes.

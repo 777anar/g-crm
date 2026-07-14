@@ -150,7 +150,19 @@
     "allStatuses": "Bütün statuslar",
     "searchPlaceholder": "Ad, telefon, e-poçt, şirkət üzrə axtar... ( / )",
     "exportCsv": "CSV ixrac et",
-    "exportFailed": "Müştərilər ixrac edilmədi."
+    "exportFailed": "Müştərilər ixrac edilmədi.",
+    "selectAllCustomers": "Bütün müştəriləri seç",
+    "selectCustomer": "{name} seç",
+    "selectedCount": "{count} seçildi",
+    "clearSelection": "Seçimi təmizlə",
+    "changeStatusTo": "Statusu dəyiş...",
+    "applyStatus": "Tətbiq et",
+    "archiveSelected": "Seçilənləri arxivləşdir",
+    "confirmBulkArchive": "Seçilmiş {count} müştəri arxivləşdirilsin?",
+    "bulkArchiveSucceeded": "{count} müştəri arxivləşdirildi.",
+    "bulkArchivePartialFailure": "{count} müştəridən {succeeded} arxivləşdirildi; qalanları uğursuz oldu.",
+    "bulkStatusSucceeded": "{count} müştərinin statusu yeniləndi.",
+    "bulkStatusPartialFailure": "{count} müştəridən {succeeded} yeniləndi; qalanları uğursuz oldu."
   },
   "customerNew": {
     "title": "Müştəri yarat",

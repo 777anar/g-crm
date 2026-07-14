@@ -4,10 +4,11 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { exportCustomers, listCustomers, updateCustomer } from "@/lib/api/crm";
+import { archiveCustomer, exportCustomers, listCustomers, updateCustomer } from "@/lib/api/crm";
 import { CUSTOMER_STATUSES, type Customer, type CustomerStatus } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { CustomerArchivedBadge, LeadChannelBadge } from "@/components/ui/badge";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { SectionTabs } from "@/components/ui/section-tabs";
@@ -22,6 +23,7 @@ import {
   useResizableColumns,
   useSavedFilters,
 } from "@/components/ui/data-table";
+import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import { useCustomerStatusLabel } from "@/lib/i18n/hooks";
@@ -52,6 +54,8 @@ function CustomersListPageInner() {
   const tCrm = useTranslations("crm");
   const statusLabel = useCustomerStatusLabel();
   const router = useRouter();
+  const confirm = useConfirm();
+  const toast = useToast();
 
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -62,6 +66,10 @@ function CustomersListPageInner() {
   const [error, setError] = useState<string | null>(null);
   const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<CustomerStatus | "">("");
+  const [bulkArchiving, setBulkArchiving] = useState(false);
+  const [bulkUpdating, setBulkUpdating] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const search = useDebouncedValue(searchInput, 250);
 
@@ -114,12 +122,67 @@ function CustomersListPageInner() {
 
   useEffect(() => {
     setCustomers(null);
+    setSelected(new Set());
     reload();
   }, [reload]);
 
   function handleLoadMore() {
     if (!nextCursor) return;
     reload({ append: true, cursor: nextCursor });
+  }
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (!customers) return;
+    setSelected((prev) => (prev.size === customers.length ? new Set() : new Set(customers.map((c) => c.id))));
+  }
+
+  async function handleBulkArchive() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!(await confirm(t("confirmBulkArchive", { count: ids.length }), { confirmLabel: t("archiveSelected") }))) return;
+    setBulkArchiving(true);
+    try {
+      const results = await Promise.allSettled(ids.map((id) => archiveCustomer(id)));
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed > 0) {
+        toast.error(t("bulkArchivePartialFailure", { succeeded: ids.length - failed, count: ids.length }));
+      } else {
+        toast.success(t("bulkArchiveSucceeded", { count: ids.length }));
+      }
+      setSelected(new Set());
+      reload();
+    } finally {
+      setBulkArchiving(false);
+    }
+  }
+
+  async function handleBulkStatusChange() {
+    const ids = Array.from(selected);
+    if (ids.length === 0 || !bulkStatus) return;
+    setBulkUpdating(true);
+    try {
+      const results = await Promise.allSettled(ids.map((id) => updateCustomer(id, { status: bulkStatus })));
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed > 0) {
+        toast.error(t("bulkStatusPartialFailure", { succeeded: ids.length - failed, count: ids.length }));
+      } else {
+        toast.success(t("bulkStatusSucceeded", { count: ids.length }));
+      }
+      setSelected(new Set());
+      setBulkStatus("");
+      reload();
+    } finally {
+      setBulkUpdating(false);
+    }
   }
 
   useListShortcuts({ searchInputRef, onCreate: () => router.push("/crm/customers/new") });
@@ -229,6 +292,35 @@ function CustomersListPageInner() {
         onRemove={savedFilters.remove}
       />
 
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface px-3 py-2">
+          <span className="text-sm font-medium text-text-primary">{t("selectedCount", { count: selected.size })}</span>
+          <Button variant="secondary" onClick={() => setSelected(new Set())}>
+            {t("clearSelection")}
+          </Button>
+          <div className="flex items-center gap-2">
+            <select
+              value={bulkStatus}
+              onChange={(e) => setBulkStatus(e.target.value as CustomerStatus | "")}
+              className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+            >
+              <option value="">{t("changeStatusTo")}</option>
+              {CUSTOMER_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {statusLabel(s)}
+                </option>
+              ))}
+            </select>
+            <Button variant="secondary" loading={bulkUpdating} disabled={!bulkStatus} onClick={handleBulkStatusChange}>
+              {t("applyStatus")}
+            </Button>
+          </div>
+          <Button variant="destructive" loading={bulkArchiving} onClick={handleBulkArchive}>
+            {t("archiveSelected")}
+          </Button>
+        </div>
+      )}
+
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {customers === null && !error && <TableSkeleton rows={5} columns={5} />}
@@ -251,6 +343,14 @@ function CustomersListPageInner() {
           <table className="w-full text-left text-sm">
             <thead className={stickyTheadClass}>
               <tr>
+                <th className="w-8 px-4 py-2">
+                  <input
+                    type="checkbox"
+                    aria-label={t("selectAllCustomers")}
+                    checked={selected.size > 0 && selected.size === customers.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 {isVisible("name") && (
                   <SortableHeader
                     field="name"
@@ -307,6 +407,14 @@ function CustomersListPageInner() {
                   onClick={() => router.push(`/crm/customers/${customer.id}`)}
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-bg"
                 >
+                  <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      aria-label={t("selectCustomer", { name: customer.name })}
+                      checked={selected.has(customer.id)}
+                      onChange={() => toggleSelected(customer.id)}
+                    />
+                  </td>
                   {isVisible("name") && (
                     <td className="px-4 py-2">
                       <Link

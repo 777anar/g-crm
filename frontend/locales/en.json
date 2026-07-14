@@ -150,7 +150,19 @@
     "allStatuses": "All statuses",
     "searchPlaceholder": "Search by name, phone, email, company... ( / )",
     "exportCsv": "Export CSV",
-    "exportFailed": "Failed to export customers."
+    "exportFailed": "Failed to export customers.",
+    "selectAllCustomers": "Select all customers",
+    "selectCustomer": "Select {name}",
+    "selectedCount": "{count} selected",
+    "clearSelection": "Clear selection",
+    "changeStatusTo": "Change status to...",
+    "applyStatus": "Apply",
+    "archiveSelected": "Archive selected",
+    "confirmBulkArchive": "Archive {count} selected customer(s)?",
+    "bulkArchiveSucceeded": "Archived {count} customer(s).",
+    "bulkArchivePartialFailure": "Archived {succeeded} of {count} customer(s); the rest failed.",
+    "bulkStatusSucceeded": "Updated status for {count} customer(s).",
+    "bulkStatusPartialFailure": "Updated {succeeded} of {count} customer(s); the rest failed."
   },
   "customerNew": {
     "title": "Create Customer",

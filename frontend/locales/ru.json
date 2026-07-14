@@ -150,7 +150,19 @@
     "allStatuses": "Все статусы",
     "searchPlaceholder": "Поиск по имени, телефону, эл. почте, компании... ( / )",
     "exportCsv": "Экспорт в CSV",
-    "exportFailed": "Не удалось экспортировать клиентов."
+    "exportFailed": "Не удалось экспортировать клиентов.",
+    "selectAllCustomers": "Выбрать всех клиентов",
+    "selectCustomer": "Выбрать {name}",
+    "selectedCount": "Выбрано: {count}",
+    "clearSelection": "Очистить выбор",
+    "changeStatusTo": "Изменить статус на...",
+    "applyStatus": "Применить",
+    "archiveSelected": "Архивировать выбранные",
+    "confirmBulkArchive": "Архивировать выбранных клиентов ({count})?",
+    "bulkArchiveSucceeded": "Архивировано клиентов: {count}.",
+    "bulkArchivePartialFailure": "Архивировано {succeeded} из {count} клиентов; остальные не удались.",
+    "bulkStatusSucceeded": "Статус обновлён для {count} клиентов.",
+    "bulkStatusPartialFailure": "Обновлено {succeeded} из {count} клиентов; остальные не удались."
   },
   "customerNew": {
     "title": "Создать клиента",
