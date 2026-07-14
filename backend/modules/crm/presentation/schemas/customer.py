@@ -47,6 +47,7 @@ class CustomerCreate(BaseModel):
 
 class CustomerUpdate(BaseModel):
     name: Optional[str] = None
+    type: Optional[str] = None
     assigned_manager_id: Optional[uuid.UUID] = None
     lead_source: Optional[str] = None
     advertising_campaign: Optional[str] = None
@@ -62,6 +63,8 @@ class CustomerUpdate(BaseModel):
     tags: Optional[List[str]] = None
 
     def model_post_init(self, __context) -> None:
+        if self.type is not None and self.type not in VALID_CUSTOMER_TYPES:
+            raise ValueError(f"type must be one of {sorted(VALID_CUSTOMER_TYPES)}")
         if self.lead_source is not None and self.lead_source not in VALID_LEAD_SOURCES:
             raise ValueError(f"lead_source must be one of {sorted(VALID_LEAD_SOURCES)}")
         if self.status is not None and self.status not in VALID_CUSTOMER_STATUSES:

@@ -138,6 +138,9 @@ class UpdateCustomerUseCase:
         if data.name is not None and data.name != customer.name:
             diff["name"] = {"old": customer.name, "new": data.name}
             customer.name = data.name
+        if data.type is not None and data.type != customer.type:
+            diff["type"] = {"old": customer.type, "new": data.type}
+            customer.type = data.type
         manager_update_requested = data.clear_assigned_manager or data.assigned_manager_id is not None
         if manager_update_requested and data.assigned_manager_id != customer.assigned_manager_id:
             if data.assigned_manager_id is not None:

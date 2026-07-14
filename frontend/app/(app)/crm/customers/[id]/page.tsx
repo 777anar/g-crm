@@ -11,7 +11,14 @@ import {
   uploadCustomerAttachment,
 } from "@/lib/api/crm";
 import { listCompanyUsers } from "@/lib/api/companies";
-import { CUSTOMER_STATUSES, type CompanyUser, type CustomerProfile, type CustomerStatus } from "@/lib/types";
+import {
+  CUSTOMER_STATUSES,
+  CUSTOMER_TYPES,
+  type CompanyUser,
+  type CustomerProfile,
+  type CustomerStatus,
+  type CustomerType,
+} from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
@@ -23,7 +30,7 @@ import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { formatDateTime } from "@/lib/format";
-import { useCustomerStatusLabel } from "@/lib/i18n/hooks";
+import { useCustomerStatusLabel, useCustomerTypeLabel } from "@/lib/i18n/hooks";
 
 export default function CustomerProfilePage() {
   const params = useParams<{ id: string }>();
@@ -33,6 +40,7 @@ export default function CustomerProfilePage() {
   const tCommon = useTranslations("common");
   const tActivityType = useTranslations("activityType");
   const statusLabel = useCustomerStatusLabel();
+  const typeLabel = useCustomerTypeLabel();
   const confirm = useConfirm();
   const toast = useToast();
 
@@ -44,6 +52,7 @@ export default function CustomerProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [updatingManager, setUpdatingManager] = useState(false);
+  const [updatingType, setUpdatingType] = useState(false);
   const [customerNotes, setCustomerNotes] = useState("");
   const [savingCustomerNotes, setSavingCustomerNotes] = useState(false);
   const [users, setUsers] = useState<CompanyUser[]>([]);
@@ -122,6 +131,20 @@ export default function CustomerProfilePage() {
       setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
     } finally {
       setUpdatingManager(false);
+    }
+  }
+
+  async function handleTypeChange(type: CustomerType) {
+    setUpdatingType(true);
+    setError(null);
+    try {
+      await updateCustomer(customerId, { type });
+      await reload();
+      toast.success(t("typeUpdated"));
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+    } finally {
+      setUpdatingType(false);
     }
   }
 
@@ -252,6 +275,23 @@ export default function CustomerProfilePage() {
           <Card>
             <CardHeader title={t("company")} />
             <dl className="flex flex-col gap-2 text-sm">
+              <div>
+                <dt className="text-text-secondary">{t("type")}</dt>
+                <dd className="text-text-primary">
+                  <select
+                    value={customer.type}
+                    disabled={updatingType}
+                    onChange={(e) => handleTypeChange(e.target.value as CustomerType)}
+                    className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary disabled:opacity-50"
+                  >
+                    {CUSTOMER_TYPES.map((ct) => (
+                      <option key={ct} value={ct}>
+                        {typeLabel(ct)}
+                      </option>
+                    ))}
+                  </select>
+                </dd>
+              </div>
               <div>
                 <dt className="text-text-secondary">{t("companyName")}</dt>
                 <dd className="text-text-primary">{customer.company_name ?? tCommon("dash")}</dd>

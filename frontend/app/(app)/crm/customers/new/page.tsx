@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SelectField, TextAreaField, TextField } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { CUSTOMER_STATUSES, LEAD_SOURCE_CHANNELS, type CompanyUser } from "@/lib/types";
-import { useCustomerStatusLabel, useLeadChannelLabel } from "@/lib/i18n/hooks";
+import { CUSTOMER_STATUSES, CUSTOMER_TYPES, LEAD_SOURCE_CHANNELS, type CompanyUser, type CustomerType } from "@/lib/types";
+import { useCustomerStatusLabel, useCustomerTypeLabel, useLeadChannelLabel } from "@/lib/i18n/hooks";
 
 export default function NewCustomerPage() {
   const router = useRouter();
@@ -19,9 +19,11 @@ export default function NewCustomerPage() {
   const tCommon = useTranslations("common");
   const channelLabel = useLeadChannelLabel();
   const statusLabel = useCustomerStatusLabel();
+  const typeLabel = useCustomerTypeLabel();
   const toast = useToast();
 
   const [name, setName] = useState("");
+  const [type, setType] = useState<CustomerType>(CUSTOMER_TYPES[0]);
   const [phone, setPhone] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [instagram, setInstagram] = useState("");
@@ -49,7 +51,7 @@ export default function NewCustomerPage() {
     try {
       const customer = await createCustomer({
         name,
-        type: "individual",
+        type,
         phone: phone || undefined,
         whatsapp: whatsapp || undefined,
         instagram: instagram || undefined,
@@ -78,6 +80,14 @@ export default function NewCustomerPage() {
         <CardHeader title={t("title")} subtitle={t("subtitle")} />
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <TextField label={t("name")} value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+
+          <SelectField label={t("type")} value={type} onChange={(e) => setType(e.target.value as CustomerType)}>
+            {CUSTOMER_TYPES.map((ct) => (
+              <option key={ct} value={ct}>
+                {typeLabel(ct)}
+              </option>
+            ))}
+          </SelectField>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TextField label={t("phone")} value={phone} onChange={(e) => setPhone(e.target.value)} />

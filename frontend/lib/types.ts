@@ -34,6 +34,9 @@ export type CompanyUser = {
   role: string;
 };
 
+export const CUSTOMER_TYPES = ["individual", "business"] as const;
+export type CustomerType = (typeof CUSTOMER_TYPES)[number];
+
 export const CUSTOMER_STATUSES = [
   "new_inquiry",
   "contacted",
@@ -55,7 +58,7 @@ export type CustomerStatus = (typeof CUSTOMER_STATUSES)[number];
 export type Customer = {
   id: string;
   name: string;
-  type: "individual" | "business";
+  type: CustomerType;
   primary_contact_id: string | null;
   assigned_manager_id: string | null;
   lead_source: string | null;

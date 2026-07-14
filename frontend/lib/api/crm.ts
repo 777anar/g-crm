@@ -5,6 +5,7 @@ import type {
   Customer,
   CustomerProfile,
   CustomerStatus,
+  CustomerType,
   Lead,
   Paginated,
   Task,
@@ -66,7 +67,7 @@ export function getCustomerProfile(id: string) {
 
 export type CreateCustomerInput = {
   name: string;
-  type: "individual" | "business";
+  type: CustomerType;
   assigned_manager_id?: string | null;
   lead_source?: string;
   advertising_campaign?: string;

@@ -186,6 +186,7 @@
     "address": "Address",
     "companyName": "Company",
     "notes": "Notes",
+    "type": "Customer Type",
     "status": "Customer Status",
     "assignedManager": "Assigned Manager",
     "unassigned": "Unassigned"
@@ -230,6 +231,7 @@
     "noteAdded": "Note added.",
     "statusUpdated": "Status updated.",
     "managerUpdated": "Manager updated.",
+    "typeUpdated": "Customer type updated.",
     "notesSaved": "Notes saved.",
     "activityTimeline": "Activity Timeline",
     "noActivity": "No activity yet",
@@ -241,6 +243,7 @@
     "address": "Address",
     "companyName": "Company",
     "notes": "Notes",
+    "type": "Customer Type",
     "status": "Customer Status"
   },
   "leads": {
@@ -298,6 +301,10 @@
     "call": "Call",
     "email": "Email",
     "meeting": "Meeting"
+  },
+  "customerType": {
+    "individual": "Individual",
+    "business": "Business"
   },
   "customerStatus": {
     "new_inquiry": "New Inquiries",

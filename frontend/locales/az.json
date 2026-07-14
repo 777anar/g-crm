@@ -186,6 +186,7 @@
     "address": "Ünvan",
     "companyName": "Şirkət",
     "notes": "Qeydlər",
+    "type": "Müştəri növü",
     "status": "Müştəri statusu",
     "assignedManager": "Təyin edilmiş menecer",
     "unassigned": "Təyin edilməyib"
@@ -230,6 +231,7 @@
     "noteAdded": "Qeyd əlavə edildi.",
     "statusUpdated": "Status yeniləndi.",
     "managerUpdated": "Menecer yeniləndi.",
+    "typeUpdated": "Müştəri növü yeniləndi.",
     "notesSaved": "Qeydlər yadda saxlanıldı.",
     "activityTimeline": "Fəaliyyət lenti",
     "noActivity": "Hələ fəaliyyət yoxdur",
@@ -241,6 +243,7 @@
     "address": "Ünvan",
     "companyName": "Şirkət",
     "notes": "Qeydlər",
+    "type": "Müştəri növü",
     "status": "Müştəri statusu"
   },
   "leads": {
@@ -298,6 +301,10 @@
     "call": "Zəng",
     "email": "E-poçt",
     "meeting": "Görüş"
+  },
+  "customerType": {
+    "individual": "Fiziki şəxs",
+    "business": "Hüquqi şəxs"
   },
   "customerStatus": {
     "new_inquiry": "Yeni müraciətlər",

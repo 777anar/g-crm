@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.23.0] — 2026-07-14 — Customer Type Picker
+
+Resolves RELEASE_CHECKLIST.md M2 (`customer.type` "write-only dead weight"), deferred since Phase 1 pending a product decision between reintroducing a picker or dropping the column. This session builds the picker. API contracts kept compatible: `CustomerCreate.type` is unchanged; `CustomerUpdate` gains a new optional `type` field (purely additive — previously silently ignored on PATCH, now actually applied).
+
+### Added
+- `type` picker on the Customer creation form (defaults to Individual), replacing a hardcoded `type: "individual"` literal.
+- Editable `type` picker on the Customer profile page's "Company" card, matching the Assigned Manager picker's inline-select-with-toast pattern.
+- `CustomerUpdate.type` (backend) — optional, validated against the same `VALID_CUSTOMER_TYPES` set `CustomerCreate` already uses; wired through `UpdateCustomerInput` and `UpdateCustomerUseCase`.
+- `CUSTOMER_TYPES`/`CustomerType` exports in `lib/types.ts`, mirroring `CUSTOMER_STATUSES`/`CustomerStatus`.
+- Reactivated the previously-orphaned `useCustomerTypeLabel()` i18n hook by re-adding `customerType.individual`/`customerType.business` to all three locale files (deleted as dead code in 2.18.0 when no UI used it — now it does).
+- 5 new backend tests: invalid `type` rejected (400) on create and update, `type` defaults to `individual` when omitted, successful update, and omitting `type` from an unrelated PATCH leaves it unchanged.
+
+### Verification
+Full backend suite passing (549/549 — 544 prior + 5 new), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes), and a live Playwright smoke test (create as Business, profile shows Business, change to Individual with toast confirmation, persists across reload) — zero console errors.
+
 ## [2.22.0] — 2026-07-14 — Refresh-Token Revocation
 
 Closes the last open Version 1.1 item (RELEASE_CHECKLIST.md M7): `POST /auth/logout` was a literal no-op since Phase 1, and the frontend never even called it — a leaked refresh token stayed valid for its full 30-day lifetime with no server-side kill switch.

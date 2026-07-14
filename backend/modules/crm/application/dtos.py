@@ -37,6 +37,7 @@ class UpdateCustomerInput:
     actor_user_id: uuid.UUID
     customer_id: uuid.UUID
     name: Optional[str] = None
+    type: Optional[str] = None
     assigned_manager_id: Optional[uuid.UUID] = None
     clear_assigned_manager: bool = False
     lead_source: Optional[str] = None

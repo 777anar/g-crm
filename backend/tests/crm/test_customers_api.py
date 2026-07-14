@@ -86,6 +86,58 @@ def test_update_customer(app_client, owner_headers):
     assert body["advertising_campaign"] == "Spring Promo"
 
 
+def test_create_customer_rejects_invalid_type(app_client, owner_headers):
+    response = app_client.post(
+        "/api/v1/crm/customers",
+        headers=owner_headers,
+        json={"name": "Bad Type Co", "type": "nonprofit"},
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_create_customer_defaults_type_to_individual(app_client, owner_headers):
+    response = app_client.post("/api/v1/crm/customers", headers=owner_headers, json={"name": "No Type Given"})
+    assert response.status_code == 200
+    assert response.json()["type"] == "individual"
+
+
+def test_update_customer_type(app_client, owner_headers):
+    created = app_client.post(
+        "/api/v1/crm/customers", headers=owner_headers, json={"name": "Switching Types", "type": "individual"}
+    ).json()
+
+    response = app_client.patch(
+        f"/api/v1/crm/customers/{created['id']}", headers=owner_headers, json={"type": "business"}
+    )
+    assert response.status_code == 200
+    assert response.json()["type"] == "business"
+
+
+def test_update_customer_rejects_invalid_type(app_client, owner_headers):
+    created = app_client.post(
+        "/api/v1/crm/customers", headers=owner_headers, json={"name": "Bad Update Co", "type": "business"}
+    ).json()
+
+    response = app_client.patch(
+        f"/api/v1/crm/customers/{created['id']}", headers=owner_headers, json={"type": "nonprofit"}
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_update_customer_omitting_type_leaves_it_unchanged(app_client, owner_headers):
+    created = app_client.post(
+        "/api/v1/crm/customers", headers=owner_headers, json={"name": "Untouched Type Co", "type": "business"}
+    ).json()
+
+    response = app_client.patch(
+        f"/api/v1/crm/customers/{created['id']}", headers=owner_headers, json={"name": "Renamed Only"}
+    )
+    assert response.status_code == 200
+    assert response.json()["type"] == "business"
+
+
 def test_archive_customer(app_client, owner_headers):
     created = app_client.post(
         "/api/v1/crm/customers", headers=owner_headers, json={"name": "To Archive", "type": "business"}

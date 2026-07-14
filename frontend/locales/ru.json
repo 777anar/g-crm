@@ -186,6 +186,7 @@
     "address": "Адрес",
     "companyName": "Компания",
     "notes": "Заметки",
+    "type": "Тип клиента",
     "status": "Статус клиента",
     "assignedManager": "Ответственный менеджер",
     "unassigned": "Не назначен"
@@ -230,6 +231,7 @@
     "noteAdded": "Заметка добавлена.",
     "statusUpdated": "Статус обновлён.",
     "managerUpdated": "Менеджер обновлён.",
+    "typeUpdated": "Тип клиента обновлён.",
     "notesSaved": "Заметки сохранены.",
     "activityTimeline": "Лента активности",
     "noActivity": "Активности пока нет",
@@ -241,6 +243,7 @@
     "address": "Адрес",
     "companyName": "Компания",
     "notes": "Заметки",
+    "type": "Тип клиента",
     "status": "Статус клиента"
   },
   "leads": {
@@ -298,6 +301,10 @@
     "call": "Звонок",
     "email": "Эл. почта",
     "meeting": "Встреча"
+  },
+  "customerType": {
+    "individual": "Физическое лицо",
+    "business": "Юридическое лицо"
   },
   "customerStatus": {
     "new_inquiry": "Новые обращения",

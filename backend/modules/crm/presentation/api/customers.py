@@ -226,6 +226,7 @@ def update_customer(
             actor_user_id=current_user.user_id,
             customer_id=customer_id,
             name=payload.name,
+            type=payload.type,
             assigned_manager_id=payload.assigned_manager_id,
             clear_assigned_manager="assigned_manager_id" in payload.model_fields_set
             and payload.assigned_manager_id is None,
