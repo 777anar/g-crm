@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -27,6 +27,7 @@ import { formatDate } from "@/lib/format";
 import { useCustomerStatusLabel } from "@/lib/i18n/hooks";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useListShortcuts } from "@/lib/use-list-shortcuts";
+import { useUrlFilters } from "@/lib/use-url-filters";
 
 const TABLE_ID = "crm-customers";
 
@@ -38,6 +39,14 @@ type CustomersFilters = {
 };
 
 export default function CustomersListPage() {
+  return (
+    <Suspense fallback={<TableSkeleton rows={5} columns={5} />}>
+      <CustomersListPageInner />
+    </Suspense>
+  );
+}
+
+function CustomersListPageInner() {
   const t = useTranslations("customers");
   const tCommon = useTranslations("common");
   const tCrm = useTranslations("crm");
@@ -74,6 +83,16 @@ export default function CustomersListPage() {
     archived: 120,
   });
   const savedFilters = useSavedFilters<CustomersFilters>(TABLE_ID);
+
+  useUrlFilters(
+    (params) => {
+      setIncludeArchived(params.get("archived") === "1");
+      setStatusFilter((params.get("status") as CustomerStatus | null) ?? "");
+      setSearchInput(params.get("search") ?? "");
+      setSort(params.get("sort") ?? "-created_at");
+    },
+    { archived: includeArchived ? "1" : undefined, status: statusFilter, search, sort: sort === "-created_at" ? undefined : sort }
+  );
 
   const reload = useCallback(
     (options: { append?: boolean; cursor?: string } = {}) => {

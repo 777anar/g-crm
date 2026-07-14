@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { convertLead, createLead, exportLeads, listLeads } from "@/lib/api/crm";
@@ -31,6 +31,7 @@ import { formatDate } from "@/lib/format";
 import { useLeadChannelLabel } from "@/lib/i18n/hooks";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useListShortcuts } from "@/lib/use-list-shortcuts";
+import { useUrlFilters } from "@/lib/use-url-filters";
 
 const CAPTURE_FORM_NAME_INPUT_ID = "lead-capture-full-name";
 const TABLE_ID = "crm-leads";
@@ -46,6 +47,14 @@ const COLUMNS = [
 type LeadsFilters = { channelFilter: string; search: string; sort: string };
 
 export default function LeadsPage() {
+  return (
+    <Suspense fallback={<TableSkeleton rows={4} columns={5} />}>
+      <LeadsPageInner />
+    </Suspense>
+  );
+}
+
+function LeadsPageInner() {
   const router = useRouter();
   const t = useTranslations("leads");
   const tCommon = useTranslations("common");
@@ -85,6 +94,15 @@ export default function LeadsPage() {
     created_at: 140,
   });
   const savedFilters = useSavedFilters<LeadsFilters>(TABLE_ID);
+
+  useUrlFilters(
+    (params) => {
+      setChannelFilter(params.get("channel") ?? "");
+      setSearchInput(params.get("search") ?? "");
+      setSort(params.get("sort") ?? "-created_at");
+    },
+    { channel: channelFilter, search, sort: sort === "-created_at" ? undefined : sort }
+  );
 
   const reload = useCallback(
     async (options: { append?: boolean; cursor?: string } = {}) => {

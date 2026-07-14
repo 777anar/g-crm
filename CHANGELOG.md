@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.20.0] — 2026-07-14 — Shareable/Persisted List Filters
+
+Closes the next Version 1.1 item per the roadmap's own sequencing (pagination in 2.19.0, filter persistence here): Customers and Leads filter state (status/channel, search, sort) lived only in component state, so a filtered view could never be bookmarked or shared via URL. Frontend-only, no backend changes.
+
+### Added
+- New shared `useUrlFilters` hook (`frontend/lib/use-url-filters.ts`) — two-way syncs a list page's filter state with its URL query string via `router.replace` (no extra browser-history entries), reading the URL once on mount to hydrate initial state.
+- Customers list page filters reflected in the URL: `?status=&search=&sort=&archived=1`.
+- Leads list page filters reflected in the URL: `?channel=&search=&sort=`.
+
+### Changed
+- Both pages split into a thin default-export wrapper plus a `<Suspense>`-wrapped inner component, required by Next.js App Router whenever a statically-generated page calls `useSearchParams()`.
+
+### Verification
+Full backend suite passing (537/537, unchanged — no backend files touched), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes, `/crm/customers` and `/crm/leads` still statically prerendered), and a live Playwright smoke test confirming: setting filters updates the URL, navigating directly to a filtered URL restores the same filter state and results, and clearing filters returns the URL to its bare path — on both Customers and Leads, zero console errors.
+
 ## [2.19.0] — 2026-07-14 — "Load More" Pagination for Customers & Leads
 
 Closes the last open Medium-priority Version 1.1 item: `GET /crm/customers`/`GET /crm/leads` have had a correct cursor-pagination contract all along, but neither list page ever consumed it — both silently capped at the default `limit=25`. Frontend-only, no backend changes.
