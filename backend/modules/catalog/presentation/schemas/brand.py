@@ -38,3 +38,4 @@ class BrandOut(BaseModel):
 
 class BrandListOut(BaseModel):
     items: list[BrandOut]
+    next_cursor: Optional[str] = None

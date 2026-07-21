@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { listInvoices } from "@/lib/api/finance";
 import { INVOICE_STATUSES, type Invoice } from "@/lib/types";
+import { Button } from "@/components/ui/button";
 import { InvoiceStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -34,6 +35,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const search = useDebouncedValue(searchInput, 250);
 
@@ -56,16 +58,27 @@ export default function InvoicesPage() {
   });
   const savedFilters = useSavedFilters<InvoicesFilters>(TABLE_ID);
 
-  const load = useCallback(() => {
-    listInvoices({ status: statusFilter || undefined, search: search || undefined })
-      .then((r) => setInvoices(r.items))
-      .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
-  }, [statusFilter, search, t]);
+  const load = useCallback(
+    (options: { append?: boolean; cursor?: string } = {}) => {
+      listInvoices({ status: statusFilter || undefined, search: search || undefined, cursor: options.cursor })
+        .then((r) => {
+          setInvoices((prev) => (options.append && prev ? [...prev, ...r.items] : r.items));
+          setNextCursor(r.next_cursor);
+        })
+        .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
+    },
+    [statusFilter, search, t]
+  );
 
   useEffect(() => {
     setInvoices(null);
     load();
   }, [load]);
+
+  function handleLoadMore() {
+    if (!nextCursor) return;
+    load({ append: true, cursor: nextCursor });
+  }
 
   function applyFilters(filters: InvoicesFilters) {
     setStatusFilter(filters.statusFilter);
@@ -118,6 +131,7 @@ export default function InvoicesPage() {
       )}
 
       {invoices && invoices.length > 0 && (
+        <>
         <div className={tableScrollShellClass}>
           <table className="w-full text-left text-sm">
             <thead className={stickyTheadClass}>
@@ -191,6 +205,14 @@ export default function InvoicesPage() {
             </tbody>
           </table>
         </div>
+        {nextCursor && (
+          <div className="flex justify-center">
+            <Button variant="secondary" onClick={handleLoadMore}>
+              {tCommon("loadMore")}
+            </Button>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

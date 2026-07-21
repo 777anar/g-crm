@@ -36,6 +36,26 @@ def test_brand_search(app_client, owner_headers):
     assert names == {"CAESARSTONE", "SAPIENSTONE"}
 
 
+def test_brands_cursor_reaches_the_next_page(app_client, owner_headers):
+    names = [f"Cursor Brand {i}" for i in range(3)]
+    for name in names:
+        app_client.post("/api/v1/catalog/brands", headers=owner_headers, json={"name": name})
+
+    first_page = app_client.get("/api/v1/catalog/brands", headers=owner_headers, params={"limit": 2}).json()
+    assert len(first_page["items"]) == 2
+    assert first_page["next_cursor"] is not None
+
+    second_page = app_client.get(
+        "/api/v1/catalog/brands", headers=owner_headers, params={"limit": 2, "cursor": first_page["next_cursor"]}
+    ).json()
+    assert len(second_page["items"]) == 1
+    assert second_page["next_cursor"] is None
+
+    first_ids = {b["id"] for b in first_page["items"]}
+    second_ids = {b["id"] for b in second_page["items"]}
+    assert first_ids.isdisjoint(second_ids)
+
+
 def test_get_brand_not_found(app_client, owner_headers):
     import uuid
 

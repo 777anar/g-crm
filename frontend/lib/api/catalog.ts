@@ -20,9 +20,16 @@ import type {
 
 // --- Brands ------------------------------------------------------------
 
-export function listBrands(params: { includeHidden?: boolean; search?: string } = {}) {
-  return apiRequest<{ items: Brand[] }>("/api/v1/catalog/brands", {
-    searchParams: { include_hidden: params.includeHidden, search: params.search || undefined },
+export function listBrands(
+  params: { includeHidden?: boolean; search?: string; limit?: number; cursor?: string } = {}
+) {
+  return apiRequest<Paginated<Brand>>("/api/v1/catalog/brands", {
+    searchParams: {
+      include_hidden: params.includeHidden,
+      search: params.search || undefined,
+      limit: params.limit,
+      cursor: params.cursor,
+    },
   });
 }
 

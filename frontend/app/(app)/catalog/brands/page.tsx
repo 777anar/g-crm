@@ -23,6 +23,7 @@ export default function BrandsPage() {
   const tCommon = useTranslations("common");
   const [brands, setBrands] = useState<Brand[] | null>(null);
   const [searchInput, setSearchInput] = useState("");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const search = useDebouncedValue(searchInput, 250);
@@ -31,14 +32,23 @@ export default function BrandsPage() {
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const reload = useCallback(async () => {
-    try {
-      const res = await listBrands({ search, includeHidden: true });
-      setBrands(res.items);
-    } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
-    }
-  }, [search, t]);
+  const reload = useCallback(
+    async (options: { append?: boolean; cursor?: string } = {}) => {
+      try {
+        const res = await listBrands({ search, includeHidden: true, cursor: options.cursor });
+        setBrands((prev) => (options.append && prev ? [...prev, ...res.items] : res.items));
+        setNextCursor(res.next_cursor);
+      } catch (err) {
+        setError(err instanceof ApiRequestError ? err.message : t("loadFailed"));
+      }
+    },
+    [search, t]
+  );
+
+  function handleLoadMore() {
+    if (!nextCursor) return;
+    reload({ append: true, cursor: nextCursor });
+  }
 
   async function handleToggleStatus(brand: Brand) {
     try {
@@ -130,34 +140,43 @@ export default function BrandsPage() {
       {brands && brands.length === 0 && <EmptyState title={t("noBrandsYet")} description={t("noBrandsDesc")} />}
 
       {brands && brands.length > 0 && (
-        <div className={tableScrollShellClass}>
-          <table className="w-full text-left text-sm">
-            <thead className={stickyTheadClass}>
-              <tr>
-                <th className="px-4 py-2 font-medium">{t("name")}</th>
-                <th className="px-4 py-2 font-medium">{t("description")}</th>
-                <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {brands.map((brand) => (
-                <tr key={brand.id} className="border-b border-border last:border-0 hover:bg-bg">
-                  <td className="px-4 py-2 font-medium text-text-primary">{brand.name}</td>
-                  <td className="px-4 py-2 text-text-secondary">{brand.description ?? tCommon("dash")}</td>
-                  <td className="px-4 py-2">
-                    <EntityStatusBadge status={brand.status} />
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <Button variant="secondary" onClick={() => handleToggleStatus(brand)}>
-                      {brand.status === "active" ? t("entityStatus.hidden") : t("entityStatus.active")}
-                    </Button>
-                  </td>
+        <>
+          <div className={tableScrollShellClass}>
+            <table className="w-full text-left text-sm">
+              <thead className={stickyTheadClass}>
+                <tr>
+                  <th className="px-4 py-2 font-medium">{t("name")}</th>
+                  <th className="px-4 py-2 font-medium">{t("description")}</th>
+                  <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
+                  <th className="px-4 py-2" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {brands.map((brand) => (
+                  <tr key={brand.id} className="border-b border-border last:border-0 hover:bg-bg">
+                    <td className="px-4 py-2 font-medium text-text-primary">{brand.name}</td>
+                    <td className="px-4 py-2 text-text-secondary">{brand.description ?? tCommon("dash")}</td>
+                    <td className="px-4 py-2">
+                      <EntityStatusBadge status={brand.status} />
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <Button variant="secondary" onClick={() => handleToggleStatus(brand)}>
+                        {brand.status === "active" ? t("entityStatus.hidden") : t("entityStatus.active")}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {nextCursor && (
+            <div className="flex justify-center">
+              <Button variant="secondary" onClick={handleLoadMore}>
+                {tCommon("loadMore")}
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

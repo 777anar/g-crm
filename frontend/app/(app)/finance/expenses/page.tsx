@@ -20,21 +20,33 @@ export default function ExpensesPage() {
 
   const [expenses, setExpenses] = useState<Expense[] | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  const load = useCallback(() => {
-    listExpenses({ category: categoryFilter || undefined })
-      .then((r) => setExpenses(r.items))
-      .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
-  }, [categoryFilter, t]);
+  const load = useCallback(
+    (options: { append?: boolean; cursor?: string } = {}) => {
+      listExpenses({ category: categoryFilter || undefined, cursor: options.cursor })
+        .then((r) => {
+          setExpenses((prev) => (options.append && prev ? [...prev, ...r.items] : r.items));
+          setNextCursor(r.next_cursor);
+        })
+        .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
+    },
+    [categoryFilter, t]
+  );
 
   useEffect(() => {
     setExpenses(null);
     load();
   }, [load]);
+
+  function handleLoadMore() {
+    if (!nextCursor) return;
+    load({ append: true, cursor: nextCursor });
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -119,6 +131,7 @@ export default function ExpensesPage() {
       )}
 
       {expenses && expenses.length > 0 && (
+        <>
         <div className="overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full text-left text-sm">
             <thead className="sticky top-0 z-10 border-b border-border bg-bg text-text-secondary">
@@ -141,6 +154,14 @@ export default function ExpensesPage() {
             </tbody>
           </table>
         </div>
+        {nextCursor && (
+          <div className="flex justify-center">
+            <Button variant="secondary" onClick={handleLoadMore}>
+              {tCommon("loadMore")}
+            </Button>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

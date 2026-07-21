@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.26.0] — 2026-07-21 — Pagination Rollout (PROJECT_AUDIT.md Priority #1)
+
+Closes the highest-priority finding from `PROJECT_AUDIT.md` §4/§10 (B4/P1): five list pages had no "Load more" UI and no way to reach records past the backend's page-size cap, unlike Customers/Leads/Materials (fixed in 2.19.0). Same established cursor-pagination pattern applied to the remaining pages; no UI redesign, no new components.
+
+### Fixed
+- **Orders, Production (work orders), Finance Invoices, Finance Expenses**: these four already had full cursor-pagination support end-to-end in their backend endpoints and `lib/api/*.ts` wrappers — only the page components never consumed `next_cursor` or exposed a "Load more" control. Silent truncation at the backend's page-size default (25) is now fixed frontend-only, no backend or API contract changes.
+- **Catalog Brands**: unlike the four above, this one *was* a real backend gap — `GET /api/v1/catalog/brands` never accepted `limit`/`cursor` and `BrandRepository.list()`'s default `limit=50` was silently truncating any company with more than 50 brands, with no contract to reach the rest. Added `limit`/`cursor` query params and a `next_cursor` field to `BrandListOut`, following the exact pattern already established by the Materials and Slabs endpoints in the same module. 1 new backend test (`test_brands_cursor_reaches_the_next_page`).
+
+### Investigated, no change needed
+- **Catalog Warehouses, Catalog Price Lists**: re-verified against the current repository code (`WarehouseRepository.list()`, `PriceListRepository.list()`) rather than assumed from `PROJECT_AUDIT.md`'s grouping — neither applies a `LIMIT` at all today, so both already return every row unbounded. There is no truncation bug here, so no "Load more" UI was added; doing so would be pagination theater over an endpoint that already returns everything. Left as-is, consistent with these being genuinely small, per-tenant master-data collections.
+
+### Verification
+Full backend suite passing (554/554 — 553 prior + 1 new), frontend `tsc --noEmit` clean, frontend production build clean (all 39 routes, unchanged).
+
 ## [2.25.0] — 2026-07-21 — G-STONE ERP Executive: Sales/Inventory/Finance Consolidation (Milestone 2)
 
 The app stops being framed as "a CRM." The primary sidebar collapses from 9 module-level sections to 6: Dashboard, Sales, Inventory, Finance, Reports, Settings. Customers, Leads, Tasks, Projects (Quotes), and Orders — previously two separate primary nav items ("Customers" and "Projects") — merge into one cross-linked "Sales" pipeline; Catalog is relabeled "Inventory" in the nav (its URLs and data model are untouched); Finance is promoted from secondary-only to primary; Production, Installation, and Messages move to secondary-only (still fully reachable, nothing deleted — same regrouping precedent Sprint 2 established for the original 9-section sidebar). The executive Dashboard gains a live Inventory snapshot, backed by a new Inventory Analytics endpoint.

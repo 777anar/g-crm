@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from core.api.errors import NotFoundError
+from core.api.pagination import decode_cursor, encode_cursor
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, require_permission
 from modules.catalog.application.dtos import CreateBrandInput, UpdateBrandInput
@@ -19,12 +20,24 @@ router = APIRouter()
 def list_brands(
     include_hidden: bool = Query(default=False),
     search: Optional[str] = Query(default=None),
+    limit: int = Query(default=25, le=100),
+    cursor: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_permission("catalog:brands:read")),
 ) -> BrandListOut:
     repo = BrandRepository(db)
-    items = repo.list(company_id=current_user.active_company_id, include_hidden=include_hidden, search=search)
-    return BrandListOut(items=[BrandOut.model_validate(b) for b in items])
+    offset = decode_cursor(cursor)
+    items = repo.list(
+        company_id=current_user.active_company_id,
+        include_hidden=include_hidden,
+        search=search,
+        limit=limit + 1,
+        offset=offset,
+    )
+    has_more = len(items) > limit
+    page = items[:limit]
+    next_cursor = encode_cursor(offset=offset + limit) if has_more else None
+    return BrandListOut(items=[BrandOut.model_validate(b) for b in page], next_cursor=next_cursor)
 
 
 @router.post("/brands", response_model=BrandOut)
