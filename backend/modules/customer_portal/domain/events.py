@@ -1,0 +1,3 @@
+PORTAL_ACCESS_ENABLED = "CustomerPortalAccessEnabled"
+PORTAL_ACCESS_PASSWORD_RESET = "CustomerPortalPasswordReset"
+PORTAL_ACCESS_STATUS_CHANGED = "CustomerPortalAccessStatusChanged"

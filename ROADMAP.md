@@ -1,7 +1,7 @@
 # G-STONE ERP — Product Roadmap
 
-_Originally proposed 2026-06-30 (CRM Version 1.0 frozen as of commit `bec2def`); the plan below was approved the same day (see Change log) and has been followed and extended ever since — updated 2026-07-21 to reflect delivery through Version 2.31.0._
-_Status: current version is **2.32.0**. All ten modules on the original plan (`PROJECT_ANALYSIS.md` §2) are now shipped — Marketing, the last one, landed this revision. This document's Version 1.1/1.2/2.0+ tables are kept as delivered — each row is annotated "Delivered <date>" once shipped — so the plan and the delivery history live in one place rather than two._
+_Originally proposed 2026-06-30 (CRM Version 1.0 frozen as of commit `bec2def`); the plan below was approved the same day (see Change log) and has been followed and extended ever since — updated 2026-07-21 to reflect delivery through Version 2.32.0._
+_Status: current version is **2.33.0**. All ten modules on the original plan (`PROJECT_ANALYSIS.md` §2) shipped as of Version 2.32.0 (Marketing, the last one). Customer Portal (this revision) is the first module built beyond that original plan, same category as Communication Center. This document's Version 1.1/1.2/2.0+ tables are kept as delivered — each row is annotated "Delivered <date>" once shipped — so the plan and the delivery history live in one place rather than two._
 
 This is a product-perspective review of the application as it stood on 2026-06-30, and a proposal for what came next, split into three horizons: **1.1** (polish the frozen CRM), **1.2** (deepen the CRM into a daily operating tool), and **2.0** (the first new ERP module beyond CRM, per the modular architecture frozen in `PROJECT_ANALYSIS.md`). Every one of those horizons is now complete; the **Summary** table and **Change log** sections further down carry the plan forward through every version actually shipped since, including this document's own most recent update.
 
@@ -578,6 +578,20 @@ Reports
 
 ---
 
+## Version 2.33.0 — Customer Portal
+
+**Theme:** the first module built beyond the original ten-module plan (`PROJECT_ANALYSIS.md` §2), same category as Communication Center. Until now every screen in this application was staff-facing — a G-STONE customer had no way to check their own order status, quote, invoice balance, or installation date without calling the office. This is fundamentally a different kind of module from every prior one: it needs a second, entirely separate authentication identity, since a customer is not a member of any company's staff RBAC hierarchy.
+
+| Feature | Priority | Business value | Dependencies | Complexity |
+|---|---|---|---|---|
+| **Customer login identity** — a new `customer_portal_logins` table (1:1 with `crm_customers`), its own JWT token type (`customer_access`/`customer_refresh`, never accepted by a staff-only endpoint or vice versa), its own rate-limit bucket, reusing only the low-level primitives (password hashing, JWT encode/decode, the refresh-token denylist) from staff auth | High | A real separate identity is the only safe way to expose customer data externally — reusing staff auth would risk a customer token being accepted somewhere it shouldn't be | None | L |
+| **Staff-side access management** — a "Customer Portal" card on the Customer detail page: enable access (email + temporary password), reset password, enable/disable without deleting the account | High | Staff need a real, auditable way to turn this on for a specific customer, not a database script | Customer login identity | M |
+| **Customer-facing read surface** — orders, quotes (drafts hidden), invoices (drafts hidden, balance due shown), installation schedule, and documents (own CRM attachments + own installation photos only), every response deliberately whitelisted to exclude internal cost/profit/margin fields | High | The actual value: a customer can self-serve "where is my order" instead of calling the office, without ever seeing G-STONE's internal cost basis on their own job | Customer login identity, CRM, Sales, Orders, Finance, Installation | L |
+
+**Verification:** full backend suite passing (630/630 — 599 prior + 31 new, including deliberate cross-token and cross-tenant isolation tests), `lint-imports` passing, a real Alembic migration generated, applied, and verified against the dev database (`alembic check` clean), frontend `tsc --noEmit` clean, frontend production build clean (55 routes — 10 new), plus a live end-to-end smoke test against the running app and dev database (enable access → customer login → profile/orders read → cross-token rejection both directions, all confirmed).
+
+---
+
 ## Complexity key
 
 - **S** (Small): a few files, one focused PR, low risk
@@ -623,6 +637,7 @@ Reports
 | 2.30.0 | Fix: Orders/Production/Installation/Finance List Pagination — found during 2.29.0's doc sync: five list endpoints hardcoded `next_cursor: null` despite accepting `limit`/`cursor`, silently undermining 2.26.0's "Load more" UI; fixed with the same proven cursor pattern | No | No (backend fix + 5 new tests) |
 | 2.31.0 | Purchasing Module — Suppliers + Purchase Orders + receiving, closing the restocking loop for the Stone Catalog; receiving a line optionally creates a real `catalog_slabs` row via Catalog's own `CreateSlabUseCase` | Yes (Supplier, PurchaseOrder, PurchaseOrderLine, GoodsReceipt) | Yes (Purchasing) |
 | 2.32.0 | Marketing Module — Campaigns with a real lifecycle, ID-based lead attribution via a new `crm_leads.campaign_id` column (no DB-level FK), and live-computed performance (leads/conversion/attributed revenue); closes out the original ten-module plan | Yes (Campaign; `crm_leads` gained 1 column) | Yes (Marketing) |
+| 2.33.0 | Customer Portal — a second, separate customer authentication identity (own JWT token type, own rate limit) with staff-side enable/disable/reset and a customer-facing read surface (orders/quotes/invoices/installation/documents, internal cost/margin fields whitelisted out); first module beyond the original ten-module plan | Yes (CustomerLogin) | Yes (Customer Portal) |
 
 ## Change log
 

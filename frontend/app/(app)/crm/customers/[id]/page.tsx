@@ -12,12 +12,19 @@ import {
 } from "@/lib/api/crm";
 import { listCompanyUsers } from "@/lib/api/companies";
 import {
+  enablePortalAccess,
+  getPortalAccess,
+  resetPortalPassword,
+  setPortalAccessActive,
+} from "@/lib/api/customer-portal-admin";
+import {
   CUSTOMER_STATUSES,
   CUSTOMER_TYPES,
   type CompanyUser,
   type CustomerProfile,
   type CustomerStatus,
   type CustomerType,
+  type PortalAccess,
 } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -25,7 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, CustomerArchivedBadge, CustomerStatusBadge, LeadChannelBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TextAreaField } from "@/components/ui/field";
+import { TextField, TextAreaField } from "@/components/ui/field";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
@@ -57,6 +64,16 @@ export default function CustomerProfilePage() {
   const [savingCustomerNotes, setSavingCustomerNotes] = useState(false);
   const [users, setUsers] = useState<CompanyUser[]>([]);
 
+  const [portalAccess, setPortalAccess] = useState<PortalAccess | null>(null);
+  const [portalAccessLoaded, setPortalAccessLoaded] = useState(false);
+  const [portalEmail, setPortalEmail] = useState("");
+  const [portalPassword, setPortalPassword] = useState("");
+  const [portalSaving, setPortalSaving] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [resetSaving, setResetSaving] = useState(false);
+  const [togglingActive, setTogglingActive] = useState(false);
+
   async function reload() {
     try {
       const data = await getCustomerProfile(customerId);
@@ -75,6 +92,62 @@ export default function CustomerProfilePage() {
   useEffect(() => {
     listCompanyUsers().then(setUsers).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    getPortalAccess(customerId)
+      .then(setPortalAccess)
+      .catch(() => setPortalAccess(null))
+      .finally(() => setPortalAccessLoaded(true));
+  }, [customerId]);
+
+  async function handleEnablePortalAccess(e: React.FormEvent) {
+    e.preventDefault();
+    setPortalSaving(true);
+    setError(null);
+    try {
+      const access = await enablePortalAccess(customerId, { email: portalEmail, password: portalPassword });
+      setPortalAccess(access);
+      setPortalEmail("");
+      setPortalPassword("");
+      toast.success(t("portalAccessEnabled"));
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("portalAccessFailed"));
+    } finally {
+      setPortalSaving(false);
+    }
+  }
+
+  async function handleResetPortalPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setResetSaving(true);
+    setError(null);
+    try {
+      const access = await resetPortalPassword(customerId, newPassword);
+      setPortalAccess(access);
+      setNewPassword("");
+      setResettingPassword(false);
+      toast.success(t("portalPasswordReset"));
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("portalAccessFailed"));
+    } finally {
+      setResetSaving(false);
+    }
+  }
+
+  async function handleTogglePortalActive() {
+    if (!portalAccess) return;
+    setTogglingActive(true);
+    setError(null);
+    try {
+      const access = await setPortalAccessActive(customerId, !portalAccess.is_active);
+      setPortalAccess(access);
+      toast.success(t("portalAccessUpdated"));
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("portalAccessFailed"));
+    } finally {
+      setTogglingActive(false);
+    }
+  }
 
   async function handleAddNote(e: React.FormEvent) {
     e.preventDefault();
@@ -344,6 +417,79 @@ export default function CustomerProfilePage() {
                   </li>
                 ))}
               </ul>
+            )}
+          </Card>
+
+          <Card>
+            <CardHeader title={t("portalAccess")} />
+            {!portalAccessLoaded && <Skeleton className="h-20 w-full" />}
+            {portalAccessLoaded && !portalAccess && (
+              <form className="flex flex-col gap-3" onSubmit={handleEnablePortalAccess}>
+                <p className="text-xs text-text-secondary">{t("portalAccessDesc")}</p>
+                <TextField
+                  label={t("portalEmail")}
+                  type="email"
+                  value={portalEmail}
+                  onChange={(e) => setPortalEmail(e.target.value)}
+                  required
+                />
+                <TextField
+                  label={t("portalPassword")}
+                  type="password"
+                  value={portalPassword}
+                  onChange={(e) => setPortalPassword(e.target.value)}
+                  required
+                />
+                <Button type="submit" disabled={portalSaving || !portalEmail || !portalPassword}>
+                  {portalSaving ? t("saving") : t("enablePortalAccess")}
+                </Button>
+              </form>
+            )}
+            {portalAccessLoaded && portalAccess && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-text-primary">{portalAccess.email}</p>
+                    <p className="text-xs text-text-secondary">
+                      {portalAccess.last_login_at
+                        ? `${t("lastLogin")}: ${formatDateTime(portalAccess.last_login_at)}`
+                        : t("neverLoggedIn")}
+                    </p>
+                  </div>
+                  <Badge tone={portalAccess.is_active ? "success" : "neutral"}>
+                    {portalAccess.is_active ? t("portalActive") : t("portalInactive")}
+                  </Badge>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={handleTogglePortalActive} disabled={togglingActive}>
+                    {portalAccess.is_active ? t("disablePortalAccess") : t("enablePortalAccessToggle")}
+                  </Button>
+                  {!resettingPassword && (
+                    <Button variant="secondary" onClick={() => setResettingPassword(true)}>
+                      {t("resetPortalPassword")}
+                    </Button>
+                  )}
+                </div>
+                {resettingPassword && (
+                  <form className="flex flex-col gap-2" onSubmit={handleResetPortalPassword}>
+                    <TextField
+                      label={t("newPortalPassword")}
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                    />
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={resetSaving || !newPassword}>
+                        {resetSaving ? t("saving") : tCommon("save")}
+                      </Button>
+                      <Button variant="secondary" onClick={() => setResettingPassword(false)}>
+                        {tCommon("cancel")}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </div>
             )}
           </Card>
         </div>

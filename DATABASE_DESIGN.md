@@ -1,7 +1,7 @@
 # G-ERP — Database Design
 
 _Originally a Phase 1 design document (2026-06-29); rewritten 2026-07-21 against the actual current SQLAlchemy models (every `infrastructure/models/*.py` file in `backend/`, not the original design) to close `PROJECT_AUDIT.md` Priority #4 — the previous revision described a superseded Phase-1 CRM/Sales schema that was never actually built that way, and still listed Production/Installation/Finance as "conceptual, not migrated" long after all three shipped._
-_Status: covers every table in every one of the twelve installed modules, as implemented as of Version 2.32.0, verified directly against model source files and Alembic migrations._
+_Status: covers every table in every one of the thirteen installed modules, as implemented as of Version 2.33.0, verified directly against model source files and Alembic migrations._
 
 ---
 
@@ -16,7 +16,7 @@ _Status: covers every table in every one of the twelve installed modules, as imp
 - Several business-date columns (`scheduled_date`, `expense_date`, `valid_until`, etc.) are stored as plain `TEXT(10)` ISO date strings rather than a `DATE` column — a deliberate SQLite/Postgres portability choice made early and kept consistent since, not an inconsistency to "fix."
 - Status/enum-like columns are plain `TEXT` with the valid-value set enforced in the domain layer (`domain/value_objects.py` per module, typically a `VALID_*` frozenset plus, for stateful entities, an explicit transition graph), not a DB-level `CHECK` constraint or native enum type — this is a real, consistent choice across every module, not a Phase-1-only shortcut.
 
-## 2. Entity-Relationship Diagram (current, all twelve installed modules)
+## 2. Entity-Relationship Diagram (current, all thirteen installed modules)
 
 ```
 companies ──┬──────< user_company_roles >────────────────── users
@@ -66,6 +66,8 @@ companies ──┬──────< user_company_roles >───────
             ├──< purchase_order_lines ──< goods_receipts >── catalog_slabs (created on receipt, when slab details given)
             │
             ├──< campaigns (Marketing) ── attributed via crm_leads.campaign_id (opaque, no DB-level FK) and orders.customer_id
+            │
+            ├──< customer_portal_logins ── customer_id ──> crm_customers (1:1, real FK)
             │
             ├──< documents >── related_entity (any module's entity, polymorphic)
             ├──< audit_log >── actor_user_id ──> users
@@ -704,11 +706,31 @@ _Marketing campaigns with real, ID-based lead attribution and revenue performanc
 
 **Performance (not a table — computed on read by `CampaignPerformanceRepository`)**: `leads_count` = count of `crm_leads` rows with this campaign's id in `campaign_id` (§4.3), scoped by `company_id`; `converted_count` = of those, how many have `converted_customer_id` set; `conversion_rate` = `converted_count / leads_count`; `attributed_revenue` = sum of `orders.total_final` for orders belonging to those converted customers, counting only orders whose status is in `{ready, delivered, installed, completed}` — a cancelled order never inflates a campaign's apparent ROI.
 
-## 15. Unbuilt Modules (conceptual only)
+## 15. Customer Portal Module Tables (Version 2.33.0)
+
+_A module beyond the original ten-module plan — same category as Communication Center (§11). Gives a G-STONE customer (not a staff member) their own login to see their own orders, quotes, invoices, installation schedule, and documents. `depends_on=["crm", "sales", "orders", "finance", "installation"]`: `customer_portal_logins` carries a real FK to `crm_customers.id` (safe here — unlike `crm_leads.campaign_id` in §14 — because this table lives in the *dependent* module, not in CRM), and the customer-facing read endpoints query Order/Quote/Invoice/InstallationJob directly, the same "depends_on for read access" pattern §14 and Reports (§12's sibling) use._
+
+### 15.1 `customer_portal_logins`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, REFERENCES companies(id), indexed |
+| customer_id | UUID | NOT NULL, UNIQUE, REFERENCES crm_customers(id), indexed — one login per customer |
+| email | TEXT | NOT NULL, UNIQUE, indexed — globally unique, same as staff `users.email` (§3) |
+| password_hash | TEXT | NOT NULL — bcrypt via the same `core.auth.security.hash_password` staff accounts use |
+| is_active | BOOLEAN | NOT NULL, DEFAULT `true` |
+| last_login_at | TIMESTAMPTZ | nullable |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL |
+
+**A separate identity from `users`, deliberately.** A customer is not a member of any company's RBAC hierarchy (`user_company_roles`, §3) — they have exactly one `customer_id`, not a role or `module_permissions`. JWTs issued for this identity carry `"type": "customer_access"`/`"customer_refresh"` (vs. staff's `"access"`/`"refresh"`) and only `customer_id`/`company_id` claims, checked by `customer_portal`'s own `get_current_customer` dependency — structurally incapable of being accepted by `core.rbac.dependencies.get_current_user` or vice versa, confirmed by tests exercising both directions.
+
+**No new tables for Orders/Quotes/Invoices/InstallationJobs/Documents.** The customer-facing read endpoints query the existing tables from §6 (`sales_quotes`), §7 (`orders`), §9 (`installation_jobs`), §10 (`invoices`), and §3 (`documents`) directly, scoped to `(company_id, customer_id)` from the caller's token — never a client-supplied filter. Response shapes are deliberately whitelisted at the Pydantic layer (`PortalOrderOut`/`PortalQuoteOut`/etc.), never a raw `model_validate()` of the staff-facing schemas: `orders.total_internal_cost`/`total_profit` and `sales_quotes.total_internal_cost`/`total_profit`/`profit_margin_pct`/`internal_notes` (real COGS/margin data) are never returned to a customer. `sales_quotes`/`invoices` rows with `status = 'draft'` are excluded from every customer-facing query entirely (`404` on direct fetch by id) — a customer never sees an internal working copy before staff sends it.
+
+## 16. Unbuilt Modules (conceptual only)
 
 Every module named in the original 10-module roadmap has now shipped (`PROJECT_AUDIT.md` §3; Purchasing in Version 2.31.0, Marketing in Version 2.32.0). Nothing remains in this section — kept as a placeholder heading so downstream section numbers below don't shift again if a genuinely new module is proposed later.
 
-## 16. Row-Level Security Strategy
+## 17. Row-Level Security Strategy
 
 **Correction from the previous revision of this document: Postgres Row-Level Security is not implemented anywhere in this codebase today.** A grep across all of `backend/` for `ROW LEVEL SECURITY`/`CREATE POLICY`/`row_level_security` returns zero hits — no migration, no raw SQL, nothing (`PROJECT_AUDIT.md` S1). The previous revision described RLS as already-in-place defense-in-depth; that was the Phase-1 design intention, never actually built.
 
@@ -724,9 +746,9 @@ CREATE POLICY tenant_isolation ON crm_customers
 
 — the backend would need to `SET LOCAL app.current_company_id` at the start of each request's DB transaction (derived from the authenticated user's active company, never client-supplied) for this to function. Not built; recorded here as a real, open gap rather than implied-complete.
 
-## 17. Migration Strategy
+## 18. Migration Strategy
 
-- Alembic revision history is a single linear chain (currently 20 migrations deep, head `430944e10164`) — unified at the database level, but each module owns the migration scripts that create/alter its own tables.
+- Alembic revision history is a single linear chain (currently 21 migrations deep, head `2b84b718b162`) — unified at the database level, but each module owns the migration scripts that create/alter its own tables.
 - Core platform tables (`companies`, `users`, `user_company_roles`, `documents`, `audit_log`, `event_log`, `ai_jobs`) were created in the earliest migration, before any module's tables.
 - **Correction from the previous revision of this document**: there is no CI step that runs `alembic upgrade head` against a disposable database on every PR — that claim was aspirational, not built. What actually runs today: the test suite (`pytest`, wired into `.github/workflows/ci.yml` as of Version 2.28.0) builds its schema via SQLAlchemy's `Base.metadata.create_all()` directly from the current model definitions, entirely bypassing the Alembic migration chain — so a passing test suite does not, by itself, prove the migration chain is consistent with the models. `alembic check` (run manually, most recently confirmed clean during the Version 2.28.0 audit pass) is the actual verification that the migration chain matches the models; it is not yet part of the CI workflow. A real gap worth closing in a future pass, not claimed as already closed here.
 - Module removal does not auto-drop tables; a deliberate downgrade migration is required if data removal is intended.

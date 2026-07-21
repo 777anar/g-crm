@@ -1447,3 +1447,94 @@ export type CampaignPerformance = {
   conversion_rate: number;
   attributed_revenue: string;
 };
+
+// --- Customer Portal -------------------------------------------------------
+// Deliberately separate, whitelisted shapes -- never the staff-facing
+// Order/Quote/Invoice types above, which carry internal cost/profit fields
+// (total_internal_cost, total_profit, profit_margin_pct) the backend's
+// PortalOrderOut/PortalQuoteOut/PortalInvoiceOut schemas never return.
+
+export type PortalAccess = {
+  customer_id: string;
+  email: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+};
+
+export type PortalMe = {
+  customer_id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  company_id: string;
+  company_name: string;
+};
+
+export type PortalOrder = {
+  id: string;
+  order_number: string;
+  status: string;
+  currency: string;
+  subtotal_gross: string;
+  discount_amount: string;
+  vat_amount: string;
+  total_final: string;
+  delivery_address: string | null;
+  scheduled_production_date: string | null;
+  scheduled_installation_date: string | null;
+  created_at: string;
+};
+
+export type PortalQuote = {
+  id: string;
+  quote_number: string;
+  version: number;
+  status: string;
+  currency: string;
+  subtotal_gross: string;
+  discount_amount: string;
+  vat_amount: string;
+  total_final: string;
+  valid_until: string | null;
+  customer_notes: string | null;
+  sent_at: string | null;
+  accepted_at: string | null;
+  rejected_at: string | null;
+  created_at: string;
+};
+
+export type PortalInvoice = {
+  id: string;
+  invoice_number: string;
+  status: string;
+  currency: string;
+  subtotal_amount: string;
+  total_amount: string;
+  amount_paid: string;
+  balance_due: string;
+  issue_date: string;
+  due_date: string | null;
+  notes: string | null;
+  sent_at: string | null;
+  paid_at: string | null;
+  created_at: string;
+};
+
+export type PortalInstallationJob = {
+  id: string;
+  job_number: string;
+  status: string;
+  scheduled_date: string | null;
+  scheduled_time_slot: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+};
+
+export type PortalDocument = {
+  id: string;
+  related_entity_type: string;
+  mime_type: string;
+  created_at: string;
+};
