@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.27.0] — 2026-07-21 — Dashboard Resilience & Accurate KPI Counts (PROJECT_AUDIT.md Priority #2)
+
+Closes the next-highest finding from `PROJECT_AUDIT.md` §4/§10 (B2/B3): the Dashboard's 11-way parallel fetch was all-or-nothing (one failing call blanked the entire page, including sections that don't depend on it), and several of its stat/KPI counts were computed from collections silently capped at 100 rows with no way to reach the rest. Frontend-only; no backend or API contract changes, no visual change to the page when every call succeeds.
+
+### Fixed
+- **Resilience (B2)**: replaced the Dashboard's `Promise.all` fan-out with `Promise.allSettled`. Previously, any single rejected call (e.g. a transient error on Inventory Analytics) meant `.then()` never ran at all, so nothing — not even the unrelated, already-successfully-fetched sections — ever rendered; the page was stuck on the loading skeleton behind a single error line. Each of the 9 calls is now applied independently from its own settled result, defaulting to an empty/`null` value only for the piece that failed. The `loading` gate no longer depends on every individual piece of state being non-null (which could never resolve if one call kept failing) — it now flips once the whole settle batch completes, regardless of outcome.
+- **JSX gating**: the KPI/revenue-trend section (which needs `executive` data specifically) is now independently gated from the Inventory snapshot and the "Today" operational sections (tasks, installations, overdue orders, notifications, recent inquiries), which don't depend on it. A failure of the Executive Dashboard call alone no longer hides sections that have nothing to do with it. Markup and layout are unchanged for the successful-load case.
+- **KPI under-counting (B3)**: `Orders`, `Production` (work orders), and `Tasks` were fetched with a hardcoded `limit: 100` and no follow-up, so `statOverdueWork`, `statInProduction`, and the overdue-orders list would silently under-count once a company passed 100 rows in any of those collections. Added `lib/fetch-all-pages.ts` — a small, generic `fetchAllPages()` helper that follows a cursor-paginated endpoint's `next_cursor` to completion (capped at 50 pages as a runaway-loop safety valve, not a real-world limit) — and applied it to Orders, Production, and Installation Jobs, the three collections these stats are actually derived from.
+- **Recent Inquiries**: previously fetched 100 leads and sorted/sliced to 5 client-side. Now requests exactly `{ sort: "-created_at", limit: 5 }` from the existing `listLeads` endpoint — correct regardless of total lead count, and one fewer bulk fetch.
+- **Customer/project name lookups**: previously fetched up to 100 customers and 100 projects in bulk just to build `id -> name` lookup maps for the Overdue Projects and Upcoming Installations sections — itself an uncapped-count risk (a company with >100 customers could see blank names) and wasteful (fetching entire tables just to label a handful of rows). Replaced with targeted per-id lookups (`getCustomer`/`getProject`) for only the customer/project ids actually referenced by the rows being rendered, mirroring the same pattern already used on the Orders and Production list pages.
+
+### Verification
+Full backend suite passing (554/554, unchanged — no backend files touched this pass), frontend `tsc --noEmit` clean, frontend production build clean (all 39 routes).
+
 ## [2.26.0] — 2026-07-21 — Pagination Rollout (PROJECT_AUDIT.md Priority #1)
 
 Closes the highest-priority finding from `PROJECT_AUDIT.md` §4/§10 (B4/P1): five list pages had no "Load more" UI and no way to reach records past the backend's page-size cap, unlike Customers/Leads/Materials (fixed in 2.19.0). Same established cursor-pagination pattern applied to the remaining pages; no UI redesign, no new components.

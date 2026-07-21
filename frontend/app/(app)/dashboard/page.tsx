@@ -3,22 +3,21 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { checkTaskReminders, listCustomers, listLeads, listTaskNotifications, listTasks } from "@/lib/api/crm";
+import { checkTaskReminders, getCustomer, listLeads, listTaskNotifications, listTasks } from "@/lib/api/crm";
 import { me } from "@/lib/api/auth";
 import { listOrders } from "@/lib/api/orders";
 import { listWorkOrders } from "@/lib/api/production";
 import { listInstallationJobs, listNotifications as listInstallationNotifications } from "@/lib/api/installation";
-import { listMeasurementsForCompany, listProjects } from "@/lib/api/sales";
+import { getProject, listMeasurementsForCompany } from "@/lib/api/sales";
 import { getExecutiveDashboard, getInventoryAnalytics } from "@/lib/api/reports";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import type {
-  Customer,
   ExecutiveDashboard,
   InstallationJob,
   InventoryAnalytics,
   InstallationNotification,
   Lead,
   Order,
-  Project,
   ProjectItemMeasurement,
   Task,
   TaskNotification,
@@ -87,8 +86,8 @@ export default function DashboardPage() {
   const channelLabel = useLeadChannelLabel();
 
   const [fullName, setFullName] = useState<string | null>(null);
-  const [customers, setCustomers] = useState<Customer[] | null>(null);
-  const [projects, setProjects] = useState<Project[] | null>(null);
+  const [customerNames, setCustomerNames] = useState<Record<string, string>>({});
+  const [projectNames, setProjectNames] = useState<Record<string, string>>({});
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [workOrders, setWorkOrders] = useState<WorkOrder[] | null>(null);
   const [installationJobs, setInstallationJobs] = useState<InstallationJob[] | null>(null);
@@ -99,62 +98,78 @@ export default function DashboardPage() {
   const [installationNotifications, setInstallationNotifications] = useState<InstallationNotification[] | null>(null);
   const [executive, setExecutive] = useState<ExecutiveDashboard | null>(null);
   const [inventory, setInventory] = useState<InventoryAnalytics | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const todayKey = toDateKey(new Date());
 
-    Promise.all([
+    // Promise.allSettled (not Promise.all) so one failing call degrades
+    // gracefully -- everything that DID load still renders below, instead
+    // of a single rejection blanking the whole page (PROJECT_AUDIT.md B2).
+    // The order/work-order/installation-job/task lists are followed to
+    // their cursor's end via fetchAllPages rather than a single capped
+    // page, so the counts derived from them below never silently
+    // under-count past an arbitrary page limit (PROJECT_AUDIT.md B3).
+    Promise.allSettled([
       me(),
-      listCustomers({ limit: 100 }),
-      listProjects({ limit: 100 }),
-      listOrders({ limit: 100 }),
-      listWorkOrders({ limit: 100 }),
-      listInstallationJobs({ dateFrom: todayKey, limit: 100 }),
-      listLeads({ limit: 100 }),
+      fetchAllPages<Order>((cursor) => listOrders({ limit: 100, cursor })),
+      fetchAllPages<WorkOrder>((cursor) => listWorkOrders({ limit: 100, cursor })),
+      fetchAllPages<InstallationJob>((cursor) => listInstallationJobs({ dateFrom: todayKey, limit: 200, cursor })),
+      listLeads({ sort: "-created_at", limit: 5 }),
       listMeasurementsForCompany({ dateFrom: todayKey, dateTo: todayKey }),
-      listTasks({ excludeTerminal: true, sort: "due_date", limit: 100 }),
+      fetchAllPages<Task>((cursor) => listTasks({ excludeTerminal: true, sort: "due_date", limit: 100, cursor })),
       getExecutiveDashboard({ period: "30d" }),
       getInventoryAnalytics(),
-    ])
-      .then(
-        ([profile, customerRes, projectRes, orderRes, workOrderRes, installationRes, leadRes, measurementRes, taskRes, executiveRes, inventoryRes]) => {
-          setFullName(profile.full_name);
-          setCustomers(customerRes.items);
-          setProjects(projectRes.items);
-          setOrders(orderRes.items);
-          setWorkOrders(workOrderRes.items);
-          setInstallationJobs(installationRes.items);
-          setLeads(leadRes.items);
-          setMeasurementsToday(measurementRes.items);
-          setTasks(taskRes.items);
-          setExecutive(executiveRes);
-          setInventory(inventoryRes);
+    ]).then((results) => {
+      const [profileR, orderR, workOrderR, installationR, leadR, measurementR, taskR, executiveR, inventoryR] = results;
 
-          // Surfaces newly-due reminders/overdue tasks the moment the
-          // Dashboard loads -- see checkTaskReminders' doc comment for why
-          // this is a pull rather than a scheduled push.
-          checkTaskReminders()
-            .catch(() => {})
-            .then(() =>
-              Promise.all([
-                listTaskNotifications({ unreadOnly: true }),
-                listInstallationNotifications({ unreadOnly: true }),
-              ])
-            )
-            .then((result) => {
-              if (!result) return;
-              const [taskNotifRes, installationNotifRes] = result;
-              setTaskNotifications(taskNotifRes.items);
-              setInstallationNotifications(installationNotifRes.items);
-            })
-            .catch(() => {
-              setTaskNotifications([]);
-              setInstallationNotifications([]);
-            });
-        }
-      )
-      .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
+      setFullName(profileR.status === "fulfilled" ? profileR.value.full_name : null);
+      setOrders(orderR.status === "fulfilled" ? orderR.value : []);
+      setWorkOrders(workOrderR.status === "fulfilled" ? workOrderR.value : []);
+      setInstallationJobs(installationR.status === "fulfilled" ? installationR.value : []);
+      setLeads(leadR.status === "fulfilled" ? leadR.value.items : []);
+      setMeasurementsToday(measurementR.status === "fulfilled" ? measurementR.value.items : []);
+      setTasks(taskR.status === "fulfilled" ? taskR.value : []);
+      setExecutive(executiveR.status === "fulfilled" ? executiveR.value : null);
+      setInventory(inventoryR.status === "fulfilled" ? inventoryR.value : null);
+
+      // Surfaces that something was incomplete without hiding whatever DID
+      // load -- see the render gates below, which only depend on their own
+      // piece of state, not on every call having succeeded.
+      const firstFailure = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+      setError(
+        firstFailure
+          ? firstFailure.reason instanceof ApiRequestError
+            ? firstFailure.reason.message
+            : t("loadFailed")
+          : null
+      );
+      setLoaded(true);
+
+      // Surfaces newly-due reminders/overdue tasks the moment the
+      // Dashboard loads -- see checkTaskReminders' doc comment for why
+      // this is a pull rather than a scheduled push. Runs independently of
+      // the fetch above so its own failure never affects the rest.
+      checkTaskReminders()
+        .catch(() => {})
+        .then(() =>
+          Promise.all([
+            listTaskNotifications({ unreadOnly: true }),
+            listInstallationNotifications({ unreadOnly: true }),
+          ])
+        )
+        .then((result) => {
+          if (!result) return;
+          const [taskNotifRes, installationNotifRes] = result;
+          setTaskNotifications(taskNotifRes.items);
+          setInstallationNotifications(installationNotifRes.items);
+        })
+        .catch(() => {
+          setTaskNotifications([]);
+          setInstallationNotifications([]);
+        });
+    });
   }, [t]);
 
   // Month-over-month delta is only meaningful with at least two trend
@@ -178,7 +193,10 @@ export default function DashboardPage() {
     return { pct: ((curr - prev) / prev) * 100, label: t("vsPreviousMonth") };
   }, [executive, t]);
 
-  const loading = customers === null || orders === null || executive === null || inventory === null;
+  // Once the initial settle-batch completes (success or partial failure)
+  // we're no longer "loading" -- unlike a `=== null` check on any single
+  // piece of state, this can't get stuck forever if just one call rejects.
+  const loading = !loaded;
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -186,8 +204,6 @@ export default function DashboardPage() {
     return fullName ? t(key, { name: fullName.split(" ")[0] }) : t("title");
   }, [fullName, t]);
 
-  const customerNameById = useMemo(() => new Map((customers ?? []).map((c) => [c.id, c.name])), [customers]);
-  const projectNameById = useMemo(() => new Map((projects ?? []).map((p) => [p.id, p.name])), [projects]);
   const orderById = useMemo(() => new Map((orders ?? []).map((o) => [o.id, o])), [orders]);
 
   // Memoized so re-renders triggered by unrelated state don't re-run these
@@ -249,10 +265,54 @@ export default function DashboardPage() {
       .sort((a, b) => a.referenceDate.localeCompare(b.referenceDate));
   }, [orders]);
 
-  const recentLeads = useMemo(
-    () => [...(leads ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5),
-    [leads]
-  );
+  // Customer/project names are resolved by id, on demand, for just the
+  // records actually rendered below (overdue orders + upcoming
+  // installations) -- not from a bulk, page-capped customer/project list,
+  // which would miss names for records outside an arbitrary first page on
+  // a company with many customers/projects (PROJECT_AUDIT.md B3). Mirrors
+  // the same per-id lookup pattern already used on the Orders/Production
+  // list pages.
+  useEffect(() => {
+    const customerIds = new Set<string>();
+    const projectIds = new Set<string>();
+    overdueOrders.forEach(({ order }) => {
+      customerIds.add(order.customer_id);
+      projectIds.add(order.project_id);
+    });
+    upcomingInstallations.forEach((job) => {
+      const order = orderById.get(job.order_id);
+      if (order) {
+        customerIds.add(order.customer_id);
+        projectIds.add(order.project_id);
+      }
+    });
+
+    if (customerIds.size > 0) {
+      Promise.all(
+        Array.from(customerIds).map((id) =>
+          getCustomer(id)
+            .then((c) => [id, c.name] as const)
+            .catch(() => null)
+        )
+      ).then((pairs) => {
+        const resolved = pairs.filter((p): p is readonly [string, string] => p !== null);
+        setCustomerNames(Object.fromEntries(resolved));
+      });
+    }
+
+    if (projectIds.size > 0) {
+      Promise.all(
+        Array.from(projectIds).map((id) =>
+          getProject(id)
+            .then((p) => [id, p.name] as const)
+            .catch(() => null)
+        )
+      ).then((pairs) => {
+        const resolved = pairs.filter((p): p is readonly [string, string] => p !== null);
+        setProjectNames(Object.fromEntries(resolved));
+      });
+    }
+  }, [overdueOrders, upcomingInstallations, orderById]);
 
   const notifications = useMemo<NotificationItem[]>(() => {
     const fromTasks = (taskNotifications ?? []).map((n) => ({
@@ -306,52 +366,58 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {!loading && executive && (
+      {!loading && (
         <>
-          {/* Executive snapshot -- the "understand the business in 10
-              seconds" surface: big numbers first, operational detail below. */}
-          <section className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <KpiCard
-                label={tReports("kpiRevenue")}
-                value={formatNumber(executive.kpis.revenue)}
-                tone="primary"
-                delta={revenueDelta}
-              />
-              <KpiCard
-                label={tReports("kpiProfit")}
-                value={formatNumber(executive.kpis.profit)}
-                tone="success"
-                hint={tReports("kpiMargin", { pct: executive.kpis.profit_margin_pct })}
-                delta={profitDelta}
-              />
-              <KpiCard label={tReports("kpiActiveCustomers")} value={formatNumber(executive.kpis.active_customers)} tone="info" />
-              <KpiCard label={tReports("kpiOrdersCreated")} value={formatNumber(executive.kpis.orders_created)} tone="neutral" />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <Card className="p-6 lg:col-span-2">
-                <CardHeader title={tReports("revenueTrend")} />
-                <TrendChart
-                  data={executive.revenue_trend.map((r) => ({ month: r.month, revenue: r.revenue, profit: r.profit }))}
-                  series={[
-                    { key: "revenue", label: tReports("kpiRevenue"), ...TREND_COLORS.revenue },
-                    { key: "profit", label: tReports("kpiProfit"), ...TREND_COLORS.profit },
-                  ]}
-                  areaFill
-                  emptyLabel={tReports("noDataPeriod")}
+          {executive && (
+            /* Executive snapshot -- the "understand the business in 10
+               seconds" surface: big numbers first, operational detail below.
+               Independently gated on `executive` so a failure of just this
+               one call (of the several the Dashboard fetches in parallel)
+               doesn't hide the Inventory/Today sections below, which don't
+               depend on it. */
+            <section className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard
+                  label={tReports("kpiRevenue")}
+                  value={formatNumber(executive.kpis.revenue)}
+                  tone="primary"
+                  delta={revenueDelta}
                 />
-              </Card>
-
-              <Card className="p-6">
-                <CardHeader title={tReports("ordersByStatus")} />
-                <StatusBarList
-                  data={executive.orders_by_status.map((r) => ({ label: tOrders(r.status as any), count: r.count }))}
-                  emptyLabel={tReports("noDataPeriod")}
+                <KpiCard
+                  label={tReports("kpiProfit")}
+                  value={formatNumber(executive.kpis.profit)}
+                  tone="success"
+                  hint={tReports("kpiMargin", { pct: executive.kpis.profit_margin_pct })}
+                  delta={profitDelta}
                 />
-              </Card>
-            </div>
-          </section>
+                <KpiCard label={tReports("kpiActiveCustomers")} value={formatNumber(executive.kpis.active_customers)} tone="info" />
+                <KpiCard label={tReports("kpiOrdersCreated")} value={formatNumber(executive.kpis.orders_created)} tone="neutral" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <Card className="p-6 lg:col-span-2">
+                  <CardHeader title={tReports("revenueTrend")} />
+                  <TrendChart
+                    data={executive.revenue_trend.map((r) => ({ month: r.month, revenue: r.revenue, profit: r.profit }))}
+                    series={[
+                      { key: "revenue", label: tReports("kpiRevenue"), ...TREND_COLORS.revenue },
+                      { key: "profit", label: tReports("kpiProfit"), ...TREND_COLORS.profit },
+                    ]}
+                    areaFill
+                    emptyLabel={tReports("noDataPeriod")}
+                  />
+                </Card>
+
+                <Card className="p-6">
+                  <CardHeader title={tReports("ordersByStatus")} />
+                  <StatusBarList
+                    data={executive.orders_by_status.map((r) => ({ label: tOrders(r.status as any), count: r.count }))}
+                    emptyLabel={tReports("noDataPeriod")}
+                  />
+                </Card>
+              </div>
+            </section>
+          )}
 
           {inventory && (
             <section className="flex flex-col gap-4">
@@ -446,8 +512,8 @@ export default function DashboardPage() {
                 <ul className="flex flex-col gap-3">
                   {upcomingInstallations.map((job) => {
                     const order = orderById.get(job.order_id);
-                    const customerName = order ? customerNameById.get(order.customer_id) : undefined;
-                    const projectName = order ? projectNameById.get(order.project_id) : undefined;
+                    const customerName = order ? customerNames[order.customer_id] : undefined;
+                    const projectName = order ? projectNames[order.project_id] : undefined;
                     return (
                       <li key={job.id} className="flex items-start gap-3">
                         <TimelineDot tone="info" />
@@ -479,7 +545,7 @@ export default function DashboardPage() {
               ) : (
                 <ul className="flex flex-col gap-3">
                   {overdueOrders.slice(0, 6).map(({ order, referenceDate }) => {
-                    const customerName = customerNameById.get(order.customer_id);
+                    const customerName = customerNames[order.customer_id];
                     const days = daysBetween(new Date(referenceDate), new Date());
                     return (
                       <li key={order.id} className="flex items-start gap-3">
@@ -487,7 +553,7 @@ export default function DashboardPage() {
                         <div className="flex flex-1 items-center justify-between gap-2">
                           <div>
                             <Link href={`/orders/${order.id}`} className="font-medium text-primary hover:underline">
-                              {projectNameById.get(order.project_id) ?? order.order_number}
+                              {projectNames[order.project_id] ?? order.order_number}
                             </Link>
                             <p className="text-xs text-text-secondary">
                               {customerName ? `${customerName} · ` : ""}
@@ -534,7 +600,7 @@ export default function DashboardPage() {
                 </Link>
               }
             />
-            {recentLeads.length === 0 ? (
+            {(leads ?? []).length === 0 ? (
               <EmptyState title={t("noInquiriesYet")} description={t("noInquiriesYetDesc")} />
             ) : (
               <div className="overflow-x-auto rounded-md border border-border">
@@ -548,7 +614,7 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentLeads.map((lead) => (
+                    {(leads ?? []).map((lead) => (
                       <tr key={lead.id} className="border-b border-border last:border-0">
                         <td className="px-4 py-2 font-medium text-text-primary">{lead.full_name}</td>
                         <td className="px-4 py-2">
