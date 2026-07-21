@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from core.api.errors import BusinessRuleViolationError, NotFoundError
-from core.api.pagination import decode_cursor
+from core.api.pagination import decode_cursor, encode_cursor
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, require_permission
 from modules.orders.application.dtos import (
@@ -66,12 +66,15 @@ def list_orders(
         status=status,
         search=search,
         sort=sort,
-        limit=limit,
+        limit=limit + 1,
         offset=offset,
     )
+    has_more = len(items) > limit
+    page = items[:limit]
+    next_cursor = encode_cursor(offset=offset + limit) if has_more else None
     return OrderListOut(
-        items=[OrderOut.model_validate(o) for o in items],
-        next_cursor=None,
+        items=[OrderOut.model_validate(o) for o in page],
+        next_cursor=next_cursor,
     )
 
 

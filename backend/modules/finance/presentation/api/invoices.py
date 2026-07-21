@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from core.api.errors import BusinessRuleViolationError, NotFoundError
-from core.api.pagination import decode_cursor
+from core.api.pagination import decode_cursor, encode_cursor
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, require_permission
 from modules.finance.application.dtos import (
@@ -64,10 +64,13 @@ def list_invoices(
         customer_id=customer_id,
         status=status,
         search=search,
-        limit=limit,
+        limit=limit + 1,
         offset=offset,
     )
-    return InvoiceListOut(items=[InvoiceOut.model_validate(i) for i in items], next_cursor=None)
+    has_more = len(items) > limit
+    page = items[:limit]
+    next_cursor = encode_cursor(offset=offset + limit) if has_more else None
+    return InvoiceListOut(items=[InvoiceOut.model_validate(i) for i in page], next_cursor=next_cursor)
 
 
 @router.post("/invoices", response_model=InvoiceOut)

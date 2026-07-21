@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from core.api.errors import BusinessRuleViolationError, NotFoundError
-from core.api.pagination import decode_cursor
+from core.api.pagination import decode_cursor, encode_cursor
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, require_permission
 from modules.production.application.dtos import CreateWorkOrderInput, UpdateWorkOrderStatusInput
@@ -54,10 +54,13 @@ def list_work_orders(
         company_id=current_user.active_company_id,
         status=status,
         search=search,
-        limit=limit,
+        limit=limit + 1,
         offset=offset,
     )
-    return WorkOrderListOut(items=[WorkOrderOut.model_validate(o) for o in items], next_cursor=None)
+    has_more = len(items) > limit
+    page = items[:limit]
+    next_cursor = encode_cursor(offset=offset + limit) if has_more else None
+    return WorkOrderListOut(items=[WorkOrderOut.model_validate(o) for o in page], next_cursor=next_cursor)
 
 
 @router.post("", response_model=WorkOrderOut)

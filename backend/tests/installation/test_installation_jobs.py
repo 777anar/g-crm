@@ -1,6 +1,74 @@
 """Tests for the Installation module's job lifecycle."""
 
 
+def _create_ready_order(app_client, db_session, owner_headers, company, project, customer, suffix):
+    from modules.sales.infrastructure.models.quote import Quote
+    from modules.sales.infrastructure.models.quote_section import QuoteSection
+    from modules.sales.infrastructure.models.quote_section_item import QuoteSectionItem
+
+    q = Quote(
+        company_id=company.id,
+        project_id=project.id,
+        customer_id=customer.id,
+        version=1,
+        quote_number=f"QT-2026-{suffix}-v1",
+        status="accepted",
+        currency="AZN",
+    )
+    db_session.add(q)
+    db_session.flush()
+    sec = QuoteSection(company_id=company.id, quote_id=q.id, name="Main Section", sort_order=0)
+    db_session.add(sec)
+    db_session.flush()
+    db_session.add(
+        QuoteSectionItem(
+            company_id=company.id,
+            section_id=sec.id,
+            quote_id=q.id,
+            item_type="material",
+            sort_order=0,
+            description="Marble countertop",
+            quantity="1",
+            unit="m2",
+            unit_sale_price="100.00",
+            unit_cost_price="80.00",
+            line_total_sale="100.00",
+            line_total_cost="80.00",
+        )
+    )
+    db_session.commit()
+
+    order = app_client.post("/api/v1/orders", headers=owner_headers, json={"quote_id": str(q.id)}).json()
+    for status in ("approved_for_production", "in_production", "ready"):
+        resp = app_client.post(f"/api/v1/orders/{order['id']}/status", headers=owner_headers, json={"status": status})
+        assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+def test_installation_jobs_cursor_reaches_the_next_page(app_client, owner_headers, db_session, company, project, customer):
+    job_ids = []
+    for i in range(3):
+        order = _create_ready_order(app_client, db_session, owner_headers, company, project, customer, f"CUR{i}")
+        resp = app_client.post("/api/v1/installation/jobs", headers=owner_headers, json={"order_id": order["id"]})
+        assert resp.status_code == 200, resp.text
+        job_ids.append(resp.json()["id"])
+
+    first_page = app_client.get("/api/v1/installation/jobs", headers=owner_headers, params={"limit": 2}).json()
+    assert len(first_page["items"]) == 2
+    assert first_page["next_cursor"] is not None
+
+    second_page = app_client.get(
+        "/api/v1/installation/jobs", headers=owner_headers, params={"limit": 2, "cursor": first_page["next_cursor"]}
+    ).json()
+    assert len(second_page["items"]) == 1
+    assert second_page["next_cursor"] is None
+
+    first_ids = {j["id"] for j in first_page["items"]}
+    second_ids = {j["id"] for j in second_page["items"]}
+    assert first_ids.isdisjoint(second_ids)
+    assert first_ids | second_ids == set(job_ids)
+
+
 def test_create_installation_job_requires_ready_order(app_client, owner_headers, accepted_quote):
     order = app_client.post(
         "/api/v1/orders", headers=owner_headers, json={"quote_id": str(accepted_quote.id)}

@@ -42,7 +42,7 @@ This specification defines the conventions every module's API follows, plus the 
 ## 4. General Conventions
 
 - **Content type**: `application/json` for all requests/responses; file uploads use `multipart/form-data` against the dedicated upload endpoint (§8), which returns a `document_id` for use in other payloads.
-- **Pagination**: cursor-based — `?limit=25&cursor=<opaque_cursor>` (`core/api/pagination.py`: an opaque base64 offset, decoded server-side). Response is `{items: [...], next_cursor: string | null}`. Applied consistently across CRM, Catalog, Sales (project/quote lists), Communication, and AI list endpoints. **Known inconsistency, not yet fixed**: Production's, Installation's, Finance's, and Orders' list endpoints accept `limit`/`cursor` query params and forward them to the repository layer, but their `next_cursor` in the response is currently always `null` — a real page-2-reachability gap on those four modules' list endpoints, distinct from (and not fixed by) the pagination work done in Version 2.26.0, which targeted list *pages* on the frontend rather than this specific backend response field. Worth a dedicated follow-up.
+- **Pagination**: cursor-based — `?limit=25&cursor=<opaque_cursor>` (`core/api/pagination.py`: an opaque base64 offset, decoded server-side). Response is `{items: [...], next_cursor: string | null}`. Applied consistently across every list endpoint in every module (Orders/Production/Installation/Finance were fixed in Version 2.30.0 — they previously accepted `limit`/`cursor` but hardcoded `next_cursor: null`, a gap this document itself flagged during the 2.29.0 sync pass and which was closed the same day).
 - **Filtering/sorting**: list endpoints accept module-specific query filters (documented per endpoint below) and `?sort=field` / `?sort=-field` (descending) where sorting is supported.
 - **Field naming**: `snake_case` in JSON payloads, matching Pydantic/Python naming.
 - **Timestamps**: ISO 8601 UTC. Several modules store business dates (e.g. `scheduled_date`, `expense_date`, `valid_until`) as plain `String(10)` ISO date strings rather than a `Date` column — a pragmatic SQLite/Postgres portability choice, not an oversight; see `DATABASE_DESIGN.md` for which columns use which representation.
@@ -266,7 +266,7 @@ An Order is created from a single accepted Quote and owns its own independent, m
 
 | Method | Path | Permission | Description |
 |---|---|---|---|
-| GET | `/orders?project_id=&customer_id=&status=&search=&sort=&limit=&cursor=` | `orders:read` | List — `limit`/`cursor` are accepted and forwarded, but the response's `next_cursor` is currently always `null` (see the pagination note in §4) |
+| GET | `/orders?project_id=&customer_id=&status=&search=&sort=&limit=&cursor=` | `orders:read` | List, cursor-paginated |
 | POST | `/orders` | `orders:write` | Create from an accepted quote. Body: `{quote_id}` — `400` if the source quote isn't `accepted` |
 | GET | `/orders/{id}` | `orders:read` | Retrieve |
 | PATCH | `/orders/{id}` | `orders:write` | Update `notes`/`production_notes`/`installation_notes`/`delivery_address`/`scheduled_production_date`/`scheduled_installation_date` — `409` if the order is in a terminal state |
@@ -284,7 +284,7 @@ One `WorkOrder` per Order (1:1, gated on the Order reaching `approved_for_produc
 
 | Method | Path | Permission | Description |
 |---|---|---|---|
-| GET | `/production?status=&search=&limit=&cursor=` | `production:read` | List work orders (`next_cursor` always `null` — same gap as Orders) |
+| GET | `/production?status=&search=&limit=&cursor=` | `production:read` | List work orders, cursor-paginated |
 | POST | `/production` | `production:write` | Create from an order. Body: `{order_id}`. `422` for `OrderNotReadyForProductionError`/`WorkOrderAlreadyExistsError`/`NoProductionItemsError`/`SlabNotReservedError` |
 | GET | `/production/{id}` | `production:read` | Retrieve |
 | GET | `/production/by-order/{order_id}` | `production:read` | Get the work order for a given order (`404` if none) |
@@ -313,7 +313,7 @@ One `InstallationJob` per Order (1:1, gated on the Order reaching `ready`/`deliv
 ### Installation Jobs
 | Method | Path | Permission | Description |
 |---|---|---|---|
-| GET | `/installation/jobs?status=&crew_id=&date_from=&date_to=&search=&limit=&cursor=` | `installation:read` | List (`next_cursor` always `null`, same gap as Orders/Production) |
+| GET | `/installation/jobs?status=&crew_id=&date_from=&date_to=&search=&limit=&cursor=` | `installation:read` | List, cursor-paginated |
 | POST | `/installation/jobs` | `installation:write` | Create from an order. Body: `{order_id}`. `422` for `OrderNotReadyForInstallationError`/`JobAlreadyExistsError`/`CrewInactiveError` |
 | GET | `/installation/jobs/{id}` | `installation:read` | Retrieve |
 | GET | `/installation/jobs/by-order/{order_id}` | `installation:read` | Get the job for an order (`404` if none) |
@@ -337,7 +337,7 @@ Completing an installation job cascades `installation_status: done` onto every O
 ### Invoices
 | Method | Path | Permission | Description |
 |---|---|---|---|
-| GET | `/finance/invoices?customer_id=&status=&search=&limit=&cursor=` | `finance:invoices:read` | List (`next_cursor` always `null`, same gap) |
+| GET | `/finance/invoices?customer_id=&status=&search=&limit=&cursor=` | `finance:invoices:read` | List, cursor-paginated |
 | POST | `/finance/invoices` | `finance:invoices:write` | Create from an order. Body: `{order_id, due_date?, notes?}`. `422` for `OrderNotInvoiceableError`/`InvoiceAlreadyExistsError` — an order becomes invoiceable once it reaches `ready`/`delivered`/`installed`/`completed` |
 | GET | `/finance/invoices/{id}` | `finance:invoices:read` | Retrieve. `balance_due` is not a stored column — it's computed on the fly as `total_amount - amount_paid` |
 | GET | `/finance/invoices/by-order/{order_id}` | `finance:invoices:read` | Get the invoice for an order (`404` if none) |
@@ -350,7 +350,7 @@ Completing an installation job cascades `installation_status: done` onto every O
 ### Expenses
 | Method | Path | Permission | Description |
 |---|---|---|---|
-| GET | `/finance/expenses?order_id=&category=&date_from=&date_to=&limit=&cursor=` | `finance:expenses:read` | List (`next_cursor` always `null`, same gap) |
+| GET | `/finance/expenses?order_id=&category=&date_from=&date_to=&limit=&cursor=` | `finance:expenses:read` | List, cursor-paginated |
 | POST | `/finance/expenses` | `finance:expenses:write` | Create. Body: `{category?, amount, expense_date, order_id?, description?, currency?}` — `category` one of `materials`/`labor`/`transport`/`utilities`/`rent`/`other` (default `other`); `order_id` omitted means general company overhead, not tied to a job. `422` (`InvalidExpenseAmountError`) on a non-positive amount |
 | GET | `/finance/expenses/{id}` | `finance:expenses:read` | Retrieve |
 

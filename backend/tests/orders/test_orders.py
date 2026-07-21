@@ -2,6 +2,71 @@
 import uuid
 
 
+def _create_accepted_quote(db_session, company, project, customer, quote_number):
+    from modules.sales.infrastructure.models.quote import Quote
+    from modules.sales.infrastructure.models.quote_section import QuoteSection
+    from modules.sales.infrastructure.models.quote_section_item import QuoteSectionItem
+
+    q = Quote(
+        company_id=company.id,
+        project_id=project.id,
+        customer_id=customer.id,
+        version=1,
+        quote_number=quote_number,
+        status="accepted",
+        currency="AZN",
+    )
+    db_session.add(q)
+    db_session.flush()
+
+    sec = QuoteSection(company_id=company.id, quote_id=q.id, name="Main Section", sort_order=0)
+    db_session.add(sec)
+    db_session.flush()
+
+    db_session.add(
+        QuoteSectionItem(
+            company_id=company.id,
+            section_id=sec.id,
+            quote_id=q.id,
+            item_type="material",
+            sort_order=0,
+            description="Marble countertop",
+            quantity="1",
+            unit="m2",
+            unit_sale_price="100.00",
+            unit_cost_price="80.00",
+            line_total_sale="100.00",
+            line_total_cost="80.00",
+        )
+    )
+    db_session.commit()
+    return q
+
+
+def test_orders_cursor_reaches_the_next_page(app_client, owner_headers, db_session, company, project, customer):
+    order_ids = []
+    for i in range(3):
+        quote = _create_accepted_quote(db_session, company, project, customer, f"QT-2026-CUR{i}-v1")
+        resp = app_client.post("/api/v1/orders", headers=owner_headers, json={"quote_id": str(quote.id)})
+        assert resp.status_code == 200, resp.text
+        order_ids.append(resp.json()["id"])
+
+    first_page = app_client.get("/api/v1/orders", headers=owner_headers, params={"limit": 2}).json()
+    assert len(first_page["items"]) == 2
+    assert first_page["next_cursor"] is not None
+
+    second_page = app_client.get(
+        "/api/v1/orders", headers=owner_headers, params={"limit": 2, "cursor": first_page["next_cursor"]}
+    ).json()
+    assert len(second_page["items"]) == 1
+    assert second_page["next_cursor"] is None
+
+    first_ids = {o["id"] for o in first_page["items"]}
+    second_ids = {o["id"] for o in second_page["items"]}
+    assert first_ids.isdisjoint(second_ids)
+    assert first_ids | second_ids == set(order_ids)
+
+
 def test_create_order_from_accepted_quote(app_client, owner_headers, accepted_quote):
     resp = app_client.post(
         "/api/v1/orders",

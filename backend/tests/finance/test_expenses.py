@@ -77,6 +77,32 @@ def test_list_expenses_filters_by_category(app_client, owner_headers):
     assert items[0]["category"] == "rent"
 
 
+def test_expenses_cursor_reaches_the_next_page(app_client, owner_headers):
+    ids = []
+    for i in range(3):
+        resp = app_client.post(
+            "/api/v1/finance/expenses",
+            headers=owner_headers,
+            json={"category": "other", "amount": "10.00", "expense_date": "2026-07-01", "description": f"Expense {i}"},
+        )
+        ids.append(resp.json()["id"])
+
+    first_page = app_client.get("/api/v1/finance/expenses", headers=owner_headers, params={"limit": 2}).json()
+    assert len(first_page["items"]) == 2
+    assert first_page["next_cursor"] is not None
+
+    second_page = app_client.get(
+        "/api/v1/finance/expenses", headers=owner_headers, params={"limit": 2, "cursor": first_page["next_cursor"]}
+    ).json()
+    assert len(second_page["items"]) == 1
+    assert second_page["next_cursor"] is None
+
+    first_ids = {e["id"] for e in first_page["items"]}
+    second_ids = {e["id"] for e in second_page["items"]}
+    assert first_ids.isdisjoint(second_ids)
+    assert first_ids | second_ids == set(ids)
+
+
 def test_get_expense(app_client, owner_headers):
     created = app_client.post(
         "/api/v1/finance/expenses",

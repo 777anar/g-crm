@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.30.0] — 2026-07-21 — Fix: Orders/Production/Installation/Finance List Endpoints Never Actually Paginated
+
+Found during the Version 2.29.0 documentation sync and fixed immediately as the highest-value follow-up: `GET /orders`, `GET /production`, `GET /installation/jobs`, `GET /finance/invoices`, and `GET /finance/expenses` all accepted `limit`/`cursor` query parameters and forwarded them to their repository's `LIMIT`/`OFFSET` query, but every one of them hardcoded `next_cursor=None` in the response regardless of whether more rows existed. This silently undermined the "Load more" UI added for Orders, Production, and Finance in Version 2.26.0 — the button can only ever appear when the backend returns a real cursor, so those pages were still effectively capped at one page (25–200 rows depending on the endpoint) despite being reported as fixed. Catalog Brands, Materials, and Slabs, CRM Customers/Leads/Tasks, and Communication/AI endpoints were never affected — they already used the correct pattern this fix brings the other five in line with.
+
+### Fixed
+- All five endpoints now fetch `limit + 1` rows, detect whether a row past the requested page exists, and return a real `encode_cursor(...)`-produced `next_cursor` when it does — the exact pattern already proven correct on `catalog:materials`/`catalog:brands`/`crm:customers`/`crm:leads`. No response schema change, no frontend change required — the "Load more" buttons added in 2.26.0 for Orders/Production/Finance now actually function past page one, and Installation Jobs (which had no frontend pagination UI yet) is ready for it whenever that's built.
+- 5 new backend tests (`test_orders_cursor_reaches_the_next_page`, `test_work_orders_cursor_reaches_the_next_page`, `test_installation_jobs_cursor_reaches_the_next_page`, `test_invoices_cursor_reaches_the_next_page`, `test_expenses_cursor_reaches_the_next_page`) — each creates 3 records, requests a page of 2, and confirms a non-null cursor reaches a real, disjoint second page.
+
+### Verification
+Full backend suite passing (559/559 — 554 prior + 5 new), `lint-imports` passing, frontend `tsc --noEmit` clean, frontend production build clean (39 routes, unchanged — no frontend files touched).
+
 ## [2.29.0] — 2026-07-21 — Documentation Sync: API_SPECIFICATION.md & DATABASE_DESIGN.md (PROJECT_AUDIT.md Priority #4)
 
 Closes `PROJECT_AUDIT.md`'s Priority #4/#9 finding: `API_SPECIFICATION.md` and `DATABASE_DESIGN.md` had drifted badly — both stopped documenting real endpoints/schema after Version 2.12, and worse, their CRM and Sales sections still described the original **Phase-1 design sketch** (generic Contact/Account/Deal/Pipeline-Stage CRM, a flat Quote/SalesOrder Sales model) that was never actually built that way once real requirements arrived. Production, Installation, and Finance — three fully-shipped, tested modules — were still listed as "conceptual, not migrated." Both documents were rewritten from scratch against the actual current source (every FastAPI router and SQLAlchemy model in `backend/`, verified file-by-file, not carried forward from the previous doc text), plus `README.md` and `ROADMAP.md` brought current through Version 2.28.0. Documentation-only; no application behavior changed.

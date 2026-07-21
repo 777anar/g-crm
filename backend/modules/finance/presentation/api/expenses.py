@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from core.api.errors import BusinessRuleViolationError, NotFoundError
-from core.api.pagination import decode_cursor
+from core.api.pagination import decode_cursor, encode_cursor
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, require_permission
 from modules.finance.application.dtos import CreateExpenseInput
@@ -36,10 +36,13 @@ def list_expenses(
         category=category,
         date_from=date_from,
         date_to=date_to,
-        limit=limit,
+        limit=limit + 1,
         offset=offset,
     )
-    return ExpenseListOut(items=[ExpenseOut.model_validate(e) for e in items], next_cursor=None)
+    has_more = len(items) > limit
+    page = items[:limit]
+    next_cursor = encode_cursor(offset=offset + limit) if has_more else None
+    return ExpenseListOut(items=[ExpenseOut.model_validate(e) for e in page], next_cursor=next_cursor)
 
 
 @router.post("/expenses", response_model=ExpenseOut)
