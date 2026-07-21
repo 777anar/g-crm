@@ -95,6 +95,8 @@
     "loadFailed": "Не удалось загрузить данные панели управления.",
     "captureLead": "Добавить обращение",
     "createCustomer": "Создать клиента",
+    "vsPreviousMonth": "по сравнению с прошлым месяцем",
+    "sectionToday": "Сегодня",
     "statMeasurementsToday": "Замеры сегодня",
     "statInProduction": "В производстве",
     "statInstallationsTomorrow": "Монтаж завтра",

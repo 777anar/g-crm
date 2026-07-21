@@ -95,6 +95,8 @@
     "loadFailed": "Failed to load dashboard data.",
     "captureLead": "Log Inquiry",
     "createCustomer": "Create Customer",
+    "vsPreviousMonth": "vs. previous month",
+    "sectionToday": "Today",
     "statMeasurementsToday": "Measurements Today",
     "statInProduction": "In Production",
     "statInstallationsTomorrow": "Installations Tomorrow",

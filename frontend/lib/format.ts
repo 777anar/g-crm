@@ -23,6 +23,16 @@ export function formatDateTime(iso: string): string {
   });
 }
 
+/** Whole-number grouped formatting for KPI headline figures (revenue, profit,
+ * counts) -- the backend returns these as raw Decimal strings with no
+ * currency symbol (aggregates can span multiple order currencies), so this
+ * only adds locale-aware thousands separators, never a currency prefix. */
+export function formatNumber(value: number | string): string {
+  const n = typeof value === "string" ? parseFloat(value) : value;
+  if (!Number.isFinite(n)) return "—";
+  return n.toLocaleString(activeDateLocale(), { maximumFractionDigits: 0 });
+}
+
 /** Converts a UTC ISO datetime into the value a <input type="datetime-local">
  * expects (no timezone, interpreted by the browser as local time). */
 export function toDatetimeLocalValue(iso: string | null | undefined): string {

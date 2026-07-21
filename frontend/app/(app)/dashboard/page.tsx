@@ -9,8 +9,10 @@ import { listOrders } from "@/lib/api/orders";
 import { listWorkOrders } from "@/lib/api/production";
 import { listInstallationJobs, listNotifications as listInstallationNotifications } from "@/lib/api/installation";
 import { listMeasurementsForCompany, listProjects } from "@/lib/api/sales";
+import { getExecutiveDashboard } from "@/lib/api/reports";
 import type {
   Customer,
+  ExecutiveDashboard,
   InstallationJob,
   InstallationNotification,
   Lead,
@@ -24,6 +26,8 @@ import type {
 import { ApiRequestError } from "@/lib/api-client";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
+import { KpiCard } from "@/components/dashboard/kpi-card";
+import { StatusBarList, TrendChart, TREND_COLORS } from "@/components/ui/charts";
 import {
   Badge,
   InstallationJobStatusBadge,
@@ -34,7 +38,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCardSkeleton, TableSkeleton } from "@/components/ui/skeleton";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
 import { useLeadChannelLabel } from "@/lib/i18n/hooks";
 
 const ORDER_TERMINAL_STATUSES = new Set(["installed", "completed", "cancelled"]);
@@ -77,6 +81,8 @@ type NotificationItem = {
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
+  const tReports = useTranslations("reports");
+  const tOrders = useTranslations("orders");
   const channelLabel = useLeadChannelLabel();
 
   const [fullName, setFullName] = useState<string | null>(null);
@@ -90,6 +96,7 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [taskNotifications, setTaskNotifications] = useState<TaskNotification[] | null>(null);
   const [installationNotifications, setInstallationNotifications] = useState<InstallationNotification[] | null>(null);
+  const [executive, setExecutive] = useState<ExecutiveDashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -105,9 +112,10 @@ export default function DashboardPage() {
       listLeads({ limit: 100 }),
       listMeasurementsForCompany({ dateFrom: todayKey, dateTo: todayKey }),
       listTasks({ excludeTerminal: true, sort: "due_date", limit: 100 }),
+      getExecutiveDashboard({ period: "30d" }),
     ])
       .then(
-        ([profile, customerRes, projectRes, orderRes, workOrderRes, installationRes, leadRes, measurementRes, taskRes]) => {
+        ([profile, customerRes, projectRes, orderRes, workOrderRes, installationRes, leadRes, measurementRes, taskRes, executiveRes]) => {
           setFullName(profile.full_name);
           setCustomers(customerRes.items);
           setProjects(projectRes.items);
@@ -117,6 +125,7 @@ export default function DashboardPage() {
           setLeads(leadRes.items);
           setMeasurementsToday(measurementRes.items);
           setTasks(taskRes.items);
+          setExecutive(executiveRes);
 
           // Surfaces newly-due reminders/overdue tasks the moment the
           // Dashboard loads -- see checkTaskReminders' doc comment for why
@@ -144,7 +153,28 @@ export default function DashboardPage() {
       .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
   }, [t]);
 
-  const loading = customers === null || orders === null;
+  // Month-over-month delta is only meaningful with at least two trend
+  // points; KPIs without a trend history (customers, orders created, win
+  // rate) show no delta rather than a fabricated one.
+  const revenueDelta = useMemo(() => {
+    const trend = executive?.revenue_trend ?? [];
+    if (trend.length < 2) return null;
+    const prev = parseFloat(trend[trend.length - 2].revenue);
+    const curr = parseFloat(trend[trend.length - 1].revenue);
+    if (!prev) return null;
+    return { pct: ((curr - prev) / prev) * 100, label: t("vsPreviousMonth") };
+  }, [executive, t]);
+
+  const profitDelta = useMemo(() => {
+    const trend = executive?.revenue_trend ?? [];
+    if (trend.length < 2) return null;
+    const prev = parseFloat(trend[trend.length - 2].profit);
+    const curr = parseFloat(trend[trend.length - 1].profit);
+    if (!prev) return null;
+    return { pct: ((curr - prev) / prev) * 100, label: t("vsPreviousMonth") };
+  }, [executive, t]);
+
+  const loading = customers === null || orders === null || executive === null;
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -241,11 +271,13 @@ export default function DashboardPage() {
   }, [taskNotifications, installationNotifications]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">{greeting}</h1>
-          <p className="text-sm text-text-secondary">{t("subtitle")}</p>
+          <h1 className="text-2xl font-semibold text-text-primary">{greeting}</h1>
+          <p className="mt-0.5 text-sm text-text-secondary">
+            {t("subtitle")} · {tReports("period_30d")}
+          </p>
         </div>
         <div className="flex gap-2">
           <Link href="/crm/leads">
@@ -260,7 +292,7 @@ export default function DashboardPage() {
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {loading && !error && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-8">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <StatCardSkeleton key={i} />
@@ -270,8 +302,55 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {!loading && (
+      {!loading && executive && (
         <>
+          {/* Executive snapshot -- the "understand the business in 10
+              seconds" surface: big numbers first, operational detail below. */}
+          <section className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiCard
+                label={tReports("kpiRevenue")}
+                value={formatNumber(executive.kpis.revenue)}
+                tone="primary"
+                delta={revenueDelta}
+              />
+              <KpiCard
+                label={tReports("kpiProfit")}
+                value={formatNumber(executive.kpis.profit)}
+                tone="success"
+                hint={tReports("kpiMargin", { pct: executive.kpis.profit_margin_pct })}
+                delta={profitDelta}
+              />
+              <KpiCard label={tReports("kpiActiveCustomers")} value={formatNumber(executive.kpis.active_customers)} tone="info" />
+              <KpiCard label={tReports("kpiOrdersCreated")} value={formatNumber(executive.kpis.orders_created)} tone="neutral" />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <Card className="p-6 lg:col-span-2">
+                <CardHeader title={tReports("revenueTrend")} />
+                <TrendChart
+                  data={executive.revenue_trend.map((r) => ({ month: r.month, revenue: r.revenue, profit: r.profit }))}
+                  series={[
+                    { key: "revenue", label: tReports("kpiRevenue"), ...TREND_COLORS.revenue },
+                    { key: "profit", label: tReports("kpiProfit"), ...TREND_COLORS.profit },
+                  ]}
+                  areaFill
+                  emptyLabel={tReports("noDataPeriod")}
+                />
+              </Card>
+
+              <Card className="p-6">
+                <CardHeader title={tReports("ordersByStatus")} />
+                <StatusBarList
+                  data={executive.orders_by_status.map((r) => ({ label: tOrders(r.status as any), count: r.count }))}
+                  emptyLabel={tReports("noDataPeriod")}
+                />
+              </Card>
+            </div>
+          </section>
+
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">{t("sectionToday")}</h2>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label={t("statMeasurementsToday")} value={(measurementsToday ?? []).length} tone="info" />
             <StatCard label={t("statInProduction")} value={inProductionWorkOrders.length} tone="warning" />

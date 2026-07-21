@@ -140,14 +140,20 @@ export function TrendChart({
   height = 240,
   valueFormatter = compactNumber,
   emptyLabel,
+  areaFill = false,
 }: {
   data: Record<string, number | string>[];
   series: TrendSeries[];
   height?: number;
   valueFormatter?: (value: number) => string;
   emptyLabel?: string;
+  /** Gradient fill under the first series only -- a second filled series
+   * would visually stack/occlude, so multi-series charts keep plain lines
+   * unless this is opted into for a single-series or primary-only look. */
+  areaFill?: boolean;
 }) {
   const clipId = useId();
+  const gradientId = useId();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   const max = useMemo(
@@ -183,10 +189,24 @@ export function TrendChart({
           <clipPath id={clipId}>
             <rect x={0} y={0} width={100} height={plotH} />
           </clipPath>
+          {areaFill && (
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={series[0].colorHex} stopOpacity={0.22} />
+              <stop offset="100%" stopColor={series[0].colorHex} stopOpacity={0} />
+            </linearGradient>
+          )}
         </defs>
         {[0, 0.5, 1].map((f) => (
           <line key={f} x1={0} x2={100} y1={plotH * (1 - f)} y2={plotH * (1 - f)} stroke="var(--color-border)" strokeWidth={0.5} />
         ))}
+        {areaFill && (
+          <path
+            clipPath={`url(#${clipId})`}
+            fill={`url(#${gradientId})`}
+            stroke="none"
+            d={`${data.map((d, i) => `${i === 0 ? "M" : "L"}${xFor(i)},${yFor(Number(d[series[0].key]) || 0)}`).join(" ")} L${xFor(data.length - 1)},${plotH} L${xFor(0)},${plotH} Z`}
+          />
+        )}
         {series.map((s) => {
           const points = data.map((d, i) => `${xFor(i)},${yFor(Number(d[s.key]) || 0)}`).join(" ");
           return (

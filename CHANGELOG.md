@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.24.0] — 2026-07-21 — G-STONE ERP Executive: Premium Executive Dashboard (Milestone 1)
+
+First step of repositioning the app from a CRM into an executive tool the owner can read in under 10 seconds. Rewires `/dashboard` onto the real server-side aggregation endpoint (`GET /api/v1/reports/executive`) that `/reports` already exposed but no other page consumed, and gives it a bigger-scale, Apple/Linear/Stripe-influenced KPI layout. No backend changes; the sidebar/IA consolidation into 7 top-level modules is deferred to a follow-up milestone.
+
+### Added
+- `components/dashboard/kpi-card.tsx` — `KpiCard`, a large-headline KPI tile (bigger scale than the existing `StatCard`) with an optional month-over-month delta badge, kept separate from `StatCard` so every other module's list-view stat tiles are unaffected.
+- Hero KPI row on `/dashboard` — Revenue, Profit (+ margin hint), Active Customers, Orders Created — sourced from `getExecutiveDashboard({period:"30d"})`.
+- Revenue & profit trend chart (`TrendChart`, now with gradient area fill) plus an Orders-by-Status pipeline (`StatusBarList`) on `/dashboard`, mirroring the pairing already proven on `/reports`.
+- `TrendChart` gained an additive `areaFill` prop (`components/ui/charts.tsx`), default `false` — opted into on the new Dashboard only, `/reports` unaffected.
+- `formatNumber()` in `lib/format.ts` — locale-aware thousands-separator formatting for KPI headline figures (the backend returns raw, currency-less Decimal strings since aggregates can span multiple order currencies).
+- New i18n keys `dashboard.vsPreviousMonth` / `dashboard.sectionToday` in all three locale files; KPI/chart labels reuse the existing `reports` namespace instead of duplicating strings.
+- A real, checked-in Playwright smoke-test harness — `playwright.config.ts`, `tests/e2e/dashboard.spec.ts`, `@playwright/test` devDependency. None existed in the repo before this (prior "live Playwright smoke test" verifications were run ad hoc); this now runs against the actual production build and a live local backend, logging in as the seeded owner and asserting the new KPI cards, trend chart, and pipeline render with zero console errors.
+
+### Changed
+- `/dashboard`'s original operational sections (Today's Tasks, Upcoming Installations, Overdue Orders, Notifications, Recent Inquiries) are unchanged in logic and fully preserved, just visually demoted below the new executive snapshot under a "Today" heading.
+
+### Verification
+Full backend suite passing (549/549, unchanged — no backend files touched), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes), and the new Playwright smoke test passing end-to-end against a freshly seeded local dev database (login → company selection → KPI cards, revenue/profit trend, orders-by-status pipeline, and the preserved "Today" section all render, zero console errors).
+
 ## [2.23.0] — 2026-07-14 — Customer Type Picker
 
 Resolves RELEASE_CHECKLIST.md M2 (`customer.type` "write-only dead weight"), deferred since Phase 1 pending a product decision between reintroducing a picker or dropping the column. This session builds the picker. API contracts kept compatible: `CustomerCreate.type` is unchanged; `CustomerUpdate` gains a new optional `type` field (purely additive — previously silently ignored on PATCH, now actually applied).
