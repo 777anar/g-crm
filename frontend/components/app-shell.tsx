@@ -13,39 +13,42 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { QuickCreateMenu } from "@/components/quick-create-menu";
 import { useCloseOnEscape } from "@/lib/use-outside-click";
 
-// Sprint 2 ("Layihə" as the primary business object): the primary sidebar is
-// deliberately reduced to 9 module-level sections per UI_UX_GUIDELINES.md
-// section 6.1 ("Primary sidebar: module-level navigation ... Secondary
-// navigation: within a module, a sub-nav for its sections"). Every page that
-// used to have its own top-level entry still exists and is still linked from
-// somewhere (a SectionTabs bar within its module, or the /settings hub for
-// back-office pages that are out of the daily office workflow) -- nothing
-// was deleted, only regrouped.
+// G-STONE ERP Executive, Milestone 2: the app is repositioned from "a CRM"
+// to an executive ERP, so the primary sidebar collapses further -- from the
+// 9 module-level sections Sprint 2 established down to the 5 modules the
+// owner actually needs to read the business (plus Settings as baseline
+// chrome, not a business module). Customers/Leads/Tasks/Projects/Orders
+// merge into one "Sales" pipeline (cross-linked via `SalesSectionTabs`);
+// Catalog keeps its own URL/data model but is relabeled "Inventory" in the
+// nav, matching ROADMAP.md's own framing of Catalog as the inventory
+// system; Production/Installation/Messages move to secondary-only, same as
+// every other page that "moved out of primary nav but still exists" --
+// nothing was deleted, only regrouped, exactly as Sprint 2's own comment
+// (preserved below in spirit) established for the prior regrouping.
 const NAV_ITEMS = [
   { labelKey: "dashboard", href: "/dashboard" },
-  { labelKey: "customers", href: "/crm/customers" },
-  { labelKey: "projects", href: "/sales/projects" },
-  { labelKey: "catalog", href: "/catalog/materials" },
-  { labelKey: "production", href: "/production" },
-  { labelKey: "installation", href: "/installation" },
-  { labelKey: "messages", href: "/communication/inbox" },
+  { labelKey: "sales", href: "/crm/customers" },
+  { labelKey: "inventory", href: "/catalog/materials" },
+  { labelKey: "finance", href: "/finance/invoices" },
   { labelKey: "reports", href: "/reports" },
   { labelKey: "settings", href: "/settings" },
 ] as const;
 
-// Routes that moved out of the primary sidebar but still need the browser
+// Routes that live outside the primary sidebar but still need the browser
 // tab title / active-section logic in the effect below -- kept as a separate
-// list so NAV_ITEMS above stays exactly the 9 visible sections.
+// list so NAV_ITEMS above stays exactly the visible primary sections.
 const SECONDARY_ROUTES = [
   { labelKey: "leads", href: "/crm/leads" },
   { labelKey: "tasks", href: "/crm/tasks" },
+  { labelKey: "projects", href: "/sales/projects" },
+  { labelKey: "orders", href: "/orders" },
   { labelKey: "brands", href: "/catalog/brands" },
   { labelKey: "slabs", href: "/catalog/slabs" },
   { labelKey: "warehouses", href: "/catalog/warehouses" },
   { labelKey: "priceLists", href: "/catalog/price-lists" },
-  { labelKey: "orders", href: "/orders" },
-  { labelKey: "invoices", href: "/finance/invoices" },
   { labelKey: "expenses", href: "/finance/expenses" },
+  { labelKey: "production", href: "/production" },
+  { labelKey: "installation", href: "/installation" },
   { labelKey: "inbox", href: "/communication/inbox" },
   { labelKey: "channels", href: "/communication/channels" },
   { labelKey: "integrations", href: "/communication/integrations" },
@@ -61,23 +64,14 @@ const NAV_ICONS: Record<(typeof NAV_ITEMS)[number]["labelKey"], React.ReactNode>
   dashboard: (
     <path d="M2.5 2.5h5v5h-5v-5Zm8 0h5v3.5h-5v-3.5Zm0 6.5h5v6.5h-5v-6.5Zm-8 2h5v4.5h-5v-4.5Z" />
   ),
-  customers: (
-    <path d="M9 9.25A3.125 3.125 0 1 0 9 3a3.125 3.125 0 0 0 0 6.25Zm0 1.75c-3 0-6 1.5-6 4v.5h12v-.5c0-2.5-3-4-6-4Z" />
+  sales: (
+    <path d="M2.5 13.5 7 9l3 3 5.5-6M11.5 6h3.5v3.5" />
   ),
-  projects: (
-    <path d="M2.5 4.5h4l1.25 1.5H15.5v8.5h-13v-10Z" />
-  ),
-  catalog: (
+  inventory: (
     <path d="M2.5 4.5 9 2l6.5 2.5L9 7l-6.5-2.5ZM2.5 8.75 9 11.25l6.5-2.5M2.5 13 9 15.5 15.5 13" />
   ),
-  production: (
-    <path d="M11.5 2.5 15.5 6.5 13 9l-1.5-1.5-4 4 1 1-2 2-3.5-3.5 2-2 1 1 4-4L8.5 5l3-2.5Z" />
-  ),
-  installation: (
-    <path d="M3 15.5 8 9m-2.5-2 3.5 3.5 5-5-3.5-3.5-5 5Zm7 7 3-3-2-2-3 3 2 2Z" />
-  ),
-  messages: (
-    <path d="M2.5 4h13v8h-8l-3 3v-3h-2v-8Z" />
+  finance: (
+    <path d="M9 15.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM9 5.5v7M11.25 7.25c0-.97-1.01-1.75-2.25-1.75s-2.25.78-2.25 1.75c0 2.5 4.5 1.25 4.5 3.25 0 .97-1.01 1.75-2.25 1.75s-2.25-.78-2.25-1.75" />
   ),
   reports: (
     <path d="M3 15.5V9m4 6.5V5.5m4 10V8m4 7.5V2.5" />

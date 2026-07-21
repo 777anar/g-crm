@@ -1036,6 +1036,24 @@ export type FinanceAnalytics = {
   revenue_by_currency: { currency: string; revenue: string }[];
 };
 
+export type InventoryAnalytics = {
+  date_from: string;
+  date_to: string;
+  kpis: {
+    total_slabs: number;
+    available_slabs: number;
+    reserved_slabs: number;
+    in_production_slabs: number;
+    sold_slabs: number;
+    available_area_m2: string;
+    materials_tracked: number;
+    materials_out_of_stock: number;
+    warehouses_count: number;
+  };
+  slabs_by_status: StatusCount[];
+  available_slabs_by_warehouse: { warehouse: string; count: number }[];
+};
+
 // ── Communication Center (Version 2.7) ───────────────────────────────────────
 
 export const CHANNEL_TYPES = ["whatsapp", "instagram", "messenger", "email", "sms", "webhook"] as const;

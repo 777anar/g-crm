@@ -9,11 +9,12 @@ import { listOrders } from "@/lib/api/orders";
 import { listWorkOrders } from "@/lib/api/production";
 import { listInstallationJobs, listNotifications as listInstallationNotifications } from "@/lib/api/installation";
 import { listMeasurementsForCompany, listProjects } from "@/lib/api/sales";
-import { getExecutiveDashboard } from "@/lib/api/reports";
+import { getExecutiveDashboard, getInventoryAnalytics } from "@/lib/api/reports";
 import type {
   Customer,
   ExecutiveDashboard,
   InstallationJob,
+  InventoryAnalytics,
   InstallationNotification,
   Lead,
   Order,
@@ -97,6 +98,7 @@ export default function DashboardPage() {
   const [taskNotifications, setTaskNotifications] = useState<TaskNotification[] | null>(null);
   const [installationNotifications, setInstallationNotifications] = useState<InstallationNotification[] | null>(null);
   const [executive, setExecutive] = useState<ExecutiveDashboard | null>(null);
+  const [inventory, setInventory] = useState<InventoryAnalytics | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -113,9 +115,10 @@ export default function DashboardPage() {
       listMeasurementsForCompany({ dateFrom: todayKey, dateTo: todayKey }),
       listTasks({ excludeTerminal: true, sort: "due_date", limit: 100 }),
       getExecutiveDashboard({ period: "30d" }),
+      getInventoryAnalytics(),
     ])
       .then(
-        ([profile, customerRes, projectRes, orderRes, workOrderRes, installationRes, leadRes, measurementRes, taskRes, executiveRes]) => {
+        ([profile, customerRes, projectRes, orderRes, workOrderRes, installationRes, leadRes, measurementRes, taskRes, executiveRes, inventoryRes]) => {
           setFullName(profile.full_name);
           setCustomers(customerRes.items);
           setProjects(projectRes.items);
@@ -126,6 +129,7 @@ export default function DashboardPage() {
           setMeasurementsToday(measurementRes.items);
           setTasks(taskRes.items);
           setExecutive(executiveRes);
+          setInventory(inventoryRes);
 
           // Surfaces newly-due reminders/overdue tasks the moment the
           // Dashboard loads -- see checkTaskReminders' doc comment for why
@@ -174,7 +178,7 @@ export default function DashboardPage() {
     return { pct: ((curr - prev) / prev) * 100, label: t("vsPreviousMonth") };
   }, [executive, t]);
 
-  const loading = customers === null || orders === null || executive === null;
+  const loading = customers === null || orders === null || executive === null || inventory === null;
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -348,6 +352,37 @@ export default function DashboardPage() {
               </Card>
             </div>
           </section>
+
+          {inventory && (
+            <section className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">
+                  {t("sectionInventory")}
+                </h2>
+                <Link href="/reports/inventory" className="text-sm text-primary hover:underline">
+                  {tCommon("viewAll")}
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <KpiCard
+                  label={tReports("kpiAvailableSlabs")}
+                  value={formatNumber(inventory.kpis.available_slabs)}
+                  tone="success"
+                  hint={`${inventory.kpis.available_area_m2} m²`}
+                />
+                <KpiCard
+                  label={tReports("kpiMaterialsOutOfStock")}
+                  value={formatNumber(inventory.kpis.materials_out_of_stock)}
+                  tone={inventory.kpis.materials_out_of_stock > 0 ? "danger" : "neutral"}
+                />
+                <KpiCard
+                  label={tReports("kpiWarehousesCount")}
+                  value={formatNumber(inventory.kpis.warehouses_count)}
+                  tone="neutral"
+                />
+              </div>
+            </section>
+          )}
 
           <h2 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">{t("sectionToday")}</h2>
 

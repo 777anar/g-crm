@@ -75,6 +75,47 @@ def test_finance_analytics_revenue_and_margin(app_client, owner_headers, complet
     assert any(r["currency"] == "AZN" for r in body["revenue_by_currency"])
 
 
+def test_inventory_analytics_reflects_stock(app_client, owner_headers, available_slab, sold_slab):
+    resp = app_client.get("/api/v1/reports/inventory", headers=owner_headers)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["kpis"]["total_slabs"] == 2
+    assert body["kpis"]["available_slabs"] == 1
+    assert body["kpis"]["sold_slabs"] == 1
+    assert body["kpis"]["available_area_m2"] == "3.250"
+    assert body["kpis"]["materials_tracked"] == 2
+    assert body["kpis"]["warehouses_count"] == 1
+    assert any(r["status"] == "available" and r["count"] == 1 for r in body["slabs_by_status"])
+    assert any(r["status"] == "sold" and r["count"] == 1 for r in body["slabs_by_status"])
+    assert body["available_slabs_by_warehouse"] == [{"warehouse": "Main Warehouse", "count": 1}]
+
+
+def test_inventory_analytics_flags_out_of_stock_material(app_client, owner_headers, available_slab, sold_slab):
+    resp = app_client.get("/api/v1/reports/inventory", headers=owner_headers)
+    assert resp.status_code == 200, resp.text
+    # `material` (behind available_slab) has stock; `out_of_stock_material`
+    # (behind sold_slab) has none available -- exactly one should count.
+    assert resp.json()["kpis"]["materials_out_of_stock"] == 1
+
+
+def test_inventory_analytics_empty_company_is_zeroed(app_client, owner_headers, company):
+    resp = app_client.get("/api/v1/reports/inventory", headers=owner_headers)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["kpis"]["total_slabs"] == 0
+    assert body["kpis"]["available_area_m2"] == "0"
+    assert body["slabs_by_status"] == []
+    assert body["available_slabs_by_warehouse"] == []
+
+
+def test_export_pdf_inventory(app_client, owner_headers, available_slab):
+    resp = app_client.get(
+        "/api/v1/reports/inventory/export/pdf", headers=owner_headers, params={"period": "90d"}
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.content[:4] == b"%PDF"
+
+
 def test_custom_date_range_overrides_period(app_client, owner_headers, completed_order):
     resp = app_client.get(
         "/api/v1/reports/finance",

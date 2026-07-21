@@ -17,6 +17,7 @@ from modules.reports.application.use_cases import (
     ExecutiveDashboardUseCase,
     FinanceAnalyticsUseCase,
     InstallationAnalyticsUseCase,
+    InventoryAnalyticsUseCase,
     ProductionAnalyticsUseCase,
     SalesAnalyticsUseCase,
 )
@@ -30,6 +31,7 @@ from modules.reports.presentation.schemas.reports import (
     ExecutiveDashboardOut,
     FinanceAnalyticsOut,
     InstallationAnalyticsOut,
+    InventoryAnalyticsOut,
     ProductionAnalyticsOut,
     SalesAnalyticsOut,
 )
@@ -42,6 +44,7 @@ _USE_CASES = {
     "production": ProductionAnalyticsUseCase,
     "installation": InstallationAnalyticsUseCase,
     "finance": FinanceAnalyticsUseCase,
+    "inventory": InventoryAnalyticsUseCase,
 }
 
 
@@ -124,6 +127,20 @@ def get_finance_analytics(
         _filter_input(current_user=current_user, period=period, date_from=date_from, date_to=date_to)
     )
     return FinanceAnalyticsOut(**data)
+
+
+@router.get("/inventory", response_model=InventoryAnalyticsOut)
+def get_inventory_analytics(
+    period: str = Query(default=DEFAULT_REPORT_PERIOD),
+    date_from: Optional[date] = Query(default=None),
+    date_to: Optional[date] = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("reports:read")),
+) -> InventoryAnalyticsOut:
+    data = InventoryAnalyticsUseCase(db).execute(
+        _filter_input(current_user=current_user, period=period, date_from=date_from, date_to=date_to)
+    )
+    return InventoryAnalyticsOut(**data)
 
 
 @router.get("/{report_type}/export/{export_format}")

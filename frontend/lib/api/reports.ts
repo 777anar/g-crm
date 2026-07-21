@@ -3,6 +3,7 @@ import type {
   ExecutiveDashboard,
   FinanceAnalytics,
   InstallationAnalytics,
+  InventoryAnalytics,
   ProductionAnalytics,
   ReportPeriod,
   SalesAnalytics,
@@ -44,7 +45,11 @@ export function getFinanceAnalytics(params: ReportFilterParams = {}) {
   return apiRequest<FinanceAnalytics>(`${BASE}/finance`, { searchParams: searchParams(params) });
 }
 
-export type ReportType = "executive" | "sales" | "production" | "installation" | "finance";
+export function getInventoryAnalytics(params: ReportFilterParams = {}) {
+  return apiRequest<InventoryAnalytics>(`${BASE}/inventory`, { searchParams: searchParams(params) });
+}
+
+export type ReportType = "executive" | "sales" | "production" | "installation" | "finance" | "inventory";
 
 export function exportReport(reportType: ReportType, format: "pdf" | "excel", params: ReportFilterParams = {}) {
   const extension = format === "pdf" ? "pdf" : "xlsx";

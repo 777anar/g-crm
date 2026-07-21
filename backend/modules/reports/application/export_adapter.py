@@ -11,6 +11,7 @@ REPORT_TITLES = {
     "production": "Production Analytics",
     "installation": "Installation Analytics",
     "finance": "Finance Analytics",
+    "inventory": "Inventory Analytics",
 }
 
 _KPI_LABELS = {
@@ -52,6 +53,16 @@ _KPI_LABELS = {
     "pipeline_value": "Pipeline value (in-progress orders)",
     "cancelled_value": "Cancelled value",
     "orders_count": "Orders",
+    # Inventory
+    "total_slabs": "Total slabs",
+    "available_slabs": "Available slabs",
+    "reserved_slabs": "Reserved slabs",
+    "in_production_slabs": "Slabs in production",
+    "sold_slabs": "Sold slabs",
+    "available_area_m2": "Available area (m²)",
+    "materials_tracked": "Materials tracked",
+    "materials_out_of_stock": "Materials out of stock",
+    "warehouses_count": "Warehouses",
 }
 
 
@@ -124,6 +135,11 @@ def build_export_sections(report_type: str, data: dict) -> ExportSections:
                                     for r in data["monthly_trend"]]))
         tables.append(ExportTable("Revenue by currency", ["Currency", "Revenue"],
                                    [[r["currency"], _fmt(r["revenue"])] for r in data["revenue_by_currency"]]))
+    elif report_type == "inventory":
+        tables.append(ExportTable("Slabs by status", ["Status", "Count"],
+                                   [[r["status"], str(r["count"])] for r in data["slabs_by_status"]]))
+        tables.append(ExportTable("Available slabs by warehouse", ["Warehouse", "Count"],
+                                   [[r["warehouse"], str(r["count"])] for r in data["available_slabs_by_warehouse"]]))
 
     return ExportSections(
         title=title,

@@ -17,6 +17,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from core.audit.models import AuditLog
+from modules.catalog.domain.value_objects import MATERIAL_STATUS_ACTIVE, SLAB_STATUS_AVAILABLE
+from modules.catalog.infrastructure.models.material import StoneMaterial
+from modules.catalog.infrastructure.models.slab import Slab
+from modules.catalog.infrastructure.models.warehouse import Warehouse
 from modules.crm.infrastructure.models.customer import Customer
 from modules.crm.infrastructure.models.lead import Lead
 from modules.installation.infrastructure.models.crew import Crew
@@ -243,3 +247,55 @@ class ReportsRepository:
     def crew_names_by_id(self, *, company_id: uuid.UUID) -> Dict[str, str]:
         stmt = select(Crew.id, Crew.name).where(Crew.company_id == company_id)
         return {str(crew_id): name for crew_id, name in self.db.execute(stmt).all()}
+
+    # ── Catalog (Inventory) ───────────────────────────────────────────────────
+
+    def slab_status_snapshot(self, *, company_id: uuid.UUID) -> List[Tuple[str, int]]:
+        """Current distribution of every tracked slab by lifecycle status --
+        a live stock snapshot, not date-bound, mirroring order_status_snapshot."""
+        stmt = select(Slab.status, func.count(Slab.id)).where(Slab.company_id == company_id).group_by(Slab.status)
+        return list(self.db.execute(stmt).all())
+
+    def available_slab_area_m2(self, *, company_id: uuid.UUID) -> Decimal:
+        """Total area of stock that is actually sellable right now -- slabs
+        already reserved/sold/in production/scrapped don't count."""
+        stmt = select(func.sum(Slab.area_m2)).where(
+            Slab.company_id == company_id, Slab.status == SLAB_STATUS_AVAILABLE
+        )
+        return self.db.scalar(stmt) or Decimal("0")
+
+    def available_slabs_by_warehouse(self, *, company_id: uuid.UUID) -> List[Tuple[str, int]]:
+        stmt = (
+            select(Warehouse.name, func.count(Slab.id))
+            .join(Slab, Slab.warehouse_id == Warehouse.id)
+            .where(Slab.company_id == company_id, Slab.status == SLAB_STATUS_AVAILABLE)
+            .group_by(Warehouse.name)
+        )
+        return list(self.db.execute(stmt).all())
+
+    def materials_tracked_count(self, *, company_id: uuid.UUID) -> int:
+        stmt = select(func.count(StoneMaterial.id)).where(
+            StoneMaterial.company_id == company_id, StoneMaterial.status == MATERIAL_STATUS_ACTIVE
+        )
+        return self.db.scalar(stmt) or 0
+
+    def materials_out_of_stock_count(self, *, company_id: uuid.UUID) -> int:
+        """Active, sellable materials with zero slabs currently available --
+        the "what can I not quote right now" signal. No stock-threshold field
+        exists on Material, so this reports a real, computable zero rather
+        than a fabricated low-stock cutoff."""
+        available_material_ids = select(Slab.material_id).where(
+            Slab.company_id == company_id, Slab.status == SLAB_STATUS_AVAILABLE
+        )
+        stmt = select(func.count(StoneMaterial.id)).where(
+            StoneMaterial.company_id == company_id,
+            StoneMaterial.status == MATERIAL_STATUS_ACTIVE,
+            StoneMaterial.id.notin_(available_material_ids),
+        )
+        return self.db.scalar(stmt) or 0
+
+    def active_warehouses_count(self, *, company_id: uuid.UUID) -> int:
+        stmt = select(func.count(Warehouse.id)).where(
+            Warehouse.company_id == company_id, Warehouse.status == "active"
+        )
+        return self.db.scalar(stmt) or 0

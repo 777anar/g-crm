@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 const TABS = [
   { labelKey: "tabExecutive", href: "/reports" },
   { labelKey: "tabSales", href: "/reports/sales" },
+  { labelKey: "tabInventory", href: "/reports/inventory" },
   { labelKey: "tabProduction", href: "/reports/production" },
   { labelKey: "tabInstallation", href: "/reports/installation" },
   { labelKey: "tabFinance", href: "/reports/finance" },

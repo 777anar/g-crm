@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { SelectField, TextField } from "@/components/ui/field";
 import { ProjectStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SectionTabs } from "@/components/ui/section-tabs";
+import { SalesSectionTabs } from "@/components/sales-section-tabs";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
 import { SortableHeader } from "@/components/ui/sortable-header";
@@ -24,7 +24,6 @@ const PROJECT_TYPES = ["kitchen", "bathroom", "commercial", "stairs", "fireplace
 export default function ProjectsPage() {
   const t = useTranslations("sales");
   const tCommon = useTranslations("common");
-  const tNav = useTranslations("nav");
   const router = useRouter();
 
   const [projects, setProjects] = useState<Project[] | null>(null);
@@ -77,12 +76,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <SectionTabs
-        items={[
-          { label: tNav("projects"), href: "/sales/projects" },
-          { label: tNav("orders"), href: "/orders" },
-        ]}
-      />
+      <SalesSectionTabs />
 
       <div className="flex items-center justify-between">
         <div>

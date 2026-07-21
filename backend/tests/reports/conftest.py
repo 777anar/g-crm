@@ -3,6 +3,10 @@ import pytest
 from core.auth.models import ROLE_OWNER, User, UserCompanyRole
 from core.auth.security import create_access_token, hash_password
 from core.companies.models import Company
+from modules.catalog.infrastructure.models.brand import Brand
+from modules.catalog.infrastructure.models.material import StoneMaterial
+from modules.catalog.infrastructure.models.slab import Slab
+from modules.catalog.infrastructure.models.warehouse import Warehouse
 from modules.crm.infrastructure.models.customer import Customer
 from modules.crm.infrastructure.models.lead import Lead
 from modules.sales.infrastructure.models.project import Project
@@ -169,6 +173,70 @@ def ready_order(app_client, owner_headers, order_in_production):
     )
     assert resp.status_code == 200, resp.text
     return resp.json()
+
+
+@pytest.fixture()
+def warehouse(db_session, company):
+    w = Warehouse(company_id=company.id, name="Main Warehouse")
+    db_session.add(w)
+    db_session.commit()
+    return w
+
+
+@pytest.fixture()
+def brand(db_session, company):
+    b = Brand(company_id=company.id, name="NEOLITH")
+    db_session.add(b)
+    db_session.commit()
+    return b
+
+
+@pytest.fixture()
+def material(db_session, company, brand):
+    m = StoneMaterial(company_id=company.id, brand_id=brand.id, name="Calacatta Gold")
+    db_session.add(m)
+    db_session.commit()
+    return m
+
+
+@pytest.fixture()
+def out_of_stock_material(db_session, company, brand):
+    """A second, active material with zero available slabs -- distinct from
+    `material`, which always gets an available slab in the tests that use it."""
+    m = StoneMaterial(company_id=company.id, brand_id=brand.id, name="Nero Marquina")
+    db_session.add(m)
+    db_session.commit()
+    return m
+
+
+@pytest.fixture()
+def available_slab(db_session, company, material, warehouse):
+    s = Slab(
+        company_id=company.id,
+        material_id=material.id,
+        warehouse_id=warehouse.id,
+        slab_number="SLB-0001",
+        area_m2="3.25",
+        status="available",
+    )
+    db_session.add(s)
+    db_session.commit()
+    return s
+
+
+@pytest.fixture()
+def sold_slab(db_session, company, out_of_stock_material, warehouse):
+    s = Slab(
+        company_id=company.id,
+        material_id=out_of_stock_material.id,
+        warehouse_id=warehouse.id,
+        slab_number="SLB-0002",
+        area_m2="2.00",
+        status="sold",
+    )
+    db_session.add(s)
+    db_session.commit()
+    return s
 
 
 @pytest.fixture()

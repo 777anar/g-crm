@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.25.0] — 2026-07-21 — G-STONE ERP Executive: Sales/Inventory/Finance Consolidation (Milestone 2)
+
+The app stops being framed as "a CRM." The primary sidebar collapses from 9 module-level sections to 6: Dashboard, Sales, Inventory, Finance, Reports, Settings. Customers, Leads, Tasks, Projects (Quotes), and Orders — previously two separate primary nav items ("Customers" and "Projects") — merge into one cross-linked "Sales" pipeline; Catalog is relabeled "Inventory" in the nav (its URLs and data model are untouched); Finance is promoted from secondary-only to primary; Production, Installation, and Messages move to secondary-only (still fully reachable, nothing deleted — same regrouping precedent Sprint 2 established for the original 9-section sidebar). The executive Dashboard gains a live Inventory snapshot, backed by a new Inventory Analytics endpoint.
+
+### Added
+- `components/sales-section-tabs.tsx` — `SalesSectionTabs`, a shared cross-navigation bar (Customers/Leads/Tasks/Projects/Orders) now rendered identically on all five of those pages, replacing two separate, smaller tab groups.
+- Backend: `GET /api/v1/reports/inventory` (Inventory Analytics) — a live stock snapshot (total/available/reserved/in-production/sold slabs, available area in m², materials tracked, materials with zero available stock, active warehouse count, slabs by status, available slabs by warehouse), following the exact same use-case/repository/schema pattern as the existing Sales/Production/Installation/Finance analytics endpoints. Unlike those, it's not date-range filtered — stock status is current state, not a historical aggregate (mirrors how Production Analytics' own order-status snapshot already ignores the date range). Full PDF/Excel export parity with every other report type. 4 new backend tests.
+- Frontend: `/reports/inventory` — a new Reports tab (Inventory Analytics) with KPI cards, a slabs-by-status breakdown, and available-stock-by-warehouse chart.
+- Dashboard: a new "Inventory" section (Available Slabs + area, Materials Out of Stock, Warehouses), sourced from the new endpoint, so the executive snapshot now covers all four priority domains (Sales, Inventory, Finance, Reports) instead of just Sales/Finance.
+- New nav i18n keys (`nav.sales`, `nav.inventory`, `nav.finance`) and Inventory Analytics keys, in all three locale files.
+- A second Playwright smoke test (`tests/e2e/dashboard.spec.ts`) covering the new nav consolidation end-to-end (Sales → Inventory → Finance → Reports → Inventory Analytics), plus an Inventory assertion added to the original dashboard test.
+
+### Changed
+- `components/app-shell.tsx` — `NAV_ITEMS` reduced to `dashboard`/`sales`/`inventory`/`finance`/`reports`/`settings`; `SECONDARY_ROUTES` gained `customers`'-and-`projects`' former primary-nav routes (still title-matched, just not primary links) plus `production`/`installation`.
+- `app/(app)/crm/customers`, `crm/leads`, `crm/tasks`, `orders`, `sales/projects` — all five now render `<SalesSectionTabs />` instead of a bespoke, page-local `SectionTabs` block.
+- `app/(app)/reports/layout.tsx` — gained an "Inventory Analytics" tab between Sales and Production.
+
+### Verification
+Full backend suite passing (553/553 — 549 prior + 4 new), frontend `tsc --noEmit` clean, frontend production build clean (39 routes, including the new `/reports/inventory`), and both Playwright smoke tests passing end-to-end against a freshly restarted local backend and a fresh production build: dashboard KPIs/trend/inventory/today sections all render, and the full nav walk (Sales → Customers/Leads/Tasks/Projects/Orders tabs all present → Inventory → Finance → Reports → Inventory Analytics with real data) resolves correctly — zero console errors throughout. (The Dashboard's "Inventory" section heading and the sidebar's "Inventory" nav link share the same text by design — both are the correct label for what they are — so the new test scopes its assertion to the heading role rather than plain text to disambiguate them, same as a screen reader's heading-vs-landmark navigation would.)
+
 ## [2.24.0] — 2026-07-21 — G-STONE ERP Executive: Premium Executive Dashboard (Milestone 1)
 
 First step of repositioning the app from a CRM into an executive tool the owner can read in under 10 seconds. Rewires `/dashboard` onto the real server-side aggregation endpoint (`GET /api/v1/reports/executive`) that `/reports` already exposed but no other page consumed, and gives it a bigger-scale, Apple/Linear/Stripe-influenced KPI layout. No backend changes; the sidebar/IA consolidation into 7 top-level modules is deferred to a follow-up milestone.

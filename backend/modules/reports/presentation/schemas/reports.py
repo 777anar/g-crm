@@ -172,3 +172,30 @@ class FinanceAnalyticsOut(BaseModel):
     kpis: FinanceKpis
     monthly_trend: List[FinanceMonthlyPoint]
     revenue_by_currency: List[RevenueByCurrency]
+
+
+# ── Inventory Analytics ──────────────────────────────────────────────────────
+
+class InventoryKpis(BaseModel):
+    total_slabs: int
+    available_slabs: int
+    reserved_slabs: int
+    in_production_slabs: int
+    sold_slabs: int
+    available_area_m2: Decimal
+    materials_tracked: int
+    materials_out_of_stock: int
+    warehouses_count: int
+
+
+class WarehouseCount(BaseModel):
+    warehouse: str
+    count: int
+
+
+class InventoryAnalyticsOut(BaseModel):
+    date_from: date
+    date_to: date
+    kpis: InventoryKpis
+    slabs_by_status: List[StatusCount]
+    available_slabs_by_warehouse: List[WarehouseCount]

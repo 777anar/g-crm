@@ -12,7 +12,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { LeadStatusBadge, Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SelectField, TextField } from "@/components/ui/field";
-import { SectionTabs } from "@/components/ui/section-tabs";
+import { SalesSectionTabs } from "@/components/sales-section-tabs";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { RecommendationCard } from "@/components/recommendation-card";
@@ -58,7 +58,6 @@ function LeadsPageInner() {
   const router = useRouter();
   const t = useTranslations("leads");
   const tCommon = useTranslations("common");
-  const tCrm = useTranslations("crm");
   const channelLabel = useLeadChannelLabel();
   const toast = useToast();
   const [leads, setLeads] = useState<Lead[] | null>(null);
@@ -217,13 +216,7 @@ function LeadsPageInner() {
 
   return (
     <div className="flex flex-col gap-4">
-      <SectionTabs
-        items={[
-          { label: tCrm("tabCustomers"), href: "/crm/customers" },
-          { label: tCrm("tabLeads"), href: "/crm/leads" },
-          { label: tCrm("tabTasks"), href: "/crm/tasks" },
-        ]}
-      />
+      <SalesSectionTabs />
 
       <div>
         <h1 className="text-xl font-semibold text-text-primary">{t("title")}</h1>
