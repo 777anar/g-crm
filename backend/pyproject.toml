@@ -9,7 +9,7 @@ pythonpath = ["."]
 testpaths = ["tests"]
 
 [tool.importlinter]
-root_package = "core"
+root_packages = ["core", "modules"]
 
 [[tool.importlinter.contracts]]
 name = "Core must never import business modules"

@@ -33,6 +33,7 @@ pytest                          # full suite
 pytest tests/crm/test_customers_api.py            # one file
 pytest tests/crm/test_customers_api.py::test_name # one test
 pytest tests/test_core_independence.py            # the architecture guardrail alone
+lint-imports                                       # import-linter: same core/module boundary, enforced in CI
 ```
 
 After changing any module's SQLAlchemy models: `alembic revision --autogenerate -m "..."` then `alembic upgrade head` — but first make sure the module's `infrastructure/models` package is imported in `migrations/env.py`, or autogenerate won't see the new tables.
@@ -52,7 +53,7 @@ npm run typecheck    # tsc --noEmit
 
 ### Core vs. modules — the one rule that matters
 
-The dependency direction is strictly **module → core, never core → module**. This is not just convention: `backend/tests/test_core_independence.py` is an executable guardrail that ASTs every file under `core/` and fails the build if any of them import from `modules.*` (the one intentional exception is `core/module_registry/registry.py`, which loads modules dynamically via `importlib` using plain strings). `pyproject.toml` also configures `import-linter` with the same forbidden-imports contract. Never make `core/` import from a module to "just this once" solve a problem — solve it via the event bus, the manifest contract, or a shared `core/` abstraction instead.
+The dependency direction is strictly **module → core, never core → module**. This is not just convention: `backend/tests/test_core_independence.py` is an executable guardrail that ASTs every file under `core/` and fails the build if any of them import from `modules.*` (the one intentional exception is `core/module_registry/registry.py`, which loads modules dynamically via `importlib` using plain strings). `pyproject.toml` also configures `import-linter` with the same forbidden-imports contract, run as `lint-imports`. Both checks — the full `pytest` suite and `lint-imports` — run automatically on every push/PR via `.github/workflows/ci.yml`, so a violation fails CI rather than depending on someone remembering to run either locally. Never make `core/` import from a module to "just this once" solve a problem — solve it via the event bus, the manifest contract, or a shared `core/` abstraction instead.
 
 `core/` never imports a module's domain/application/infrastructure internals directly — the *only* thing it touches per module is a single `MODULE_MANIFEST` object (`core/module_registry/contracts.py`), which declares the module's router, permissions, navigation entries, settings schema, and event subscriptions. `core/module_registry/registry.py`'s `INSTALLED_MODULES` list is the entire "install a module" step — nothing else in `core/` changes when a module is added.
 

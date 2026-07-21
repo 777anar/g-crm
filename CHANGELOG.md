@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.28.0] — 2026-07-21 — Real CI Enforcement of the Core/Module Architecture Boundary (PROJECT_AUDIT.md Priority #3)
+
+Closes `PROJECT_AUDIT.md` §5/§8/§9 (S2): `PROJECT_ANALYSIS.md` sections 4.3/7/10 have always described the core→module import boundary as "enforced by a CI lint rule... not just a convention," and `pyproject.toml` has declared an `import-linter` contract since Phase 1 — but `import-linter` was never actually installed (missing from `requirements.txt`, failed to even run), and no CI pipeline existed in this repository at all. The only thing actually stopping a violation was `tests/test_core_independence.py`, which only ran when someone remembered to run `pytest` locally. This closes that gap for real: `import-linter` runs, and now nothing merges without both it and the full backend/frontend check suite passing.
+
+### Added
+- `.github/workflows/ci.yml` — GitHub Actions workflow on every push/PR to `main`, two jobs: **backend** (`pip install -r requirements.txt`, `pytest`, `lint-imports`) and **frontend** (`npm ci`, `npm run typecheck`, `npm run build`). Any failing step fails the job and blocks the pipeline — this is the CI-enforced architecture gate `PROJECT_ANALYSIS.md` has described since Phase 1 but that never actually existed until now.
+- `import-linter==2.13` added to `backend/requirements.txt` (previously configured in `pyproject.toml` but not an installable/runnable dependency anywhere).
+
+### Fixed
+- `pyproject.toml`'s `[tool.importlinter]` config used `root_package = "core"` with a `forbidden_modules = ["modules"]` contract — since `modules` sits outside the single declared root package, running `lint-imports` errored immediately ("must have `include_external_packages=True`") rather than ever actually evaluating the contract. Changed to `root_packages = ["core", "modules"]` (both are real top-level packages under `backend/`) so the contract runs and evaluates correctly. Verified with a temporary, deliberately-introduced `core -> modules` import: `lint-imports` correctly reported it as broken, then verified clean again after reverting — this contract now has real teeth, not just plausible-looking config.
+
+### Changed
+- `backend/README.md`, `CLAUDE.md`: documented `lint-imports` as a real, runnable command alongside `pytest`, and noted both now run automatically in CI.
+
+### Verification
+Full backend suite passing (554/554, unchanged — no application code touched), `lint-imports` passing (1 contract kept, 0 broken) and confirmed to correctly fail on a real violation before being reverted, frontend `tsc --noEmit` clean, frontend production build clean (all 39 routes, unchanged).
+
 ## [2.27.0] — 2026-07-21 — Dashboard Resilience & Accurate KPI Counts (PROJECT_AUDIT.md Priority #2)
 
 Closes the next-highest finding from `PROJECT_AUDIT.md` §4/§10 (B2/B3): the Dashboard's 11-way parallel fetch was all-or-nothing (one failing call blanked the entire page, including sections that don't depend on it), and several of its stat/KPI counts were computed from collections silently capped at 100 rows with no way to reach the rest. Frontend-only; no backend or API contract changes, no visual change to the page when every call succeeds.

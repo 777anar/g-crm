@@ -35,9 +35,17 @@ Seeded login: `owner@g-erp.example` / `ChangeMe123!` (owner role on all three co
 pytest
 ```
 
-167 tests, all passing: core (boot-standalone, RBAC rules, event bus, import-boundary), CRM (domain entities, every API endpoint, RBAC enforcement, multi-company isolation, and — for every write action — that it produced both an audit log entry and a domain event), and Stone Catalog (full CRUD per entity, brand/collection-mismatch validation, duplicate-slab-number conflict, the full slab status transition graph including rejected illegal transitions, price-list upsert idempotency, image/document linking via the shared documents endpoint, and multi-company isolation).
-
 Includes an executable architecture guardrail (`tests/test_core_independence.py`) that fails the build if any `core/` file imports from `modules.*`.
+
+## Architecture boundary (import-linter)
+
+The core/module dependency direction (`CLAUDE.md`: "module → core, never core → module") is additionally enforced by [import-linter](https://import-linter.readthedocs.io/), configured in `pyproject.toml`:
+
+```bash
+lint-imports
+```
+
+Both `pytest` and `lint-imports` run automatically on every push/PR via GitHub Actions (`.github/workflows/ci.yml`) — a violating change fails CI, not just a local check someone has to remember to run.
 
 ## CRM Module (Phase 2)
 
