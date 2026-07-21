@@ -224,3 +224,17 @@ export function ChannelTypeBadge({ channelType }: { channelType: string }) {
   const t = useTranslations("communication");
   return <Badge tone="info">{t(`channel_${channelType}` as any)}</Badge>;
 }
+
+const PURCHASE_ORDER_STATUS_TONE: Record<string, Tone> = {
+  draft: "neutral",
+  sent: "info",
+  confirmed: "info",
+  partially_received: "warning",
+  received: "success",
+  cancelled: "danger",
+};
+
+export function PurchaseOrderStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("purchasing");
+  return <Badge tone={PURCHASE_ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+}

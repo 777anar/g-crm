@@ -1,7 +1,7 @@
 # G-STONE ERP — Product Roadmap
 
-_Originally proposed 2026-06-30 (CRM Version 1.0 frozen as of commit `bec2def`); the plan below was approved the same day (see Change log) and has been followed and extended ever since — updated 2026-07-21 to reflect delivery through Version 2.28.0._
-_Status: current version is **2.28.0**. Nine of the ten modules on the original list are shipped (Marketing is not; Purchasing, added to the plan after the original ten, is also not — see `PROJECT_AUDIT.md` §3 for the up-to-date gap list). This document's Version 1.1/1.2/2.0+ tables are kept as delivered — each row is annotated "Delivered <date>" once shipped — so the plan and the delivery history live in one place rather than two._
+_Originally proposed 2026-06-30 (CRM Version 1.0 frozen as of commit `bec2def`); the plan below was approved the same day (see Change log) and has been followed and extended ever since — updated 2026-07-21 to reflect delivery through Version 2.31.0._
+_Status: current version is **2.31.0**. Nine of the ten modules on the original list are shipped, plus Purchasing as of this revision — Marketing is now the only module remaining from the original plan (see `PROJECT_AUDIT.md` §3). This document's Version 1.1/1.2/2.0+ tables are kept as delivered — each row is annotated "Delivered <date>" once shipped — so the plan and the delivery history live in one place rather than two._
 
 This is a product-perspective review of the application as it stood on 2026-06-30, and a proposal for what came next, split into three horizons: **1.1** (polish the frozen CRM), **1.2** (deepen the CRM into a daily operating tool), and **2.0** (the first new ERP module beyond CRM, per the modular architecture frozen in `PROJECT_ANALYSIS.md`). Every one of those horizons is now complete; the **Summary** table and **Change log** sections further down carry the plan forward through every version actually shipped since, including this document's own most recent update.
 
@@ -524,6 +524,46 @@ Reports
 
 ---
 
+## Version 2.29.0 — Documentation Sync
+
+**Theme:** closes Priority #4 of `PROJECT_AUDIT.md`: `API_SPECIFICATION.md` and `DATABASE_DESIGN.md` had drifted badly — both stopped documenting real endpoints/schema after Version 2.12, and their CRM/Sales sections still described the original Phase-1 design sketch that was never actually built that way.
+
+| Change | Area | Business value |
+|---|---|---|
+| Full rewrite of `API_SPECIFICATION.md`, verified endpoint-by-endpoint against the real FastAPI routers — replaced the fictional CRM/Sales design with the real Customer/Lead/Task model and nested Sales tree, added first-time coverage of Production/Installation/Finance/Reports | Docs | Anyone reading the spec now gets the real contract, not a superseded sketch |
+| Full rewrite of `DATABASE_DESIGN.md`, verified table-by-table against the real SQLAlchemy models — confirmed Row-Level Security was never actually implemented (app-layer `company_id` filtering is the real mechanism), `ai_jobs` is unused (AI has its own table), and refresh-token revocation lives in Redis, not a column | Docs | Corrects several claims that were quietly false, not just outdated |
+
+**Verification:** documentation-only change; full backend suite unaffected (554/554), frontend unaffected.
+
+---
+
+## Version 2.30.0 — Fix: Orders/Production/Installation/Finance List Pagination
+
+**Theme:** found during the 2.29.0 documentation sync and fixed the same day as the highest-value follow-up: five list endpoints accepted `limit`/`cursor` but hardcoded `next_cursor: null`, silently undermining the "Load more" UI added for Orders/Production/Finance in Version 2.26.0.
+
+| Change | Area | Business value |
+|---|---|---|
+| `GET /orders`, `/production`, `/installation/jobs`, `/finance/invoices`, `/finance/expenses` now fetch `limit + 1` rows and return a real `encode_cursor(...)` cursor when more exist — the exact pattern already proven correct on Catalog/CRM | Backend | The "Load more" buttons added in 2.26.0 for Orders/Production/Finance now actually function past page one |
+| 5 new regression tests, one per endpoint | Backend — testing | Each creates 3 records, requests a page of 2, and confirms a non-null cursor reaches a real, disjoint second page |
+
+**Verification:** full backend suite passing (559/559 — 554 prior + 5 new), `lint-imports` passing, frontend unaffected.
+
+---
+
+## Version 2.31.0 — Purchasing Module
+
+**Theme:** the first new business module since Version 2.9 (Real Integrations), and the first of the two remaining modules from the original ten-module plan (`PROJECT_ANALYSIS.md` §2). Closes the restocking loop for the Stone Catalog — until now there was no system of record for who G-STONE buys stone from or what's on order, only what's already in the warehouse.
+
+| Feature | Priority | Business value | Dependencies | Complexity |
+|---|---|---|---|---|
+| **Suppliers** — CRUD with active/hidden status, the same lightweight-entity pattern as Catalog Brands/Warehouses | High | A real system of record for vendors, replacing tribal knowledge / a spreadsheet | None | S |
+| **Purchase Orders** — created against a Supplier with line items (optionally linked to a Catalog material), a `draft→sent→confirmed→{partially_received,received}/cancelled` lifecycle mirroring Finance's invoice-status discipline | High | Real visibility into what's on order, from whom, and at what cost — before now, restocking had no tracked commitment between "we need more stone" and "the slab is on the shelf" | Suppliers | L |
+| **Receiving** — recording a receipt against a line accumulates `quantity_received` and, when given warehouse + slab details, creates a real `catalog_slabs` row via Catalog's own `CreateSlabUseCase` — the inverse of Production's slab-consumption flow, reusing the same cross-module pattern rather than duplicating slab-creation logic | High | Closes the loop end-to-end: a purchase order's receipt becomes real, sellable inventory in the same action, not a separate manual step in Catalog | Purchase Orders, Catalog | M |
+
+**Verification:** full backend suite passing (583/583 — 559 prior + 24 new), `lint-imports` passing, a real Alembic migration generated, applied, and verified against the dev database (`alembic check` clean), frontend `tsc --noEmit` clean, frontend production build clean (42 routes — 4 new: Suppliers list, Purchase Orders list/create/detail).
+
+---
+
 ## Complexity key
 
 - **S** (Small): a few files, one focused PR, low risk
@@ -562,6 +602,12 @@ Reports
 | 2.23.0 | Customer Type Picker — resolves RELEASE_CHECKLIST.md M2 (`customer.type` "write-only dead weight"); a real picker on Customer creation + an editable one on the profile page, `CustomerUpdate` gaining an additive `type` field, and a previously-orphaned `useCustomerTypeLabel` i18n hook reactivated | No | No (extends CRM) |
 | 2.24.0 | G-STONE ERP Executive, Milestone 1 — Premium Executive Dashboard, rebuilding `/dashboard` around the existing `GET /api/v1/reports/executive` aggregation (revenue/profit/margin/customers/orders/win-rate KPIs, a revenue-vs-profit trend, orders-by-status pipeline) with a new large-KPI-card visual language, ahead of a later 7-module sidebar consolidation (Dashboard/Customers/Orders/Inventory/Finance/Reports/Settings) | No | No (frontend-only, extends Dashboard + reuses Reports' executive endpoint) |
 | 2.25.0 | G-STONE ERP Executive, Milestone 2 — Sales/Inventory/Finance Consolidation: primary sidebar collapses from 9 to 6 sections (Dashboard/Sales/Inventory/Finance/Reports/Settings); Customers/Leads/Tasks/Projects/Orders merge into one cross-linked "Sales" pipeline; a new Inventory Analytics endpoint + Reports tab + Dashboard section give the app its first real stock visibility | No | No (adds one read-only analytics endpoint to Reports; no new tables) |
+| 2.26.0 | Pagination Rollout — closes PROJECT_AUDIT.md Priority #1: Orders/Production/Finance Invoices/Finance Expenses gained the "Load more" pattern already proven on Customers/Leads/Materials; Catalog Brands gained real cursor pagination (previously had none) | No | No (frontend-only except the Brands endpoint fix) |
+| 2.27.0 | Dashboard Resilience & Accurate KPI Counts — closes Priority #2: `Promise.all` → `Promise.allSettled` so one failing call no longer blanks the page; a new `fetchAllPages` helper stops Orders/Production/Tasks-derived stats from silently under-counting past `limit:100` | No | No (frontend-only) |
+| 2.28.0 | Real CI Enforcement of the Core/Module Architecture Boundary — closes Priority #3: fixed `import-linter`'s broken config and pinned it as a real dependency; added `.github/workflows/ci.yml` (backend tests + `lint-imports`, frontend typecheck + build) | No | No (tooling only) |
+| 2.29.0 | Documentation Sync — closes Priority #4: full rewrite of API_SPECIFICATION.md and DATABASE_DESIGN.md against the actual source code, replacing a superseded Phase-1 design sketch and correcting several stale/false claims (RLS, `ai_jobs`, refresh-token storage) | No | No (documentation only) |
+| 2.30.0 | Fix: Orders/Production/Installation/Finance List Pagination — found during 2.29.0's doc sync: five list endpoints hardcoded `next_cursor: null` despite accepting `limit`/`cursor`, silently undermining 2.26.0's "Load more" UI; fixed with the same proven cursor pattern | No | No (backend fix + 5 new tests) |
+| 2.31.0 | Purchasing Module — Suppliers + Purchase Orders + receiving, closing the restocking loop for the Stone Catalog; receiving a line optionally creates a real `catalog_slabs` row via Catalog's own `CreateSlabUseCase` | Yes (Supplier, PurchaseOrder, PurchaseOrderLine, GoodsReceipt) | Yes (Purchasing) |
 
 ## Change log
 

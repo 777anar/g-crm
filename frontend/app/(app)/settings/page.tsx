@@ -37,6 +37,13 @@ export default function SettingsPage() {
       ],
     },
     {
+      heading: t("groupPurchasing"),
+      items: [
+        { title: tNav("suppliers"), description: t("suppliersDesc"), href: "/purchasing/suppliers" },
+        { title: tNav("purchaseOrders"), description: t("purchaseOrdersDesc"), href: "/purchasing/orders" },
+      ],
+    },
+    {
       heading: t("groupOffice"),
       items: [
         { title: tNav("orders"), description: t("ordersDesc"), href: "/orders" },

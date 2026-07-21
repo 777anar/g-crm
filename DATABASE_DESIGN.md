@@ -1,7 +1,7 @@
 # G-ERP — Database Design
 
 _Originally a Phase 1 design document (2026-06-29); rewritten 2026-07-21 against the actual current SQLAlchemy models (every `infrastructure/models/*.py` file in `backend/`, not the original design) to close `PROJECT_AUDIT.md` Priority #4 — the previous revision described a superseded Phase-1 CRM/Sales schema that was never actually built that way, and still listed Production/Installation/Finance as "conceptual, not migrated" long after all three shipped._
-_Status: covers every table in every one of the ten installed modules, as implemented as of Version 2.28.0, verified directly against model source files and Alembic migrations. Marketing and Purchasing are not built — see §13._
+_Status: covers every table in every one of the eleven installed modules, as implemented as of Version 2.31.0, verified directly against model source files and Alembic migrations. Marketing is the only module from the original plan not yet built — see §14._
 
 ---
 
@@ -16,7 +16,7 @@ _Status: covers every table in every one of the ten installed modules, as implem
 - Several business-date columns (`scheduled_date`, `expense_date`, `valid_until`, etc.) are stored as plain `TEXT(10)` ISO date strings rather than a `DATE` column — a deliberate SQLite/Postgres portability choice made early and kept consistent since, not an inconsistency to "fix."
 - Status/enum-like columns are plain `TEXT` with the valid-value set enforced in the domain layer (`domain/value_objects.py` per module, typically a `VALID_*` frozenset plus, for stateful entities, an explicit transition graph), not a DB-level `CHECK` constraint or native enum type — this is a real, consistent choice across every module, not a Phase-1-only shortcut.
 
-## 2. Entity-Relationship Diagram (current, all ten installed modules)
+## 2. Entity-Relationship Diagram (current, all eleven installed modules)
 
 ```
 companies ──┬──────< user_company_roles >────────────────── users
@@ -61,6 +61,9 @@ companies ──┬──────< user_company_roles >───────
             ├──< communication_channels ──< communication_integration_logs
             │
             ├──< ai_recommendations (owned by the `ai` module, not core — polymorphic related_entity_type/id)
+            │
+            ├──< suppliers ──< purchase_orders ──< purchase_order_lines >── catalog_materials
+            ├──< purchase_order_lines ──< goods_receipts >── catalog_slabs (created on receipt, when slab details given)
             │
             ├──< documents >── related_entity (any module's entity, polymorphic)
             ├──< audit_log >── actor_user_id ──> users
@@ -611,16 +614,79 @@ _Unified omnichannel inbox (WhatsApp Business, Instagram Direct, Facebook Messen
 
 **This table is owned by `modules/ai/`, not `core/`** — it is entirely separate from the reserved-but-unused core `ai_jobs` table (§3.7). One table covers all 27 recommendation types, discriminated by `recommendation_type`, the same pattern `communication_message_templates` uses. **Nothing in this module ever writes to another module's tables** — accepting/rejecting/editing a recommendation only ever updates this table's own `status`/`reviewed_by`/`reviewed_at`/`edited_response` columns, making "AI never performs business actions automatically" a structural property, not a UI convention.
 
-## 13. Unbuilt Modules (conceptual only)
+## 13. Purchasing Module Tables (Version 2.31.0)
 
-Only two modules remain unbuilt from the full plan (`PROJECT_AUDIT.md` §3): **Marketing** and **Purchasing**. Kept here only so foreign-key shapes are pre-considered — no migration exists for either, and nothing below is real.
+_Suppliers and purchase orders, closing the restocking loop for the Stone Catalog — the inverse of Production's slab-consumption flow (§8.2). Receiving against a line optionally creates a real `catalog_slabs` row via the same `CreateSlabUseCase` Catalog itself uses, rather than duplicating slab-creation logic._
+
+### 13.1 `suppliers`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| name | TEXT | NOT NULL |
+| contact_name / phone / email | TEXT | nullable |
+| address / notes | TEXT | nullable |
+| status | TEXT | NOT NULL, DEFAULT `active` (`active`\|`hidden`), indexed |
+| created_by | UUID | nullable, REFERENCES users(id) |
+
+### 13.2 `purchase_orders`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| supplier_id | UUID | NOT NULL, REFERENCES suppliers(id), indexed |
+| po_number | TEXT(50) | NOT NULL, indexed |
+| status | TEXT(50) | NOT NULL, DEFAULT `draft`, indexed |
+| currency | TEXT(3) | NOT NULL, DEFAULT `AZN` |
+| notes | TEXT | nullable |
+| expected_delivery_date | TEXT(10) | nullable |
+| subtotal_amount / total_amount | NUMERIC(14,2) | NOT NULL, DEFAULT `0` — no separate VAT modeling, unlike Sales Quotes/Orders (a deliberately simpler cost-side document) |
+| cancelled_at | TIMESTAMPTZ | nullable |
+| cancelled_reason | TEXT | nullable |
+| created_by | UUID | nullable, REFERENCES users(id) |
+
+**`status`** (default `draft`): `draft`, `sent`, `confirmed`, `partially_received`, `received`, `cancelled` (`received`/`cancelled` terminal). Transition graph: `draft→{sent, cancelled}`; `sent→{confirmed, cancelled}`; `confirmed→{partially_received, received, cancelled}`; `partially_received→{received, cancelled}`. Only `sent`/`confirmed`/`cancelled` are manually settable — `partially_received`/`received` are set exclusively as a side effect of receiving (§13.4), the same discipline Finance's `invoice.status` uses for `partially_paid`/`paid` (§10.1). Only a `draft` order's lines/notes/expected-delivery-date may still change.
+
+### 13.3 `purchase_order_lines`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| purchase_order_id | UUID | NOT NULL, REFERENCES purchase_orders(id), indexed |
+| material_id | UUID | nullable, REFERENCES catalog_materials(id), indexed — nullable so a line can be a non-material cost (freight, customs) |
+| description | TEXT(500) | NOT NULL, DEFAULT `""` |
+| quantity | NUMERIC(10,3) | NOT NULL, DEFAULT `1` |
+| unit | TEXT(10) | NOT NULL, DEFAULT `unit` |
+| unit_cost / line_total | NUMERIC(14,2) | NOT NULL, DEFAULT `0` |
+| quantity_received | NUMERIC(10,3) | NOT NULL, DEFAULT `0` — accumulates across every `goods_receipts` row against this line; never exceeds `quantity` (enforced in the use case, not a DB constraint) |
+| sort_order | INTEGER | NOT NULL, DEFAULT `0` |
+
+### 13.4 `goods_receipts`
+One receiving action recorded against a line.
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| purchase_order_id | UUID | NOT NULL, REFERENCES purchase_orders(id), indexed — denormalized from the line for direct per-order queries |
+| purchase_order_line_id | UUID | NOT NULL, REFERENCES purchase_order_lines(id), indexed |
+| slab_id | UUID | nullable, REFERENCES catalog_slabs(id), indexed — set only when the receiver supplied warehouse + slab details and the line has a linked material |
+| quantity_received | NUMERIC(10,3) | NOT NULL |
+| notes | TEXT | nullable |
+| received_by | UUID | nullable, REFERENCES users(id) |
+| received_at | TIMESTAMPTZ | NOT NULL |
+
+### 13.5 `purchase_order_number_sequences`
+Same shape as every other module's number sequence (§6.4/§7.3/§8.3/§9.5/§10.4): `company_id`, `year`, `last_number`, `UNIQUE(company_id, year)`, no timestamps. Produces numbers like `PO-2026-0001`.
+
+## 14. Unbuilt Modules (conceptual only)
+
+**Marketing** is the only module remaining unbuilt from the full plan (`PROJECT_AUDIT.md` §3, updated — Purchasing shipped in Version 2.31.0). Kept here only so foreign-key shapes are pre-considered — no migration exists, and nothing below is real.
 
 - **Marketing** (feeds `LeadCreated`-adjacent events into CRM): `campaigns(id, company_id, name, channel, start_date, end_date)`, `lead_sources(id, company_id, campaign_id, name)` — note `crm_leads.source_channel`/`campaign` already exist as free-text fields; a real Marketing module would likely turn `campaign` into a proper FK.
-- **Purchasing** (suppliers and purchase orders, used to restock the Catalog): `suppliers(id, company_id, name, contact_info)`, `purchase_orders(id, company_id, supplier_id, status)`, `purchase_order_lines(id, purchase_order_id, material_id, quantity, unit_cost)`, `goods_receipts(id, purchase_order_id, received_at)` — would create `catalog_slabs` rows on receipt, the inverse of Production's consumption flow (§8.2).
 
-Each would get its own `infrastructure/migrations/` directory and Alembic revision chain when built, per the plugin contract — no core changes required either way.
+It would get its own `infrastructure/migrations/` directory and Alembic revision chain when built, per the plugin contract — no core changes required.
 
-## 14. Row-Level Security Strategy
+## 15. Row-Level Security Strategy
 
 **Correction from the previous revision of this document: Postgres Row-Level Security is not implemented anywhere in this codebase today.** A grep across all of `backend/` for `ROW LEVEL SECURITY`/`CREATE POLICY`/`row_level_security` returns zero hits — no migration, no raw SQL, nothing (`PROJECT_AUDIT.md` S1). The previous revision described RLS as already-in-place defense-in-depth; that was the Phase-1 design intention, never actually built.
 
@@ -636,7 +702,7 @@ CREATE POLICY tenant_isolation ON crm_customers
 
 — the backend would need to `SET LOCAL app.current_company_id` at the start of each request's DB transaction (derived from the authenticated user's active company, never client-supplied) for this to function. Not built; recorded here as a real, open gap rather than implied-complete.
 
-## 15. Migration Strategy
+## 16. Migration Strategy
 
 - Alembic revision history is a single linear chain (currently 18 migrations deep, head `4cbc1f1d4028`) — unified at the database level, but each module owns the migration scripts that create/alter its own tables.
 - Core platform tables (`companies`, `users`, `user_company_roles`, `documents`, `audit_log`, `event_log`, `ai_jobs`) were created in the earliest migration, before any module's tables.

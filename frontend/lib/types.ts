@@ -1327,3 +1327,79 @@ export type AIDashboard = {
     avg_execution_time_ms: number | null;
   };
 };
+
+// --- Purchasing --------------------------------------------------------
+
+export const SUPPLIER_STATUSES = ["active", "hidden"] as const;
+export type SupplierStatus = (typeof SUPPLIER_STATUSES)[number];
+
+export type Supplier = {
+  id: string;
+  company_id: string;
+  name: string;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+  status: SupplierStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const PURCHASE_ORDER_STATUSES = [
+  "draft",
+  "sent",
+  "confirmed",
+  "partially_received",
+  "received",
+  "cancelled",
+] as const;
+export type PurchaseOrderStatus = (typeof PURCHASE_ORDER_STATUSES)[number];
+
+// The manual "change status" action only ever drives these three targets --
+// partially_received/received are exclusively a side effect of receiving.
+export const MANUALLY_SETTABLE_PURCHASE_ORDER_STATUSES = ["sent", "confirmed", "cancelled"] as const;
+
+export type PurchaseOrder = {
+  id: string;
+  company_id: string;
+  supplier_id: string;
+  po_number: string;
+  status: PurchaseOrderStatus;
+  currency: string;
+  notes: string | null;
+  expected_delivery_date: string | null;
+  subtotal_amount: string;
+  total_amount: string;
+  cancelled_at: string | null;
+  cancelled_reason: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PurchaseOrderLine = {
+  id: string;
+  purchase_order_id: string;
+  material_id: string | null;
+  description: string;
+  quantity: string;
+  unit: string;
+  unit_cost: string;
+  line_total: string;
+  quantity_received: string;
+  sort_order: number;
+};
+
+export type GoodsReceipt = {
+  id: string;
+  purchase_order_id: string;
+  purchase_order_line_id: string;
+  slab_id: string | null;
+  quantity_received: string;
+  notes: string | null;
+  received_by: string | null;
+  received_at: string;
+};

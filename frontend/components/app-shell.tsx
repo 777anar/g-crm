@@ -54,6 +54,8 @@ const SECONDARY_ROUTES = [
   { labelKey: "integrations", href: "/communication/integrations" },
   { labelKey: "messageTemplates", href: "/communication/templates" },
   { labelKey: "aiAssistant", href: "/ai/dashboard" },
+  { labelKey: "suppliers", href: "/purchasing/suppliers" },
+  { labelKey: "purchaseOrders", href: "/purchasing/orders" },
 ] as const;
 
 // Minimal inline line-icons matched to each section, drawn in the same style
