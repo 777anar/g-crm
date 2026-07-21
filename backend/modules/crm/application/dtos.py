@@ -78,6 +78,7 @@ class CreateLeadInput:
     email: Optional[str] = None
     phone: Optional[str] = None
     campaign: Optional[str] = None
+    campaign_id: Optional[uuid.UUID] = None
     assigned_manager_id: Optional[uuid.UUID] = None
 
 

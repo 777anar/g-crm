@@ -144,6 +144,7 @@ export type CreateLeadInput = {
   email?: string;
   phone?: string;
   campaign?: string;
+  campaign_id?: string;
 };
 
 export function createLead(input: CreateLeadInput) {

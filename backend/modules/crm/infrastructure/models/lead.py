@@ -16,6 +16,12 @@ class Lead(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     source_channel: Mapped[str] = mapped_column(String, nullable=False, index=True)
     campaign: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    # Opaque reference to a Marketing campaigns.id row -- no DB-level FK,
+    # same "polymorphic reference, application-layer only" pattern already
+    # used by documents.related_entity_id and crm_activities.related_entity_id,
+    # so CRM never needs to import or depend on the marketing module even
+    # though marketing.campaigns points campaign attribution back here.
+    campaign_id: Mapped[Optional[str]] = mapped_column(GUID(), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String, nullable=False, default="new", index=True)
     assigned_manager_id: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
     converted_customer_id: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("crm_customers.id"), nullable=True)

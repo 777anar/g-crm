@@ -116,6 +116,7 @@ export type Lead = {
   phone: string | null;
   source_channel: LeadSourceChannel;
   campaign: string | null;
+  campaign_id: string | null;
   status: "new" | "contacted" | "qualified" | "converted" | "disqualified";
   assigned_manager_id: string | null;
   converted_customer_id: string | null;
@@ -1402,4 +1403,47 @@ export type GoodsReceipt = {
   notes: string | null;
   received_by: string | null;
   received_at: string;
+};
+
+// --- Marketing -----------------------------------------------------------
+
+// Same vocabulary as LeadSourceChannel -- a campaign runs on the same
+// channels a lead can arrive through.
+export const CAMPAIGN_CHANNELS = [
+  "instagram",
+  "facebook",
+  "messenger",
+  "whatsapp",
+  "phone_call",
+  "website",
+  "office_visit",
+  "referral",
+  "other",
+] as const;
+export type CampaignChannel = (typeof CAMPAIGN_CHANNELS)[number];
+
+export const CAMPAIGN_STATUSES = ["draft", "active", "completed", "cancelled"] as const;
+export type CampaignStatus = (typeof CAMPAIGN_STATUSES)[number];
+
+export type Campaign = {
+  id: string;
+  company_id: string;
+  name: string;
+  channel: CampaignChannel;
+  status: CampaignStatus;
+  start_date: string | null;
+  end_date: string | null;
+  budget: string | null;
+  currency: string;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CampaignPerformance = {
+  leads_count: number;
+  converted_count: number;
+  conversion_rate: number;
+  attributed_revenue: string;
 };

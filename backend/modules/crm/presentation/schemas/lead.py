@@ -13,6 +13,7 @@ class LeadCreate(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     campaign: Optional[str] = None
+    campaign_id: Optional[uuid.UUID] = None
     assigned_manager_id: Optional[uuid.UUID] = None
 
     def model_post_init(self, __context) -> None:
@@ -29,6 +30,7 @@ class LeadOut(BaseModel):
     phone: Optional[str]
     source_channel: str
     campaign: Optional[str]
+    campaign_id: Optional[uuid.UUID]
     status: str
     assigned_manager_id: Optional[uuid.UUID]
     converted_customer_id: Optional[uuid.UUID]

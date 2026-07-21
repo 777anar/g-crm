@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { convertLead, createLead, exportLeads, listLeads } from "@/lib/api/crm";
 import { analyzeLead } from "@/lib/api/ai";
-import { LEAD_SOURCE_CHANNELS, type AIRecommendation, type Lead } from "@/lib/types";
+import { listCampaigns } from "@/lib/api/marketing";
+import { LEAD_SOURCE_CHANNELS, type AIRecommendation, type Campaign, type Lead } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -81,7 +82,15 @@ function LeadsPageInner() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [campaign, setCampaign] = useState("");
+  const [campaignId, setCampaignId] = useState("");
+  const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    listCampaigns({ status: "active", limit: 100 })
+      .then((res) => setActiveCampaigns(res.items))
+      .catch(() => {});
+  }, []);
 
   const columnDefs = COLUMNS.map((c) => ({ id: c.id, label: t(c.label) }));
   const { isVisible, toggle, reset } = useColumnVisibility(TABLE_ID, columnDefs);
@@ -153,11 +162,13 @@ function LeadsPageInner() {
         email: email || undefined,
         phone: phone || undefined,
         campaign: campaign || undefined,
+        campaign_id: campaignId || undefined,
       });
       setFullName("");
       setEmail("");
       setPhone("");
       setCampaign("");
+      setCampaignId("");
       await reload();
       toast.success(t("leadCreated"));
     } catch (err) {
@@ -243,6 +254,14 @@ function LeadsPageInner() {
           <TextField label={t("email")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <TextField label={t("phone")} value={phone} onChange={(e) => setPhone(e.target.value)} />
           <TextField label={t("campaign")} value={campaign} onChange={(e) => setCampaign(e.target.value)} />
+          <SelectField label={t("linkedCampaign")} value={campaignId} onChange={(e) => setCampaignId(e.target.value)}>
+            <option value="">{t("noCampaign")}</option>
+            {activeCampaigns.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </SelectField>
           <div className="flex items-end">
             <Button type="submit" loading={submitting} disabled={!fullName}>
               {t("createLead")}

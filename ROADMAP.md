@@ -1,7 +1,7 @@
 # G-STONE ERP — Product Roadmap
 
 _Originally proposed 2026-06-30 (CRM Version 1.0 frozen as of commit `bec2def`); the plan below was approved the same day (see Change log) and has been followed and extended ever since — updated 2026-07-21 to reflect delivery through Version 2.31.0._
-_Status: current version is **2.31.0**. Nine of the ten modules on the original list are shipped, plus Purchasing as of this revision — Marketing is now the only module remaining from the original plan (see `PROJECT_AUDIT.md` §3). This document's Version 1.1/1.2/2.0+ tables are kept as delivered — each row is annotated "Delivered <date>" once shipped — so the plan and the delivery history live in one place rather than two._
+_Status: current version is **2.32.0**. All ten modules on the original plan (`PROJECT_ANALYSIS.md` §2) are now shipped — Marketing, the last one, landed this revision. This document's Version 1.1/1.2/2.0+ tables are kept as delivered — each row is annotated "Delivered <date>" once shipped — so the plan and the delivery history live in one place rather than two._
 
 This is a product-perspective review of the application as it stood on 2026-06-30, and a proposal for what came next, split into three horizons: **1.1** (polish the frozen CRM), **1.2** (deepen the CRM into a daily operating tool), and **2.0** (the first new ERP module beyond CRM, per the modular architecture frozen in `PROJECT_ANALYSIS.md`). Every one of those horizons is now complete; the **Summary** table and **Change log** sections further down carry the plan forward through every version actually shipped since, including this document's own most recent update.
 
@@ -564,6 +564,20 @@ Reports
 
 ---
 
+## Version 2.32.0 — Marketing Module
+
+**Theme:** the last of the ten modules on the original plan (`PROJECT_ANALYSIS.md` §2). Until now, "which campaign brought in this lead" and "did this campaign make money" had no real answer — `crm_leads.campaign`/`crm_customers.advertising_campaign` were free-text fields with no aggregation behind them.
+
+| Feature | Priority | Business value | Dependencies | Complexity |
+|---|---|---|---|---|
+| **Campaigns** — CRUD with a `draft→active→{completed,cancelled}` lifecycle, channel drawn from the same vocabulary as CRM lead source channels | High | A real system of record for marketing spend, replacing tribal knowledge | None | S |
+| **Lead attribution** — `crm_leads` gains an unconstrained, indexed `campaign_id` column (no DB-level FK, same pattern as `documents.related_entity_id`), and the Lead capture form gains a live campaign picker | High | Real leads-per-campaign counts instead of guessing from a free-text field | Campaigns, CRM | M |
+| **Performance** — computed live (not stored): leads captured, conversion rate, and revenue attributed from converted customers' orders in a revenue-bearing status (`ready`/`delivered`/`installed`/`completed`, so a cancelled order can't inflate ROI) | High | The actual question a marketing spend decision needs answered — CAC and ROI per channel, not just a leads count | Campaigns, CRM, Orders | M |
+
+**Verification:** full backend suite passing (599/599 — 583 prior + 16 new), `lint-imports` passing, a real Alembic migration generated, applied, and verified against the dev database (`alembic check` clean), frontend `tsc --noEmit` clean, frontend production build clean (45 routes — 2 new: Campaigns list/create, Campaign detail).
+
+---
+
 ## Complexity key
 
 - **S** (Small): a few files, one focused PR, low risk
@@ -608,6 +622,7 @@ Reports
 | 2.29.0 | Documentation Sync — closes Priority #4: full rewrite of API_SPECIFICATION.md and DATABASE_DESIGN.md against the actual source code, replacing a superseded Phase-1 design sketch and correcting several stale/false claims (RLS, `ai_jobs`, refresh-token storage) | No | No (documentation only) |
 | 2.30.0 | Fix: Orders/Production/Installation/Finance List Pagination — found during 2.29.0's doc sync: five list endpoints hardcoded `next_cursor: null` despite accepting `limit`/`cursor`, silently undermining 2.26.0's "Load more" UI; fixed with the same proven cursor pattern | No | No (backend fix + 5 new tests) |
 | 2.31.0 | Purchasing Module — Suppliers + Purchase Orders + receiving, closing the restocking loop for the Stone Catalog; receiving a line optionally creates a real `catalog_slabs` row via Catalog's own `CreateSlabUseCase` | Yes (Supplier, PurchaseOrder, PurchaseOrderLine, GoodsReceipt) | Yes (Purchasing) |
+| 2.32.0 | Marketing Module — Campaigns with a real lifecycle, ID-based lead attribution via a new `crm_leads.campaign_id` column (no DB-level FK), and live-computed performance (leads/conversion/attributed revenue); closes out the original ten-module plan | Yes (Campaign; `crm_leads` gained 1 column) | Yes (Marketing) |
 
 ## Change log
 

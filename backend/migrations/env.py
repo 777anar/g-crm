@@ -29,6 +29,7 @@ from modules.finance.infrastructure import models as finance_models  # noqa: F40
 from modules.communication.infrastructure import models as communication_models  # noqa: F401
 from modules.ai.infrastructure import models as ai_models  # noqa: F401
 from modules.purchasing.infrastructure import models as purchasing_models  # noqa: F401
+from modules.marketing.infrastructure import models as marketing_models  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

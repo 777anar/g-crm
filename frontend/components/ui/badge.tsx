@@ -238,3 +238,15 @@ export function PurchaseOrderStatusBadge({ status }: { status: string }) {
   const t = useTranslations("purchasing");
   return <Badge tone={PURCHASE_ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
 }
+
+const CAMPAIGN_STATUS_TONE: Record<string, Tone> = {
+  draft: "neutral",
+  active: "info",
+  completed: "success",
+  cancelled: "danger",
+};
+
+export function CampaignStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("marketing");
+  return <Badge tone={CAMPAIGN_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+}

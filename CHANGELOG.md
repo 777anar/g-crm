@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.32.0] — 2026-07-21 — Marketing Module
+
+The last of the ten modules on the original plan (`PROJECT_ANALYSIS.md` §2). Closes a real gap: `crm_leads.campaign` and `crm_customers.advertising_campaign` were free-text fields with no aggregation behind them — there was no real answer to "which campaign brought in this lead" or "did this campaign make money." Built as a full Clean Architecture module (`modules/marketing/{domain,application,infrastructure,presentation}`) with `depends_on=["crm", "orders"]` for read-only cross-module attribution queries — the same "depends_on for read access" pattern Reports uses against every other module. CRM itself gained no dependency on Marketing: `crm_leads.campaign_id` is an unconstrained, indexed, nullable UUID column with no DB-level FK, the same "polymorphic reference, application-layer only" pattern already used by `documents.related_entity_id` and `crm_activities.related_entity_id`.
+
+### Added
+- **Campaigns** — `campaigns` table: `name`, `channel` (same vocabulary as CRM lead `source_channel`), `budget`/`currency`, `start_date`/`end_date`, `notes`, a `draft→active→{completed,cancelled}` status lifecycle. `GET/POST /marketing/campaigns`, `GET/PATCH /marketing/campaigns/{id}` (blocked once terminal), `POST /marketing/campaigns/{id}/status` (`422` on an invalid transition).
+- **Lead attribution** — `crm_leads` gains `campaign_id` (nullable UUID, indexed, no FK). `CreateLeadInput`/`LeadCreate`/`LeadOut` all extended additively; existing leads and the pre-existing free-text `campaign` field are untouched.
+- **Performance** — `GET /marketing/campaigns/{id}/performance`, computed live via `CampaignPerformanceRepository` (not a stored/cached value): `leads_count` (CRM leads carrying this campaign's id), `converted_count` (of those, how many converted to a customer), `conversion_rate`, and `attributed_revenue` (sum of `total_final` across converted customers' orders, counting only revenue-bearing statuses `ready`/`delivered`/`installed`/`completed` — a cancelled order never inflates a campaign's apparent ROI). Verified company-scoped, not just campaign-id-scoped, via a deliberate cross-tenant `campaign_id` collision test.
+- **Frontend**: the Lead capture form (`/crm/leads`) gained a live campaign picker (active campaigns only) alongside the pre-existing free-text field. `/marketing/campaigns` (list + inline create, cursor-paginated), `/marketing/campaigns/[id]` (live performance stat cards, status actions, draft/active-only budget/notes editing). Reachable from the `/settings` hub (new "Marketinq"/"Маркетинг"/"Marketing" group).
+- 16 new backend tests (`tests/marketing/`): campaign CRUD + permission/search/pagination, the full status transition graph, update-blocked-when-terminal, performance with no leads (all zeros), performance with a mix of converted/unconverted leads (conversion rate), performance ignoring cancelled orders, multi-company isolation (including the cross-tenant `campaign_id` collision case), and audit-log + domain-event coverage for campaign creation and status changes.
+- A real Alembic migration (`430944e10164_marketing_module_tables_and_crm_leads_.py`), generated via `alembic revision --autogenerate`, applied to and verified against the actual dev database (`alembic check` clean) — confirmed to add `crm_leads.campaign_id` with no FK constraint, as designed.
+
+### Fixed
+- `tests/purchasing/` and `tests/marketing/` were both missing `__init__.py` (present in every other module's test package), which caused a pytest module-name collision between the two packages' identically-named `test_isolation_and_events.py` files the moment both existed. Added both files, matching the established pattern.
+
+### Documentation
+`API_SPECIFICATION.md` §21 and `DATABASE_DESIGN.md` §14 document the full endpoint/schema contract; `README.md` and `ROADMAP.md` updated to reflect all twelve shipped modules — the original ten-module plan is now complete.
+
+### Verification
+Full backend suite passing (599/599 — 583 prior + 16 new), `lint-imports` passing (1 contract kept, 0 broken), frontend `tsc --noEmit` clean, frontend production build clean (45 routes — 2 new), i18n key parity verified across az/ru/en (1338 keys each).
+
 ## [2.31.0] — 2026-07-21 — Purchasing Module
 
 The first new business module since Version 2.9 (Real Integrations), and the first of the two remaining modules from the original ten-module plan (`PROJECT_ANALYSIS.md` §2 — Marketing is now the only one left). Closes a real gap: until now there was no system of record for who G-STONE buys stone from, what's on order, or when a purchase order's receipt actually becomes sellable inventory — restocking was entirely untracked outside spreadsheets. Built as a full Clean Architecture module (`modules/purchasing/{domain,application,infrastructure,presentation}`), following the exact same manifest/permissions/navigation contract every other module uses — `core/` required zero changes beyond the one-line `INSTALLED_MODULES` addition the plugin architecture promises.

@@ -52,6 +52,7 @@ class CreateLeadUseCase:
             phone=data.phone,
             source_channel=data.source_channel,
             campaign=data.campaign,
+            campaign_id=data.campaign_id,
             assigned_manager_id=data.assigned_manager_id,
             created_by=data.actor_user_id,
         )

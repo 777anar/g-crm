@@ -44,6 +44,12 @@ export default function SettingsPage() {
       ],
     },
     {
+      heading: t("groupMarketing"),
+      items: [
+        { title: tNav("campaigns"), description: t("campaignsDesc"), href: "/marketing/campaigns" },
+      ],
+    },
+    {
       heading: t("groupOffice"),
       items: [
         { title: tNav("orders"), description: t("ordersDesc"), href: "/orders" },

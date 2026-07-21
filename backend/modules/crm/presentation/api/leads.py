@@ -127,6 +127,7 @@ def create_lead(
             email=payload.email,
             phone=payload.phone,
             campaign=payload.campaign,
+            campaign_id=payload.campaign_id,
             assigned_manager_id=payload.assigned_manager_id,
         )
     )
