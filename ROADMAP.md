@@ -1,9 +1,9 @@
 # G-STONE ERP — Product Roadmap
 
-_Date: 2026-06-30_
-_Status: CRM Version 1.0 is frozen as of commit `bec2def`. No new business features are being added until this roadmap is approved._
+_Originally proposed 2026-06-30 (CRM Version 1.0 frozen as of commit `bec2def`); the plan below was approved the same day (see Change log) and has been followed and extended ever since — updated 2026-07-21 to reflect delivery through Version 2.28.0._
+_Status: current version is **2.28.0**. Nine of the ten modules on the original list are shipped (Marketing is not; Purchasing, added to the plan after the original ten, is also not — see `PROJECT_AUDIT.md` §3 for the up-to-date gap list). This document's Version 1.1/1.2/2.0+ tables are kept as delivered — each row is annotated "Delivered <date>" once shipped — so the plan and the delivery history live in one place rather than two._
 
-This is a product-perspective review of the application as it stands, and a proposal for what comes next, split into three horizons: **1.1** (polish the frozen CRM), **1.2** (deepen the CRM into a daily operating tool), and **2.0** (the first new ERP module beyond CRM, per the modular architecture frozen in `PROJECT_ANALYSIS.md`).
+This is a product-perspective review of the application as it stood on 2026-06-30, and a proposal for what came next, split into three horizons: **1.1** (polish the frozen CRM), **1.2** (deepen the CRM into a daily operating tool), and **2.0** (the first new ERP module beyond CRM, per the modular architecture frozen in `PROJECT_ANALYSIS.md`). Every one of those horizons is now complete; the **Summary** table and **Change log** sections further down carry the plan forward through every version actually shipped since, including this document's own most recent update.
 
 ---
 
@@ -451,6 +451,76 @@ Reports
 **Deliberately not done in this pass:** no Type column added to the Customers list table — the roadmap's own precedent (the Assigned Manager picker didn't add a list column either) and this codebase's existing scope pattern (not every editable field needs list-table visibility) both point the same way; `type` remains visible via creation + profile only, which is where office staff actually set/correct it. M8 (`GetCustomerProfileUseCase`'s `contacts` list) is untouched — it's a different, unrelated tested-API-contract question from M2, not resolved by this session.
 
 **Verification:** full backend suite (549/549 passing — 544 prior + 5 new), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes), and a live Playwright smoke test against a freshly seeded dev database: the creation form's picker defaulted to Individual, a customer was created as Business, the profile page's picker correctly showed "Business," was changed to "Individual" with a confirming toast, and the change was confirmed to persist across a full page reload — zero console errors throughout.
+
+---
+
+## Version 2.24.0 — G-STONE ERP Executive, Milestone 1: Premium Executive Dashboard
+
+**Theme:** first step of repositioning the app from "a CRM" into an executive tool the owner can read in under 10 seconds. Rewires `/dashboard` onto the real server-side aggregation endpoint (`GET /api/v1/reports/executive`) that `/reports` already exposed but no other page consumed. No backend changes; the sidebar/IA consolidation into fewer top-level modules is deferred to Milestone 2.
+
+| Change | Area | Business value |
+|---|---|---|
+| Hero KPI row (Revenue, Profit + margin hint, Active Customers, Orders Created) sourced from `getExecutiveDashboard({period:"30d"})`, plus a revenue/profit trend chart and an Orders-by-Status pipeline view | Frontend — Dashboard | The owner sees the business's real numbers on login instead of only operational to-do lists |
+| A real, checked-in Playwright smoke-test harness (`playwright.config.ts`, `tests/e2e/dashboard.spec.ts`) | Frontend — testing | First automated end-to-end coverage of the Dashboard; every "live Playwright smoke test" claim in prior release notes had been run ad hoc until now |
+| The Dashboard's original operational sections (Today's Tasks, Upcoming Installations, Overdue Orders, Notifications, Recent Inquiries) preserved unchanged, visually demoted below the new executive snapshot | Frontend — Dashboard | No regression to the daily-ops workflow Sprint 6 (2.15.0) built |
+
+**Verification:** full backend suite passing (549/549, unchanged — no backend files touched), frontend `tsc --noEmit` clean, frontend production build clean (all 38 routes).
+
+---
+
+## Version 2.25.0 — G-STONE ERP Executive, Milestone 2: Sales/Inventory/Finance Consolidation
+
+**Theme:** the app stops being framed as "a CRM." The primary sidebar collapses from 9 module-level sections to 6: Dashboard, Sales, Inventory, Finance, Reports, Settings.
+
+| Change | Area | Business value |
+|---|---|---|
+| Customers, Leads, Tasks, Projects (Quotes), and Orders — previously two separate primary nav items — merge into one cross-linked "Sales" pipeline via a shared `SalesSectionTabs` bar rendered identically on all five pages | Frontend — navigation | One mental model for "everything about a sale," matching how the office actually works rather than the CRM/Sales/Orders module boundary |
+| Catalog relabeled "Inventory" in the nav (URLs/data model untouched); Finance promoted from secondary-only to primary; Production/Installation/Messages move to secondary-only (still fully reachable) | Frontend — navigation | Plainer terminology; surfaces the two domains (Sales, Finance) the owner cares about most daily |
+| `GET /api/v1/reports/inventory` (Inventory Analytics) — a live stock snapshot (available/reserved/in-production/sold slabs, available area, materials out of stock, warehouse count), following the same use-case/repository/schema pattern as every other analytics endpoint | Backend — Reports | The Reports module and Dashboard both gain real inventory visibility for the first time — previously only Sales/Finance had analytics |
+| New Reports tab (`/reports/inventory`) and a Dashboard "Inventory" section sourced from the new endpoint | Frontend — Reports, Dashboard | Completes the four-domain executive snapshot (Sales, Inventory, Finance, Reports) |
+
+**Verification:** full backend suite passing (553/553 — 549 prior + 4 new), frontend `tsc --noEmit` clean, frontend production build clean (39 routes), two Playwright smoke tests passing end-to-end.
+
+---
+
+## Version 2.26.0 — Pagination Rollout
+
+**Theme:** closes Priority #1 of `PROJECT_AUDIT.md` (2026-07-21's full-codebase audit): five list pages had no "Load more" UI and silently truncated past the backend's page-size cap, the same class of bug already fixed on Customers/Leads/Materials in 2.19.0.
+
+| Change | Area | Business value |
+|---|---|---|
+| Orders, Production, Finance Invoices, Finance Expenses gained the same cursor-pagination "Load more" pattern already proven on Customers/Leads/Materials | Frontend | Companies with more than a page's worth of orders/invoices/expenses can now actually see all of them |
+| `GET /api/v1/catalog/brands` gained `limit`/`cursor` query params and a `next_cursor` response field (it previously had neither, silently capped at a repository-level default of 50 with no way to reach the rest) | Backend — Catalog | The one genuine backend gap found among the five pages — closed with the same pattern already used by Materials/Slabs in the same module |
+| Catalog Warehouses and Price Lists investigated and left unchanged — their repositories apply no `LIMIT` at all today, so both already return every row; re-verified against the code rather than assumed from the audit's grouping | Backend — Catalog | Avoids adding pagination UI over an endpoint that already returns everything |
+
+**Verification:** full backend suite passing (554/554 — 553 prior + 1 new), frontend `tsc --noEmit` clean, frontend production build clean (39 routes, unchanged).
+
+---
+
+## Version 2.27.0 — Dashboard Resilience & Accurate KPI Counts
+
+**Theme:** closes Priority #2 of `PROJECT_AUDIT.md`: the Dashboard's 11-way parallel fetch was all-or-nothing, and several of its stat/KPI counts were silently capped.
+
+| Change | Area | Business value |
+|---|---|---|
+| `Promise.all` → `Promise.allSettled` for the Dashboard's parallel fetch; the KPI/revenue-trend section is now independently gated from the Inventory and "Today" sections | Frontend — Dashboard | A single failing call (e.g. a transient error on one analytics endpoint) no longer blanks the entire page — everything that did load still renders |
+| New `lib/fetch-all-pages.ts` helper follows a cursor-paginated endpoint to completion; applied to Orders/Production/Tasks, the three collections `statOverdueWork`/`statInProduction` are derived from | Frontend — Dashboard | Those stats can no longer silently under-count once a company passes 100 rows in any of those collections |
+| Recent Inquiries now asks the API for the 5 most recent leads directly (`sort=-created_at&limit=5`) instead of fetching 100 and sorting client-side; customer/project name lookups for Overdue Projects/Upcoming Installations switched from a bulk 100-row fetch to targeted per-id lookups (same pattern as the Orders/Production list pages) | Frontend — Dashboard | Correct regardless of company size, and fewer/smaller requests |
+
+**Verification:** full backend suite passing (554/554, unchanged), frontend `tsc --noEmit` clean, frontend production build clean (39 routes, unchanged).
+
+---
+
+## Version 2.28.0 — Real CI Enforcement of the Core/Module Architecture Boundary
+
+**Theme:** closes Priority #3 of `PROJECT_AUDIT.md`: `import-linter` had been declared in `pyproject.toml` since Phase 1 but was never installed or runnable, and this repository had no CI pipeline at all — the only real enforcement of the "module → core, never core → module" rule was a pytest test that only ran if someone remembered to run it locally.
+
+| Change | Area | Business value |
+|---|---|---|
+| Fixed `pyproject.toml`'s `[tool.importlinter]` config (`root_package="core"` → `root_packages=["core","modules"]`, which was silently preventing the contract from ever actually evaluating) and pinned `import-linter==2.13` in `requirements.txt` | Backend — tooling | The architecture guarantee `PROJECT_ANALYSIS.md` has described since Phase 1 is now something that actually runs, verified by deliberately introducing and then reverting a real violation |
+| `.github/workflows/ci.yml` — a `backend` job (`pytest`, `lint-imports`) and a `frontend` job (`tsc --noEmit`, `next build`) on every push/PR to `main` | Backend + Frontend — CI | Nothing merges without both the full test suite and the architecture boundary passing, not just "whoever remembers to run it" |
+
+**Verification:** full backend suite passing (554/554, unchanged — no application code touched), `lint-imports` passing (1 contract kept, 0 broken), frontend `tsc --noEmit` clean, frontend production build clean (39 routes, unchanged).
 
 ---
 
