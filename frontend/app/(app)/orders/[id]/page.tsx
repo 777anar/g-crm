@@ -261,7 +261,7 @@ export default function OrderDetailPage() {
           <div className="flex gap-2">
             {nextStatus && (
               <Button onClick={handleAdvance} disabled={transitioning}>
-                {transitioning ? t("saving") : `→ ${t(nextStatus as any)}`}
+                {transitioning ? t("saving") : `→ ${t(nextStatus as Parameters<typeof t>[0])}`}
               </Button>
             )}
             {!cancelMode && (
@@ -485,7 +485,7 @@ export default function OrderDetailPage() {
                         >
                           <option value="">—</option>
                           {PROD_STATUSES.map((s) => (
-                            <option key={s} value={s}>{t(`prodStatus_${s}` as any)}</option>
+                            <option key={s} value={s}>{t(`prodStatus_${s}` as Parameters<typeof t>[0])}</option>
                           ))}
                         </select>
                       </td>
@@ -498,11 +498,11 @@ export default function OrderDetailPage() {
                         >
                           <option value="">—</option>
                           {INST_STATUSES.map((s) => (
-                            <option key={s} value={s}>{t(`instStatus_${s}` as any)}</option>
+                            <option key={s} value={s}>{t(`instStatus_${s}` as Parameters<typeof t>[0])}</option>
                           ))}
                         </select>
                       </td>
-                      <td className="px-2 py-1 text-xs text-text-secondary">{tSales(`itemType_${item.item_type}` as any)}</td>
+                      <td className="px-2 py-1 text-xs text-text-secondary">{tSales(`itemType_${item.item_type}` as Parameters<typeof tSales>[0])}</td>
                       <td className="px-2 py-1">{item.description || "—"}</td>
                       <td className="px-2 py-1">{item.quantity}</td>
                       <td className="px-2 py-1">{item.unit}</td>

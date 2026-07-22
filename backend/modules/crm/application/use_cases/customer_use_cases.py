@@ -13,6 +13,7 @@ from modules.crm.application.dtos import (
     AddCustomerNoteInput,
     ArchiveCustomerInput,
     CreateCustomerInput,
+    RestoreCustomerInput,
     UpdateCustomerInput,
 )
 from modules.crm.domain import events as crm_events
@@ -239,6 +240,45 @@ class ArchiveCustomerUseCase:
         event_bus.publish(
             Event(
                 name=crm_events.CUSTOMER_ARCHIVED,
+                company_id=data.company_id,
+                payload={"customer_id": str(customer.id)},
+                published_by_module=MODULE_NAME,
+            ),
+            self.db,
+        )
+        return customer
+
+
+class RestoreCustomerUseCase:
+    def __init__(self, db: Session):
+        self.db = db
+        self.customers = CustomerRepository(db)
+
+    def execute(self, data: RestoreCustomerInput) -> Customer:
+        customer = self.customers.get_model(company_id=data.company_id, customer_id=data.customer_id)
+        if customer is None:
+            raise NotFoundError("Customer not found")
+        from modules.crm.domain.exceptions import CustomerNotArchivedError
+
+        if customer.deleted_at is None:
+            raise CustomerNotArchivedError(f"Customer {customer.id} is not archived")
+
+        customer.deleted_at = None
+
+        record_audit(
+            self.db,
+            company_id=data.company_id,
+            module=MODULE_NAME,
+            actor_user_id=data.actor_user_id,
+            action="customer.restored",
+            entity_type="customer",
+            entity_id=customer.id,
+        )
+        self.db.flush()
+
+        event_bus.publish(
+            Event(
+                name=crm_events.CUSTOMER_RESTORED,
                 company_id=data.company_id,
                 payload={"customer_id": str(customer.id)},
                 published_by_module=MODULE_NAME,

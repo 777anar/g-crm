@@ -182,7 +182,7 @@ export default function PurchaseOrderDetailPage() {
           <div className="flex gap-2">
             {nextStatus && (
               <Button onClick={handleAdvance} disabled={transitioning}>
-                {transitioning ? t("saving") : `→ ${t(nextStatus as any)}`}
+                {transitioning ? t("saving") : `→ ${t(nextStatus as Parameters<typeof t>[0])}`}
               </Button>
             )}
             {!cancelMode && (

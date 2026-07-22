@@ -45,7 +45,7 @@ export default function CutOptimizationRunDetailPage() {
           {run.slab_length_mm}×{run.slab_width_mm}mm
         </h1>
         <Badge tone={run.source === "offcut_recommendation" ? "info" : "neutral"}>
-          {t(`source_${run.source}` as any)}
+          {t(`source_${run.source}` as Parameters<typeof t>[0])}
         </Badge>
       </div>
       <p className="text-xs text-text-secondary">{t("created")}: {formatDateTime(run.created_at)}</p>

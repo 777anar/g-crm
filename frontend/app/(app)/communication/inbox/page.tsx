@@ -17,7 +17,6 @@ import {
   updateConversation,
 } from "@/lib/api/communication";
 import { listCompanyUsers } from "@/lib/api/companies";
-import { me } from "@/lib/api/auth";
 import { analyzeConversation } from "@/lib/api/ai";
 import {
   CONVERSATION_STATUSES,
@@ -48,7 +47,6 @@ export default function InboxPage() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [users, setUsers] = useState<CompanyUser[]>([]);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState("");
   const [channelFilter, setChannelFilter] = useState("");
@@ -93,7 +91,6 @@ export default function InboxPage() {
     listChannels().then((r) => setChannels(r.items)).catch(() => {});
     listCompanyUsers().then(setUsers).catch(() => {});
     listTemplates().then((r) => setTemplates(r.items)).catch(() => {});
-    me().then((profile) => setCurrentUserId(profile.id)).catch(() => {});
   }, []);
 
   const loadConversationDetail = useCallback(async (id: string) => {
@@ -254,7 +251,7 @@ export default function InboxPage() {
             >
               <option value="">{tCommon("allStatuses")}</option>
               {CONVERSATION_STATUSES.map((s) => (
-                <option key={s} value={s}>{t(s as any)}</option>
+                <option key={s} value={s}>{t(s as Parameters<typeof t>[0])}</option>
               ))}
             </select>
             <select
@@ -446,7 +443,7 @@ export default function InboxPage() {
                 className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary"
               >
                 {CONVERSATION_STATUSES.map((s) => (
-                  <option key={s} value={s}>{t(s as any)}</option>
+                  <option key={s} value={s}>{t(s as Parameters<typeof t>[0])}</option>
                 ))}
               </select>
             </div>

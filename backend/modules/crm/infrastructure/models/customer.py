@@ -14,8 +14,21 @@ class Customer(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     company_id: Mapped[str] = mapped_column(GUID(), ForeignKey("companies.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     type: Mapped[str] = mapped_column(String, nullable=False, default="individual")
+    # crm_customers.primary_contact_id -> crm_contacts.id and
+    # crm_contacts.customer_id -> crm_customers.id form a mutual (circular)
+    # foreign-key reference between these two tables. `use_alter=True` (plus
+    # an explicit constraint `name`, required for ALTER-added constraints)
+    # tells SQLAlchemy to add this specific FK via a post-create ALTER TABLE
+    # instead of needing both tables to exist simultaneously at CREATE TABLE
+    # time -- this is the standard resolution for a circular FK and breaks
+    # the "unresolvable cycles" warning SQLAlchemy would otherwise raise when
+    # sorting tables for create_all()/Alembic autogenerate. No behavioral or
+    # data-model change: the column, nullability, and referenced table are
+    # all unchanged.
     primary_contact_id: Mapped[Optional[str]] = mapped_column(
-        GUID(), ForeignKey("crm_contacts.id"), nullable=True
+        GUID(),
+        ForeignKey("crm_contacts.id", use_alter=True, name="fk_crm_customers_primary_contact_id"),
+        nullable=True,
     )
     assigned_manager_id: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
     lead_source: Mapped[Optional[str]] = mapped_column(String, nullable=True)

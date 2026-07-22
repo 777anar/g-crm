@@ -176,7 +176,11 @@
     "bulkArchiveSucceeded": "Archived {count} customer(s).",
     "bulkArchivePartialFailure": "Archived {succeeded} of {count} customer(s); the rest failed.",
     "bulkStatusSucceeded": "Updated status for {count} customer(s).",
-    "bulkStatusPartialFailure": "Updated {succeeded} of {count} customer(s); the rest failed."
+    "bulkStatusPartialFailure": "Updated {succeeded} of {count} customer(s); the rest failed.",
+    "restoreCustomer": "Restore",
+    "restoring": "Restoring...",
+    "restored": "Customer restored.",
+    "restoreFailed": "Failed to restore customer."
   },
   "customerNew": {
     "title": "Create Customer",
@@ -213,6 +217,11 @@
     "archiving": "Archiving...",
     "archiveConfirm": "Archive this customer? They will be hidden from the default customer list.",
     "archiveFailed": "Failed to archive customer.",
+    "restoreCustomer": "Restore Customer",
+    "restoring": "Restoring...",
+    "restoreConfirm": "Restore this customer? They will reappear in the default customer list.",
+    "restoreFailed": "Failed to restore customer.",
+    "restored": "Customer restored.",
     "loadFailed": "Failed to load customer profile.",
     "loading": "Loading customer profile...",
     "contactInformation": "Contact Information",

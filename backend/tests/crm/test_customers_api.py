@@ -167,6 +167,64 @@ def test_archive_already_archived_customer_returns_conflict(app_client, owner_he
     assert response.json()["error"]["code"] == "CONFLICT"
 
 
+def test_restore_customer(app_client, owner_headers):
+    created = app_client.post(
+        "/api/v1/crm/customers", headers=owner_headers, json={"name": "To Restore", "type": "business"}
+    ).json()
+    app_client.delete(f"/api/v1/crm/customers/{created['id']}", headers=owner_headers)
+
+    response = app_client.post(f"/api/v1/crm/customers/{created['id']}/restore", headers=owner_headers)
+    assert response.status_code == 200
+    assert response.json()["deleted_at"] is None
+
+    listed = app_client.get("/api/v1/crm/customers", headers=owner_headers).json()
+    assert created["id"] in [c["id"] for c in listed["items"]]
+
+
+def test_restore_not_archived_customer_returns_conflict(app_client, owner_headers):
+    created = app_client.post(
+        "/api/v1/crm/customers", headers=owner_headers, json={"name": "Never Archived", "type": "business"}
+    ).json()
+
+    response = app_client.post(f"/api/v1/crm/customers/{created['id']}/restore", headers=owner_headers)
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "CONFLICT"
+
+
+def test_restore_nonexistent_customer_returns_not_found(app_client, owner_headers):
+    response = app_client.post(
+        "/api/v1/crm/customers/00000000-0000-0000-0000-000000000000/restore", headers=owner_headers
+    )
+    assert response.status_code == 404
+
+
+def test_restore_customer_requires_write_permission(app_client, owner_headers, viewer_headers):
+    created = app_client.post(
+        "/api/v1/crm/customers", headers=owner_headers, json={"name": "Viewer Restore Attempt", "type": "business"}
+    ).json()
+    app_client.delete(f"/api/v1/crm/customers/{created['id']}", headers=owner_headers)
+
+    response = app_client.post(f"/api/v1/crm/customers/{created['id']}/restore", headers=viewer_headers)
+    assert response.status_code == 403
+
+
+def test_restore_customer_is_audited_and_records_diff_free_action(app_client, owner_headers, db_session):
+    from core.audit.models import AuditLog
+
+    created = app_client.post(
+        "/api/v1/crm/customers", headers=owner_headers, json={"name": "Audited Restore", "type": "business"}
+    ).json()
+    app_client.delete(f"/api/v1/crm/customers/{created['id']}", headers=owner_headers)
+    app_client.post(f"/api/v1/crm/customers/{created['id']}/restore", headers=owner_headers)
+
+    entries = (
+        db_session.query(AuditLog)
+        .filter(AuditLog.entity_id == created["id"], AuditLog.action == "customer.restored")
+        .all()
+    )
+    assert len(entries) == 1
+
+
 def test_add_and_list_customer_notes(app_client, owner_headers):
     created = app_client.post(
         "/api/v1/crm/customers", headers=owner_headers, json={"name": "Notes Co", "type": "business"}

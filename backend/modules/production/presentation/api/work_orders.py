@@ -43,6 +43,7 @@ _BUSINESS_RULE_ERRORS = (
 def list_work_orders(
     status: Optional[str] = Query(default=None),
     search: Optional[str] = Query(default=None),
+    sort: Optional[str] = Query(default=None),
     limit: int = Query(default=25, le=100),
     cursor: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
@@ -54,6 +55,7 @@ def list_work_orders(
         company_id=current_user.active_company_id,
         status=status,
         search=search,
+        sort=sort,
         limit=limit + 1,
         offset=offset,
     )

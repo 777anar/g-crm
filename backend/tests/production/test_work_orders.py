@@ -98,6 +98,42 @@ def test_work_orders_cursor_reaches_the_next_page(app_client, owner_headers, db_
     assert first_ids | second_ids == set(work_order_ids)
 
 
+def test_work_orders_sort_by_work_order_number(app_client, owner_headers, db_session, company, project, customer):
+    work_order_numbers = []
+    for i in range(3):
+        order = _create_approved_order(app_client, db_session, owner_headers, company, project, customer, f"SRT{i}")
+        resp = app_client.post("/api/v1/production", headers=owner_headers, json={"order_id": order["id"]})
+        assert resp.status_code == 200, resp.text
+        work_order_numbers.append(resp.json()["work_order_number"])
+
+    ascending = app_client.get("/api/v1/production", headers=owner_headers, params={"sort": "work_order_number"}).json()[
+        "items"
+    ]
+    ascending_numbers = [
+        w["work_order_number"] for w in ascending if w["work_order_number"] in work_order_numbers
+    ]
+    assert ascending_numbers == sorted(work_order_numbers)
+
+    descending = app_client.get(
+        "/api/v1/production", headers=owner_headers, params={"sort": "-work_order_number"}
+    ).json()["items"]
+    descending_numbers = [
+        w["work_order_number"] for w in descending if w["work_order_number"] in work_order_numbers
+    ]
+    assert descending_numbers == sorted(work_order_numbers, reverse=True)
+
+
+def test_work_orders_sort_by_priority(app_client, owner_headers, db_session, company, project, customer):
+    order = _create_approved_order(app_client, db_session, owner_headers, company, project, customer, "PRIO")
+    resp = app_client.post(
+        "/api/v1/production", headers=owner_headers, json={"order_id": order["id"], "priority": "urgent"}
+    )
+    assert resp.status_code == 200, resp.text
+
+    response = app_client.get("/api/v1/production", headers=owner_headers, params={"sort": "-priority"})
+    assert response.status_code == 200
+
+
 def test_create_work_order_reserves_slab_and_advances_order(app_client, owner_headers, approved_order, slab, db_session):
     resp = app_client.post(
         "/api/v1/production",

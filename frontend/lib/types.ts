@@ -1473,12 +1473,12 @@ export type AIRecommendation = {
   provider: string;
   model: string;
   prompt: string;
-  response: Record<string, any>;
+  response: Record<string, unknown>;
   confidence_score: number | null;
   execution_time_ms: number | null;
   summary: string | null;
   status: AIRecommendationStatus;
-  edited_response: Record<string, any> | null;
+  edited_response: Record<string, unknown> | null;
   requested_by: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;

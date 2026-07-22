@@ -1,9 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import {
+  BarChart3,
+  CircleDollarSign,
+  LayoutDashboard,
+  Menu,
+  Package,
+  Settings as SettingsIcon,
+  TrendingUp,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { clearAccessToken, getRefreshToken } from "@/lib/session";
 import { logout as logoutRequest } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
@@ -11,7 +22,7 @@ import { CompanySwitcher } from "@/components/company-switcher";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { QuickCreateMenu } from "@/components/quick-create-menu";
-import { useCloseOnEscape } from "@/lib/use-outside-click";
+import { useCloseOnEscape, useFocusTrap } from "@/lib/use-outside-click";
 
 // G-STONE ERP Executive, Milestone 2: the app is repositioned from "a CRM"
 // to an executive ERP, so the primary sidebar collapses further -- from the
@@ -61,29 +72,19 @@ const SECONDARY_ROUTES = [
   { labelKey: "offcutLibrary", href: "/catalog/offcuts" },
 ] as const;
 
-// Minimal inline line-icons matched to each section, drawn in the same style
-// as the existing hamburger/close icons above (stroke currentColor, no new
-// icon-library dependency -- an icon set was previously deferred as "a real
-// design-system decision"; this keeps that decision small and local instead).
-const NAV_ICONS: Record<(typeof NAV_ITEMS)[number]["labelKey"], React.ReactNode> = {
-  dashboard: (
-    <path d="M2.5 2.5h5v5h-5v-5Zm8 0h5v3.5h-5v-3.5Zm0 6.5h5v6.5h-5v-6.5Zm-8 2h5v4.5h-5v-4.5Z" />
-  ),
-  sales: (
-    <path d="M2.5 13.5 7 9l3 3 5.5-6M11.5 6h3.5v3.5" />
-  ),
-  inventory: (
-    <path d="M2.5 4.5 9 2l6.5 2.5L9 7l-6.5-2.5ZM2.5 8.75 9 11.25l6.5-2.5M2.5 13 9 15.5 15.5 13" />
-  ),
-  finance: (
-    <path d="M9 15.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM9 5.5v7M11.25 7.25c0-.97-1.01-1.75-2.25-1.75s-2.25.78-2.25 1.75c0 2.5 4.5 1.25 4.5 3.25 0 .97-1.01 1.75-2.25 1.75s-2.25-.78-2.25-1.75" />
-  ),
-  reports: (
-    <path d="M3 15.5V9m4 6.5V5.5m4 10V8m4 7.5V2.5" />
-  ),
-  settings: (
-    <path d="M9 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm6.25-2.5a6.3 6.3 0 0 1-.08 1l1.58 1.24-1.5 2.6-1.87-.63a6.3 6.3 0 0 1-1.7 1l-.28 1.98h-3l-.28-1.98a6.3 6.3 0 0 1-1.7-1l-1.87.63-1.5-2.6L4.83 10.5a6.3 6.3 0 0 1 0-2L3.25 7.26l1.5-2.6 1.87.63a6.3 6.3 0 0 1 1.7-1l.28-1.98h3l.28 1.98a6.3 6.3 0 0 1 1.7 1l1.87-.63 1.5 2.6-1.58 1.24c.05.33.08.66.08 1Z" />
-  ),
+// One Lucide icon per primary section -- replaces the hand-drawn inline SVG
+// path set this map used to hold (UI_UX_GUIDELINES.md section 2 always
+// called for "a single consistent icon library (e.g., Lucide)"; the inline
+// paths were an explicit, deliberate deferral of that decision, not an
+// oversight). Every consumer (the full labeled sidebar and the tablet
+// icon-only rail below) renders the same icon per section from this one map.
+const NAV_ICONS: Record<(typeof NAV_ITEMS)[number]["labelKey"], LucideIcon> = {
+  dashboard: LayoutDashboard,
+  sales: TrendingUp,
+  inventory: Package,
+  finance: CircleDollarSign,
+  reports: BarChart3,
+  settings: SettingsIcon,
 };
 
 function NavLinks({ pathname, onNavigate }: { pathname: string | null; onNavigate?: () => void }) {
@@ -92,6 +93,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string | null; onNavigat
     <ul className="flex flex-col gap-0.5">
       {NAV_ITEMS.map((item) => {
         const active = pathname?.startsWith(item.href);
+        const Icon = NAV_ICONS[item.labelKey];
         return (
           <li key={item.href}>
             <Link
@@ -104,21 +106,45 @@ function NavLinks({ pathname, onNavigate }: { pathname: string | null; onNavigat
                   : "border-transparent text-text-secondary hover:bg-bg hover:text-text-primary"
               }`}
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 18 18"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-                className="shrink-0"
-              >
-                {NAV_ICONS[item.labelKey]}
-              </svg>
+              <Icon size={18} strokeWidth={1.4} aria-hidden className="shrink-0" />
               <span className="truncate">{tNav(item.labelKey)}</span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+// Icon-only collapsed sidebar for the tablet breakpoint (md to <lg, i.e.
+// 768-1023px), per UI_UX_GUIDELINES.md section 7's tablet spec -- previously
+// tablet widths fell all the way back to the phone-width slide-over drawer,
+// which this replaces with a persistent, always-visible rail (no open/close
+// state, unlike the drawer) so a tablet user doesn't have to open a menu to
+// navigate at all. Each entry's label is still available via `title` (native
+// tooltip) and `aria-label`, since there's no visible text at this width.
+function NavIconRail({ pathname }: { pathname: string | null }) {
+  const tNav = useTranslations("nav");
+  return (
+    <ul className="flex flex-col items-center gap-1">
+      {NAV_ITEMS.map((item) => {
+        const active = pathname?.startsWith(item.href);
+        const Icon = NAV_ICONS[item.labelKey];
+        const label = tNav(item.labelKey);
+        return (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              aria-label={label}
+              title={label}
+              className={`flex h-10 w-10 items-center justify-center rounded-md border-l-2 transition-colors ${
+                active
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-transparent text-text-secondary hover:bg-bg hover:text-text-primary"
+              }`}
+            >
+              <Icon size={20} strokeWidth={1.4} aria-hidden />
             </Link>
           </li>
         );
@@ -133,7 +159,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const tCommon = useTranslations("common");
   const tNav = useTranslations("nav");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const mobileNavRef = useRef<HTMLElement>(null);
   useCloseOnEscape(mobileNavOpen, () => setMobileNavOpen(false));
+  useFocusTrap(mobileNavRef, mobileNavOpen);
 
   function handleLogout() {
     const refreshToken = getRefreshToken();
@@ -166,11 +194,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             type="button"
             onClick={() => setMobileNavOpen(true)}
             aria-label={tCommon("openNavigation")}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-bg hover:text-text-primary lg:hidden"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-bg hover:text-text-primary md:hidden"
           >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-              <path d="M2 4.5h14M2 9h14M2 13.5h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <Menu size={18} strokeWidth={1.5} aria-hidden />
           </button>
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-bold text-white">
             GS
@@ -195,14 +221,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <NavLinks pathname={pathname} />
         </nav>
 
+        <nav
+          aria-label={tCommon("mainNavigation")}
+          className="hidden shrink-0 overflow-y-auto border-r border-border bg-surface p-2 md:block lg:hidden"
+        >
+          <NavIconRail pathname={pathname} />
+        </nav>
+
         {mobileNavOpen && (
-          <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="fixed inset-0 z-40 md:hidden">
             <div
               className="absolute inset-0 bg-black/40"
               onClick={() => setMobileNavOpen(false)}
               aria-hidden
             />
             <nav
+              ref={mobileNavRef}
               aria-label={tCommon("mainNavigation")}
               className="absolute inset-y-0 left-0 w-64 max-w-[80vw] overflow-y-auto border-r border-border bg-surface p-3 shadow-elevated"
             >
@@ -214,9 +248,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   aria-label={tCommon("closeNavigation")}
                   className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-bg hover:text-text-primary"
                 >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-                    <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
+                  <X size={16} strokeWidth={1.5} aria-hidden />
                 </button>
               </div>
               <NavLinks pathname={pathname} onNavigate={() => setMobileNavOpen(false)} />

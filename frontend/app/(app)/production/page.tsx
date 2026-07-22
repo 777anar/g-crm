@@ -11,6 +11,7 @@ import { WorkOrderPriorityBadge, WorkOrderStatusBadge } from "@/components/ui/ba
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
+import { SortableHeader } from "@/components/ui/sortable-header";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
@@ -24,13 +25,19 @@ export default function ProductionPage() {
   const [orderNumbers, setOrderNumbers] = useState<Record<string, string>>({});
   const [statusFilter, setStatusFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [sort, setSort] = useState("-created_at");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const search = useDebouncedValue(searchInput, 250);
 
   const load = useCallback(
     (options: { append?: boolean; cursor?: string } = {}) => {
-      listWorkOrders({ status: statusFilter || undefined, search: search || undefined, cursor: options.cursor })
+      listWorkOrders({
+        status: statusFilter || undefined,
+        search: search || undefined,
+        sort,
+        cursor: options.cursor,
+      })
         .then((r) => {
           setWorkOrders((prev) => (options.append && prev ? [...prev, ...r.items] : r.items));
           setNextCursor(r.next_cursor);
@@ -48,7 +55,7 @@ export default function ProductionPage() {
         })
         .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
     },
-    [statusFilter, search, t]
+    [statusFilter, search, sort, t]
   );
 
   useEffect(() => {
@@ -83,7 +90,7 @@ export default function ProductionPage() {
         >
           <option value="">{tCommon("allStatuses")}</option>
           {WORK_ORDER_STATUSES.map((s) => (
-            <option key={s} value={s}>{t(s as any)}</option>
+            <option key={s} value={s}>{t(s as Parameters<typeof t>[0])}</option>
           ))}
         </select>
       </div>
@@ -102,12 +109,17 @@ export default function ProductionPage() {
             <table className="w-full text-left text-sm">
               <thead className={stickyTheadClass}>
                 <tr>
-                  <th className="px-4 py-2 font-medium">{t("tableWorkOrder")}</th>
-                  <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
-                  <th className="px-4 py-2 font-medium">{t("tablePriority")}</th>
+                  <SortableHeader field="work_order_number" label={t("tableWorkOrder")} sort={sort} onSortChange={setSort} />
+                  <SortableHeader field="status" label={t("tableStatus")} sort={sort} onSortChange={setSort} />
+                  <SortableHeader field="priority" label={t("tablePriority")} sort={sort} onSortChange={setSort} />
                   <th className="px-4 py-2 font-medium">{t("tableOrder")}</th>
-                  <th className="px-4 py-2 font-medium">{t("tableDueDate")}</th>
-                  <th className="px-4 py-2 font-medium">{t("tableCreated")}</th>
+                  <SortableHeader
+                    field="scheduled_completion_date"
+                    label={t("tableDueDate")}
+                    sort={sort}
+                    onSortChange={setSort}
+                  />
+                  <SortableHeader field="created_at" label={t("tableCreated")} sort={sort} onSortChange={setSort} />
                 </tr>
               </thead>
               <tbody>

@@ -36,7 +36,7 @@ export default function SalesAnalyticsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range.period, range.dateFrom, range.dateTo]);
 
-  const trendSeries = TREND_SERIES.map((s) => ({ ...s, label: tSales(s.label as any) }));
+  const trendSeries = TREND_SERIES.map((s) => ({ ...s, label: tSales(s.label as Parameters<typeof tSales>[0]) }));
 
   return (
     <div className="flex flex-col gap-4">
@@ -73,7 +73,7 @@ export default function SalesAnalyticsPage() {
               <CardHeader title={t("revenueByProjectType")} />
               <CategoryBarChart
                 data={data.revenue_by_project_type.map((r) => ({
-                  label: tSales(`projectType_${r.project_type}` as any),
+                  label: tSales(`projectType_${r.project_type}` as Parameters<typeof tSales>[0]),
                   value: parseFloat(r.revenue),
                 }))}
                 emptyLabel={t("noDataPeriod")}
@@ -96,7 +96,7 @@ export default function SalesAnalyticsPage() {
             <Card>
               <CardHeader title={t("quotesByStatus")} />
               <StatusBarList
-                data={data.quotes_by_status.map((r) => ({ label: tSales(r.status as any), count: r.count }))}
+                data={data.quotes_by_status.map((r) => ({ label: tSales(r.status as Parameters<typeof tSales>[0]), count: r.count }))}
                 emptyLabel={t("noDataPeriod")}
               />
             </Card>

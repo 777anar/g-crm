@@ -81,7 +81,7 @@ export default function InstallationAnalyticsPage() {
             <Card>
               <CardHeader title={t("jobStatusBreakdown")} />
               <StatusBarList
-                data={data.job_status_breakdown.map((r) => ({ label: tInstallation(r.status as any), count: r.count }))}
+                data={data.job_status_breakdown.map((r) => ({ label: tInstallation(r.status as Parameters<typeof tInstallation>[0]), count: r.count }))}
                 emptyLabel={t("noDataPeriod")}
               />
             </Card>

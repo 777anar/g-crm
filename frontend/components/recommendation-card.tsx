@@ -67,9 +67,9 @@ export function RecommendationCard({
     <div className="flex flex-col gap-2 rounded-md border border-border bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium uppercase tracking-wide text-text-secondary">
-          {t(`type_${recommendation.recommendation_type}` as any)}
+          {t(`type_${recommendation.recommendation_type}` as Parameters<typeof t>[0])}
         </span>
-        <Badge tone={STATUS_TONE[recommendation.status] ?? "neutral"}>{t(`status_${recommendation.status}` as any)}</Badge>
+        <Badge tone={STATUS_TONE[recommendation.status] ?? "neutral"}>{t(`status_${recommendation.status}` as Parameters<typeof t>[0])}</Badge>
       </div>
 
       <p className="text-sm text-text-primary">{recommendation.summary}</p>

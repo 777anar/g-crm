@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { listProjects, createProject } from "@/lib/api/sales";
 import { listCustomers } from "@/lib/api/crm";
 import { PROJECT_STATUSES, type Customer, type Project } from "@/lib/types";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SelectField, TextField } from "@/components/ui/field";
 import { ProjectStatusBadge } from "@/components/ui/badge";
@@ -112,7 +112,7 @@ export default function ProjectsPage() {
               onChange={(e) => setForm({ ...form, project_type: e.target.value })}
             >
               {PROJECT_TYPES.map((pt) => (
-                <option key={pt} value={pt}>{t(`projectType_${pt}` as any)}</option>
+                <option key={pt} value={pt}>{t(`projectType_${pt}` as Parameters<typeof t>[0])}</option>
               ))}
             </SelectField>
             <TextField
@@ -147,7 +147,7 @@ export default function ProjectsPage() {
         >
           <option value="">{tCommon("allStatuses")}</option>
           {PROJECT_STATUSES.map((s) => (
-            <option key={s} value={s}>{t(s as any)}</option>
+            <option key={s} value={s}>{t(s as Parameters<typeof t>[0])}</option>
           ))}
         </select>
       </div>
@@ -181,7 +181,7 @@ export default function ProjectsPage() {
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-bg"
                 >
                   <td className="px-4 py-2 font-medium text-text-primary">{p.name}</td>
-                  <td className="px-4 py-2">{t(`projectType_${p.project_type || "other"}` as any)}</td>
+                  <td className="px-4 py-2">{t(`projectType_${p.project_type || "other"}` as Parameters<typeof t>[0])}</td>
                   <td className="px-4 py-2 text-text-secondary">{customerName(p.customer_id)}</td>
                   <td className="px-4 py-2 text-text-secondary">{p.address ?? tCommon("dash")}</td>
                   <td className="px-4 py-2">

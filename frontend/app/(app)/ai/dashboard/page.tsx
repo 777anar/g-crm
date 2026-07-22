@@ -227,9 +227,9 @@ export default function AIDashboardPage() {
               <tbody>
                 {dashboard.recent_activity.map((activity) => (
                   <tr key={activity.recommendation_id} className="border-b border-border last:border-0">
-                    <td className="px-2 py-1 text-text-primary">{t(`type_${activity.recommendation_type}` as any)}</td>
+                    <td className="px-2 py-1 text-text-primary">{t(`type_${activity.recommendation_type}` as Parameters<typeof t>[0])}</td>
                     <td className="px-2 py-1 text-text-secondary">{activity.summary ?? tCommon("dash")}</td>
-                    <td className="px-2 py-1 text-text-secondary">{t(`status_${activity.status}` as any)}</td>
+                    <td className="px-2 py-1 text-text-secondary">{t(`status_${activity.status}` as Parameters<typeof t>[0])}</td>
                     <td className="px-2 py-1 text-text-secondary">{activity.provider}</td>
                     <td className="px-2 py-1 text-text-secondary">{formatDateTime(activity.created_at)}</td>
                   </tr>

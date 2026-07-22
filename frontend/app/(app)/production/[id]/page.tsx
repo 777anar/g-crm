@@ -173,7 +173,7 @@ export default function ProductionJobDetailPage() {
           <div className="flex gap-2">
             {nextStatus && (
               <Button onClick={handleAdvance} disabled={transitioning}>
-                {transitioning ? t("saving") : `→ ${t(nextStatus as any)}`}
+                {transitioning ? t("saving") : `→ ${t(nextStatus as Parameters<typeof t>[0])}`}
               </Button>
             )}
             {!cancelMode && (
@@ -235,7 +235,7 @@ export default function ProductionJobDetailPage() {
           >
             {WORK_ORDER_PRIORITIES.map((p: WorkOrderPriority) => (
               <option key={p} value={p}>
-                {t(`priority_${p}` as any)}
+                {t(`priority_${p}` as Parameters<typeof t>[0])}
               </option>
             ))}
           </SelectField>
@@ -336,7 +336,7 @@ export default function ProductionJobDetailPage() {
                   <p className="text-sm text-text-primary">
                     {event.event_type === "stage_changed" && !event.from_value
                       ? t("timelineEvent_stage_set", { to: event.to_value ?? tCommon("dash") })
-                      : t(`timelineEvent_${event.event_type}` as any, {
+                      : t(`timelineEvent_${event.event_type}` as Parameters<typeof t>[0], {
                           from: event.from_value ?? tCommon("dash"),
                           to: event.to_value ?? tCommon("dash"),
                         })}

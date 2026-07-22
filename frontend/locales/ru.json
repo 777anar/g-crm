@@ -176,7 +176,11 @@
     "bulkArchiveSucceeded": "Архивировано клиентов: {count}.",
     "bulkArchivePartialFailure": "Архивировано {succeeded} из {count} клиентов; остальные не удались.",
     "bulkStatusSucceeded": "Статус обновлён для {count} клиентов.",
-    "bulkStatusPartialFailure": "Обновлено {succeeded} из {count} клиентов; остальные не удались."
+    "bulkStatusPartialFailure": "Обновлено {succeeded} из {count} клиентов; остальные не удались.",
+    "restoreCustomer": "Восстановить",
+    "restoring": "Восстановление...",
+    "restored": "Клиент восстановлен.",
+    "restoreFailed": "Не удалось восстановить клиента."
   },
   "customerNew": {
     "title": "Создать клиента",
@@ -213,6 +217,11 @@
     "archiving": "Архивация...",
     "archiveConfirm": "Архивировать этого клиента? Он будет скрыт из основного списка клиентов.",
     "archiveFailed": "Не удалось архивировать клиента.",
+    "restoreCustomer": "Восстановить клиента",
+    "restoring": "Восстановление...",
+    "restoreConfirm": "Восстановить этого клиента? Он снова появится в основном списке клиентов.",
+    "restoreFailed": "Не удалось восстановить клиента.",
+    "restored": "Клиент восстановлен.",
     "loadFailed": "Не удалось загрузить профиль клиента.",
     "loading": "Загрузка профиля клиента...",
     "contactInformation": "Контактная информация",

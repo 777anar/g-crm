@@ -204,7 +204,7 @@ export default function InstallationJobDetailPage() {
           <div className="flex gap-2">
             {nextStatus && (
               <Button onClick={handleAdvance} disabled={transitioning}>
-                {transitioning ? t("saving") : `→ ${t(nextStatus as any)}`}
+                {transitioning ? t("saving") : `→ ${t(nextStatus as Parameters<typeof t>[0])}`}
               </Button>
             )}
             {job.status === "in_progress" && (
@@ -364,7 +364,7 @@ export default function InstallationJobDetailPage() {
                 ) : (
                   <div className="flex h-28 items-center justify-center text-xs text-text-secondary">{tCommon("loading")}</div>
                 )}
-                <p className="px-2 py-1 text-xs text-text-secondary">{t(`photoType_${p.photo_type}` as any)}</p>
+                <p className="px-2 py-1 text-xs text-text-secondary">{t(`photoType_${p.photo_type}` as Parameters<typeof t>[0])}</p>
               </div>
             ))}
           </div>
@@ -373,7 +373,7 @@ export default function InstallationJobDetailPage() {
           <div className="flex flex-wrap items-center gap-2">
             {PHOTO_TYPES.map((type) => (
               <label key={type} className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs text-text-primary hover:bg-bg">
-                {uploadingPhoto ? t("saving") : `+ ${t(`photoType_${type}` as any)}`}
+                {uploadingPhoto ? t("saving") : `+ ${t(`photoType_${type}` as Parameters<typeof t>[0])}`}
                 <input
                   ref={fileInputRef}
                   type="file"

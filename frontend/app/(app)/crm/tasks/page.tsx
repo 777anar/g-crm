@@ -153,7 +153,7 @@ export default function TasksPage() {
           >
             <option value="">{tCommon("allStatuses")}</option>
             {TASK_STATUSES.map((s) => (
-              <option key={s} value={s}>{t(s as any)}</option>
+              <option key={s} value={s}>{t(s as Parameters<typeof t>[0])}</option>
             ))}
           </select>
           <select
@@ -163,7 +163,7 @@ export default function TasksPage() {
           >
             <option value="">{t("allPriorities")}</option>
             {TASK_PRIORITIES.map((p) => (
-              <option key={p} value={p}>{t(`priority_${p}` as any)}</option>
+              <option key={p} value={p}>{t(`priority_${p}` as Parameters<typeof t>[0])}</option>
             ))}
           </select>
           <select

@@ -14,7 +14,6 @@ export function useLocalStorageState<T>(key: string, initial: T): [T, (value: T)
     } catch {
       // Corrupt/unavailable storage -- fall back to `initial` silently.
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   function update(next: T) {

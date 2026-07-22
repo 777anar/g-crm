@@ -90,7 +90,7 @@ export default function ExecutiveDashboardPage() {
           <Card>
             <CardHeader title={t("ordersByStatus")} />
             <StatusBarList
-              data={data.orders_by_status.map((r) => ({ label: tOrders(r.status as any), count: r.count }))}
+              data={data.orders_by_status.map((r) => ({ label: tOrders(r.status as Parameters<typeof tOrders>[0]), count: r.count }))}
               emptyLabel={t("noDataPeriod")}
             />
           </Card>

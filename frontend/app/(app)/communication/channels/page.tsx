@@ -72,7 +72,7 @@ export default function ChannelsPage() {
             onChange={(e) => setForm({ ...form, channel_type: e.target.value })}
           >
             {CHANNEL_TYPES.map((ct) => (
-              <option key={ct} value={ct}>{t(`channel_${ct}` as any)}</option>
+              <option key={ct} value={ct}>{t(`channel_${ct}` as Parameters<typeof t>[0])}</option>
             ))}
           </SelectField>
           <TextField

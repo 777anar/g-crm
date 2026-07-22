@@ -15,7 +15,6 @@ import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-ta
 
 export default function ProductionStagesPage() {
   const t = useTranslations("production");
-  const tCommon = useTranslations("common");
   const tNav = useTranslations("nav");
   const [stages, setStages] = useState<ProductionStage[] | null>(null);
   const [error, setError] = useState<string | null>(null);

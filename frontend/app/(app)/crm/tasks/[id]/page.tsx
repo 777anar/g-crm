@@ -150,7 +150,7 @@ export default function TaskDetailPage() {
             <h1 className="text-xl font-semibold text-text-primary">{task.title}</h1>
             <TaskStatusBadge status={task.status} />
             <TaskPriorityBadge priority={task.priority} />
-            {task.is_recurring && <span className="text-xs text-text-secondary">↻ {t(`recurrence_${task.recurrence_rule}` as any)}</span>}
+            {task.is_recurring && <span className="text-xs text-text-secondary">↻ {t(`recurrence_${task.recurrence_rule}` as Parameters<typeof t>[0])}</span>}
           </div>
           {task.related_entity_type === "customer" && task.related_entity_id && (
             <p className="mt-1 text-xs text-text-secondary">
@@ -223,7 +223,7 @@ export default function TaskDetailPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <SelectField label={t("priority")} value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
                 {TASK_PRIORITIES.map((p) => (
-                  <option key={p} value={p}>{t(`priority_${p}` as any)}</option>
+                  <option key={p} value={p}>{t(`priority_${p}` as Parameters<typeof t>[0])}</option>
                 ))}
               </SelectField>
               <SelectField label={t("assignee")} value={form.assigned_to} onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}>

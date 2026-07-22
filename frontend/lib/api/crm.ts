@@ -96,6 +96,10 @@ export function archiveCustomer(id: string) {
   return apiRequest<Customer>(`/api/v1/crm/customers/${id}`, { method: "DELETE" });
 }
 
+export function restoreCustomer(id: string) {
+  return apiRequest<Customer>(`/api/v1/crm/customers/${id}/restore`, { method: "POST" });
+}
+
 export function addCustomerNote(id: string, body: string) {
   return apiRequest<Activity>(`/api/v1/crm/customers/${id}/notes`, { method: "POST", body: { body } });
 }

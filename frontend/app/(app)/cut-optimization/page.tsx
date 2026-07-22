@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { runCutOptimization } from "@/lib/api/cut-optimization";
@@ -9,7 +9,6 @@ import type { CutOptimizationRun, Material, PieceSpec, Slab } from "@/lib/types"
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SelectField, TextField } from "@/components/ui/field";
-import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
 import { SlabLayoutSvg } from "@/components/cut-optimization/slab-layout-svg";
 
@@ -22,7 +21,6 @@ function emptyPiece(label: string): PieceSpec {
 export default function CutOptimizationPage() {
   const t = useTranslations("cutOptimization");
   const tCommon = useTranslations("common");
-  const toast = useToast();
 
   const [slabMode, setSlabMode] = useState<SlabMode>("custom");
   const [slabLengthMm, setSlabLengthMm] = useState("3200");

@@ -4,12 +4,13 @@ import type { Paginated, ProductionJob, ProductionStage, WorkOrder, WorkOrderEve
 const BASE = "/api/v1/production";
 
 export function listWorkOrders(
-  params: { status?: string; search?: string; limit?: number; cursor?: string } = {}
+  params: { status?: string; search?: string; sort?: string; limit?: number; cursor?: string } = {}
 ) {
   return apiRequest<Paginated<WorkOrder>>(BASE, {
     searchParams: {
       status: params.status,
       search: params.search || undefined,
+      sort: params.sort,
       limit: params.limit,
       cursor: params.cursor,
     },

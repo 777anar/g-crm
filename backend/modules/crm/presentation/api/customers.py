@@ -15,6 +15,7 @@ from modules.crm.application.dtos import (
     AddCustomerNoteInput,
     ArchiveCustomerInput,
     CreateCustomerInput,
+    RestoreCustomerInput,
     UpdateCustomerInput,
 )
 from modules.crm.application.use_cases import (
@@ -22,9 +23,10 @@ from modules.crm.application.use_cases import (
     ArchiveCustomerUseCase,
     CreateCustomerUseCase,
     GetCustomerProfileUseCase,
+    RestoreCustomerUseCase,
     UpdateCustomerUseCase,
 )
-from modules.crm.domain.exceptions import CustomerAlreadyArchivedError
+from modules.crm.domain.exceptions import CustomerAlreadyArchivedError, CustomerNotArchivedError
 from modules.crm.infrastructure.repositories.customer_repository import CustomerRepository
 from modules.crm.presentation.schemas.customer import (
     ActivityOut,
@@ -265,6 +267,28 @@ def archive_customer(
             )
         )
     except CustomerAlreadyArchivedError as exc:
+        raise ConflictError(str(exc)) from exc
+    db.commit()
+    db.refresh(customer)
+    return CustomerOut.model_validate(customer)
+
+
+@router.post("/customers/{customer_id}/restore", response_model=CustomerOut)
+def restore_customer(
+    customer_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("crm:customers:write")),
+) -> CustomerOut:
+    use_case = RestoreCustomerUseCase(db)
+    try:
+        customer = use_case.execute(
+            RestoreCustomerInput(
+                company_id=current_user.active_company_id,
+                actor_user_id=current_user.user_id,
+                customer_id=customer_id,
+            )
+        )
+    except CustomerNotArchivedError as exc:
         raise ConflictError(str(exc)) from exc
     db.commit()
     db.refresh(customer)

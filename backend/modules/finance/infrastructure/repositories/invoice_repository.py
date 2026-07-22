@@ -7,6 +7,17 @@ from sqlalchemy.orm import Session
 from modules.finance.infrastructure.models.invoice import Invoice
 from modules.finance.infrastructure.models.invoice_number_sequence import InvoiceNumberSequence
 
+# Whitelisted sortable columns per the `?sort=field` / `?sort=-field`
+# convention every other list endpoint follows (see OrderRepository.list) --
+# whitelisting prevents sorting on an arbitrary/unindexed/sensitive column.
+_SORTABLE = {
+    "invoice_number": Invoice.invoice_number,
+    "status": Invoice.status,
+    "created_at": Invoice.created_at,
+    "due_date": Invoice.due_date,
+    "total_amount": Invoice.total_amount,
+}
+
 
 class InvoiceRepository:
     def __init__(self, db: Session):
@@ -34,6 +45,7 @@ class InvoiceRepository:
         customer_id: Optional[uuid.UUID] = None,
         status: Optional[str] = None,
         search: Optional[str] = None,
+        sort: Optional[str] = None,
         limit: int = 25,
         offset: int = 0,
     ) -> List[Invoice]:
@@ -44,7 +56,9 @@ class InvoiceRepository:
             stmt = stmt.where(Invoice.status == status)
         if search:
             stmt = stmt.where(Invoice.invoice_number.ilike(f"%{search}%"))
-        stmt = stmt.order_by(Invoice.created_at.desc()).offset(offset).limit(limit)
+        sort_col = _SORTABLE.get((sort or "-created_at").lstrip("-"), Invoice.created_at)
+        desc = not sort or sort.startswith("-")
+        stmt = stmt.order_by(sort_col.desc() if desc else sort_col.asc()).offset(offset).limit(limit)
         return list(self.db.scalars(stmt).all())
 
     def next_invoice_number(self, *, company_id: uuid.UUID, year: int) -> str:

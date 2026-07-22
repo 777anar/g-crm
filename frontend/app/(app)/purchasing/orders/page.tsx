@@ -99,7 +99,7 @@ export default function PurchaseOrdersPage() {
           <option value="">{tCommon("allStatuses")}</option>
           {PURCHASE_ORDER_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {t(s as any)}
+              {t(s as Parameters<typeof t>[0])}
             </option>
           ))}
         </select>

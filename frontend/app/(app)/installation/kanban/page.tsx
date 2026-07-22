@@ -84,7 +84,7 @@ export default function InstallationKanbanPage() {
         {INSTALLATION_JOB_STATUSES.map((status) => (
           <div key={status} className="flex flex-col gap-2">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-sm font-semibold text-text-primary">{t(status as any)}</h3>
+              <h3 className="text-sm font-semibold text-text-primary">{t(status as Parameters<typeof t>[0])}</h3>
               <span className="text-xs text-text-secondary">{columns[status]?.length ?? 0}</span>
             </div>
             <div className="flex flex-col gap-2">
@@ -108,7 +108,7 @@ export default function InstallationKanbanPage() {
                       disabled={advancingId === job.id}
                       className="mt-2 w-full rounded-md border border-border py-1 text-xs font-medium text-primary hover:bg-bg disabled:opacity-50"
                     >
-                      {advancingId === job.id ? t("saving") : `→ ${t(NEXT_STATUS[job.status] as any)}`}
+                      {advancingId === job.id ? t("saving") : `→ ${t(NEXT_STATUS[job.status] as Parameters<typeof t>[0])}`}
                     </button>
                   )}
                 </Card>

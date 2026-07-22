@@ -70,7 +70,7 @@ export function getRecommendation(id: string) {
 export function reviewRecommendation(
   id: string,
   decision: "accept" | "reject" | "edit",
-  editedResponse?: Record<string, any>
+  editedResponse?: Record<string, unknown>
 ) {
   return apiRequest<AIRecommendation>(`${BASE}/recommendations/${id}/review`, {
     method: "POST",

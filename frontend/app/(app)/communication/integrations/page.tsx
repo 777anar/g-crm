@@ -243,7 +243,7 @@ export default function IntegrationsPage() {
                     {credential && (
                       <div className="mt-1 flex items-center gap-2 text-xs text-text-secondary">
                         <Badge tone={HEALTH_TONE[credential.health_status] ?? "neutral"}>
-                          {t(`health_${credential.health_status}` as any)}
+                          {t(`health_${credential.health_status}` as Parameters<typeof t>[0])}
                         </Badge>
                         <span>{credential.provider}</span>
                         {credential.last_error && <span className="text-danger">{credential.last_error}</span>}
@@ -292,7 +292,7 @@ export default function IntegrationsPage() {
                         onChange={(e) => setSelectedProvider(e.target.value as ProviderName)}
                       >
                         {providers.map((p) => (
-                          <option key={p} value={p}>{t(`provider_${p}` as any)}</option>
+                          <option key={p} value={p}>{t(`provider_${p}` as Parameters<typeof t>[0])}</option>
                         ))}
                       </SelectField>
                     )}
@@ -301,7 +301,7 @@ export default function IntegrationsPage() {
                         {PROVIDER_FIELDS[selectedProvider].map((field) => (
                           <TextField
                             key={field.key}
-                            label={t(field.labelKey as any)}
+                            label={t(field.labelKey as Parameters<typeof t>[0])}
                             type={field.secret ? "password" : "text"}
                             value={form[field.key] ?? ""}
                             onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
@@ -352,7 +352,7 @@ export default function IntegrationsPage() {
                   <tr key={entry.id} className="border-b border-border last:border-0">
                     <td className="px-3 py-2">
                       <Badge tone={entry.status === "sent" ? "success" : entry.status === "failed" ? "danger" : "warning"}>
-                        {t(`queueStatus_${entry.status}` as any)}
+                        {t(`queueStatus_${entry.status}` as Parameters<typeof t>[0])}
                       </Badge>
                     </td>
                     <td className="px-3 py-2 text-text-secondary">{entry.attempts}/{entry.max_attempts}</td>
@@ -404,8 +404,8 @@ export default function IntegrationsPage() {
                     <td className="px-3 py-2 text-text-secondary">
                       {entry.direction === "outbound" ? t("outbound") : t("inboundWebhookMonitor")}
                     </td>
-                    <td className="px-3 py-2 text-text-secondary">{t(`provider_${entry.provider}` as any)}</td>
-                    <td className="px-3 py-2 text-text-secondary">{t(`action_${entry.action}` as any)}</td>
+                    <td className="px-3 py-2 text-text-secondary">{t(`provider_${entry.provider}` as Parameters<typeof t>[0])}</td>
+                    <td className="px-3 py-2 text-text-secondary">{t(`action_${entry.action}` as Parameters<typeof t>[0])}</td>
                     <td className="px-3 py-2">
                       <Badge tone={entry.success ? "success" : "danger"}>
                         {entry.success ? t("success") : t("failure")}

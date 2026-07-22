@@ -7,6 +7,18 @@ from sqlalchemy.orm import Session
 from modules.production.infrastructure.models.work_order import WorkOrder
 from modules.production.infrastructure.models.work_order_number_sequence import WorkOrderNumberSequence
 
+# Whitelisted sortable columns per the `?sort=field` / `?sort=-field`
+# convention every other list endpoint follows (see OrderRepository.list) --
+# whitelisting prevents sorting on an arbitrary/unindexed/sensitive column.
+_SORTABLE = {
+    "work_order_number": WorkOrder.work_order_number,
+    "status": WorkOrder.status,
+    "created_at": WorkOrder.created_at,
+    "priority": WorkOrder.priority,
+    "scheduled_start_date": WorkOrder.scheduled_start_date,
+    "scheduled_completion_date": WorkOrder.scheduled_completion_date,
+}
+
 
 class WorkOrderRepository:
     def __init__(self, db: Session):
@@ -33,6 +45,7 @@ class WorkOrderRepository:
         company_id: uuid.UUID,
         status: Optional[str] = None,
         search: Optional[str] = None,
+        sort: Optional[str] = None,
         limit: int = 25,
         offset: int = 0,
     ) -> List[WorkOrder]:
@@ -41,7 +54,9 @@ class WorkOrderRepository:
             stmt = stmt.where(WorkOrder.status == status)
         if search:
             stmt = stmt.where(WorkOrder.work_order_number.ilike(f"%{search}%"))
-        stmt = stmt.order_by(WorkOrder.created_at.desc()).offset(offset).limit(limit)
+        sort_col = _SORTABLE.get((sort or "-created_at").lstrip("-"), WorkOrder.created_at)
+        desc = not sort or sort.startswith("-")
+        stmt = stmt.order_by(sort_col.desc() if desc else sort_col.asc()).offset(offset).limit(limit)
         return list(self.db.scalars(stmt).all())
 
     def next_work_order_number(self, *, company_id: uuid.UUID, year: int) -> str:

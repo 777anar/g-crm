@@ -68,14 +68,14 @@ export default function ProductionAnalyticsPage() {
             <Card>
               <CardHeader title={t("orderStatusBreakdown")} />
               <StatusBarList
-                data={data.order_status_breakdown.map((r) => ({ label: tOrders(r.status as any), count: r.count }))}
+                data={data.order_status_breakdown.map((r) => ({ label: tOrders(r.status as Parameters<typeof tOrders>[0]), count: r.count }))}
                 emptyLabel={t("noDataPeriod")}
               />
             </Card>
             <Card>
               <CardHeader title={t("itemProductionStatus")} />
               <StatusBarList
-                data={data.item_production_status.map((r) => ({ label: tOrders(`prodStatus_${r.status}` as any), count: r.count }))}
+                data={data.item_production_status.map((r) => ({ label: tOrders(`prodStatus_${r.status}` as Parameters<typeof tOrders>[0]), count: r.count }))}
                 emptyLabel={t("noDataPeriod")}
               />
             </Card>

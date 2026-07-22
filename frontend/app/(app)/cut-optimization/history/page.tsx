@@ -75,7 +75,7 @@ export default function CutOptimizationHistoryPage() {
                     <td className="px-4 py-2 font-mono text-text-primary">{run.slab_length_mm}×{run.slab_width_mm}mm</td>
                     <td className="px-4 py-2">
                       <Badge tone={run.source === "offcut_recommendation" ? "info" : "neutral"}>
-                        {t(`source_${run.source}` as any)}
+                        {t(`source_${run.source}` as Parameters<typeof t>[0])}
                       </Badge>
                     </td>
                     <td className="px-4 py-2 text-text-secondary">{run.utilization_pct}%</td>

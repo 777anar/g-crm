@@ -282,7 +282,7 @@ export default function InvoiceDetailPage() {
               {payments.map((p) => (
                 <tr key={p.id} className="border-t border-border">
                   <td className="px-2 py-1 text-text-secondary">{formatDateTime(p.paid_at)}</td>
-                  <td className="px-2 py-1">{t(`paymentMethod_${p.method}` as any)}</td>
+                  <td className="px-2 py-1">{t(`paymentMethod_${p.method}` as Parameters<typeof t>[0])}</td>
                   <td className="px-2 py-1 font-medium text-text-primary">
                     {invoice.currency} {parseFloat(p.amount).toFixed(2)}
                   </td>
@@ -315,7 +315,7 @@ export default function InvoiceDetailPage() {
                 onChange={(e) => setPaymentForm({ ...paymentForm, method: e.target.value })}
               >
                 {PAYMENT_METHODS.map((m) => (
-                  <option key={m} value={m}>{t(`paymentMethod_${m}` as any)}</option>
+                  <option key={m} value={m}>{t(`paymentMethod_${m}` as Parameters<typeof t>[0])}</option>
                 ))}
               </select>
             </div>

@@ -69,6 +69,39 @@ def test_invoices_cursor_reaches_the_next_page(app_client, owner_headers, db_ses
     assert first_ids | second_ids == set(invoice_ids)
 
 
+def test_invoices_sort_by_invoice_number(app_client, owner_headers, db_session, company, project, customer):
+    invoice_numbers = []
+    for i in range(3):
+        order = _create_ready_order(app_client, db_session, owner_headers, company, project, customer, f"SRT{i}")
+        resp = app_client.post("/api/v1/finance/invoices", headers=owner_headers, json={"order_id": order["id"]})
+        assert resp.status_code == 200, resp.text
+        invoice_numbers.append(resp.json()["invoice_number"])
+
+    ascending = app_client.get(
+        "/api/v1/finance/invoices", headers=owner_headers, params={"sort": "invoice_number"}
+    ).json()["items"]
+    ascending_numbers = [inv["invoice_number"] for inv in ascending if inv["invoice_number"] in invoice_numbers]
+    assert ascending_numbers == sorted(invoice_numbers)
+
+    descending = app_client.get(
+        "/api/v1/finance/invoices", headers=owner_headers, params={"sort": "-invoice_number"}
+    ).json()["items"]
+    descending_numbers = [inv["invoice_number"] for inv in descending if inv["invoice_number"] in invoice_numbers]
+    assert descending_numbers == sorted(invoice_numbers, reverse=True)
+
+
+def test_invoices_sort_rejects_unwhitelisted_column_by_falling_back_to_default(
+    app_client, owner_headers, db_session, company, project, customer
+):
+    order = _create_ready_order(app_client, db_session, owner_headers, company, project, customer, "FALLBACK")
+    app_client.post("/api/v1/finance/invoices", headers=owner_headers, json={"order_id": order["id"]})
+
+    response = app_client.get(
+        "/api/v1/finance/invoices", headers=owner_headers, params={"sort": "not_a_real_column"}
+    )
+    assert response.status_code == 200
+
+
 def test_create_invoice_requires_ready_order(app_client, owner_headers, accepted_quote):
     order = app_client.post(
         "/api/v1/orders", headers=owner_headers, json={"quote_id": str(accepted_quote.id)}

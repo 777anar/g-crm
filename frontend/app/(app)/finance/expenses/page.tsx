@@ -84,7 +84,7 @@ export default function ExpensesPage() {
             onChange={(e) => setForm({ ...form, category: e.target.value })}
           >
             {EXPENSE_CATEGORIES.map((c) => (
-              <option key={c} value={c}>{t(`expenseCategory_${c}` as any)}</option>
+              <option key={c} value={c}>{t(`expenseCategory_${c}` as Parameters<typeof t>[0])}</option>
             ))}
           </SelectField>
           <TextField
@@ -119,7 +119,7 @@ export default function ExpensesPage() {
         >
           <option value="">{t("allCategories")}</option>
           {EXPENSE_CATEGORIES.map((c) => (
-            <option key={c} value={c}>{t(`expenseCategory_${c}` as any)}</option>
+            <option key={c} value={c}>{t(`expenseCategory_${c}` as Parameters<typeof t>[0])}</option>
           ))}
         </select>
       </div>
@@ -146,7 +146,7 @@ export default function ExpensesPage() {
               {expenses.map((e) => (
                 <tr key={e.id} className="border-b border-border last:border-0">
                   <td className="px-4 py-2 text-text-secondary">{formatDate(e.expense_date)}</td>
-                  <td className="px-4 py-2 text-text-primary">{t(`expenseCategory_${e.category}` as any)}</td>
+                  <td className="px-4 py-2 text-text-primary">{t(`expenseCategory_${e.category}` as Parameters<typeof t>[0])}</td>
                   <td className="px-4 py-2 text-text-secondary">{e.description ?? tCommon("dash")}</td>
                   <td className="px-4 py-2 font-medium text-text-primary">{e.currency} {parseFloat(e.amount).toFixed(2)}</td>
                 </tr>

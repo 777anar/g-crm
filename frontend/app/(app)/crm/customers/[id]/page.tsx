@@ -7,6 +7,7 @@ import {
   addCustomerNote,
   archiveCustomer,
   getCustomerProfile,
+  restoreCustomer,
   updateCustomer,
   uploadCustomerAttachment,
 } from "@/lib/api/crm";
@@ -36,6 +37,7 @@ import { TextField, TextAreaField } from "@/components/ui/field";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { usePermission } from "@/lib/permissions";
 import { formatDateTime } from "@/lib/format";
 import { useCustomerStatusLabel, useCustomerTypeLabel } from "@/lib/i18n/hooks";
 
@@ -50,12 +52,14 @@ export default function CustomerProfilePage() {
   const typeLabel = useCustomerTypeLabel();
   const confirm = useConfirm();
   const toast = useToast();
+  const canWrite = usePermission("crm:customers:write");
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [noteBody, setNoteBody] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [updatingManager, setUpdatingManager] = useState(false);
@@ -176,6 +180,20 @@ export default function CustomerProfilePage() {
       setError(err instanceof ApiRequestError ? err.message : t("archiveFailed"));
     } finally {
       setArchiving(false);
+    }
+  }
+
+  async function handleRestore() {
+    if (!(await confirm(t("restoreConfirm")))) return;
+    setRestoring(true);
+    try {
+      await restoreCustomer(customerId);
+      await reload();
+      toast.success(t("restored"));
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("restoreFailed"));
+    } finally {
+      setRestoring(false);
     }
   }
 
@@ -302,11 +320,16 @@ export default function CustomerProfilePage() {
           <p className="mt-0.5 text-sm text-text-secondary">{t("subtitle")}</p>
         </div>
         <div className="flex gap-2">
-          {customer.deleted_at === null && (
-            <Button variant="destructive" onClick={handleArchive} disabled={archiving}>
-              {archiving ? t("archiving") : t("archiveCustomer")}
-            </Button>
-          )}
+          {canWrite &&
+            (customer.deleted_at === null ? (
+              <Button variant="destructive" onClick={handleArchive} disabled={archiving}>
+                {archiving ? t("archiving") : t("archiveCustomer")}
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={handleRestore} disabled={restoring}>
+                {restoring ? t("restoring") : t("restoreCustomer")}
+              </Button>
+            ))}
         </div>
       </div>
 

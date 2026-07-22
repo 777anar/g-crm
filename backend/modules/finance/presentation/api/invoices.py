@@ -52,6 +52,7 @@ def list_invoices(
     customer_id: Optional[uuid.UUID] = Query(default=None),
     status: Optional[str] = Query(default=None),
     search: Optional[str] = Query(default=None),
+    sort: Optional[str] = Query(default=None),
     limit: int = Query(default=25, le=100),
     cursor: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
@@ -64,6 +65,7 @@ def list_invoices(
         customer_id=customer_id,
         status=status,
         search=search,
+        sort=sort,
         limit=limit + 1,
         offset=offset,
     )

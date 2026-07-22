@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Plus } from "lucide-react";
 import { useCloseOnEscape, useOutsideClick } from "@/lib/use-outside-click";
 
 /** Available from every authenticated screen (not just the Dashboard or
@@ -25,9 +26,7 @@ export function QuickCreateMenu() {
         aria-label={t("title")}
         className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary-hover"
       >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-          <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
+        <Plus size={14} strokeWidth={1.8} aria-hidden />
       </button>
 
       {open && (

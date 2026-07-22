@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { ChevronDown } from "lucide-react";
 import { me, selectCompany } from "@/lib/api/auth";
 import { listMyCompanies } from "@/lib/api/companies";
 import { setAccessToken } from "@/lib/session";
@@ -59,9 +60,7 @@ export function CompanySwitcher() {
         className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-bg disabled:opacity-50"
       >
         <span>{activeCompany.name}</span>
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-text-secondary" aria-hidden>
-          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <ChevronDown size={12} strokeWidth={1.5} className="text-text-secondary" aria-hidden />
       </button>
 
       {open && (

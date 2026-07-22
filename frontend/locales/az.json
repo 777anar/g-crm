@@ -176,7 +176,11 @@
     "bulkArchiveSucceeded": "{count} müştəri arxivləşdirildi.",
     "bulkArchivePartialFailure": "{count} müştəridən {succeeded} arxivləşdirildi; qalanları uğursuz oldu.",
     "bulkStatusSucceeded": "{count} müştərinin statusu yeniləndi.",
-    "bulkStatusPartialFailure": "{count} müştəridən {succeeded} yeniləndi; qalanları uğursuz oldu."
+    "bulkStatusPartialFailure": "{count} müştəridən {succeeded} yeniləndi; qalanları uğursuz oldu.",
+    "restoreCustomer": "Bərpa et",
+    "restoring": "Bərpa edilir...",
+    "restored": "Müştəri bərpa edildi.",
+    "restoreFailed": "Müştəri bərpa edilmədi."
   },
   "customerNew": {
     "title": "Müştəri yarat",
@@ -213,6 +217,11 @@
     "archiving": "Arxivlənir...",
     "archiveConfirm": "Bu müştəri arxivlənsin? O, standart müştəri siyahısından gizlədiləcək.",
     "archiveFailed": "Müştəri arxivlənmədi.",
+    "restoreCustomer": "Müştərini bərpa et",
+    "restoring": "Bərpa edilir...",
+    "restoreConfirm": "Bu müştəri bərpa edilsin? O, standart müştəri siyahısında yenidən görünəcək.",
+    "restoreFailed": "Müştəri bərpa edilmədi.",
+    "restored": "Müştəri bərpa edildi.",
     "loadFailed": "Müştəri profili yüklənmədi.",
     "loading": "Müştəri profili yüklənir...",
     "contactInformation": "Əlaqə məlumatı",

@@ -97,7 +97,7 @@ const PROJECT_STATUS_TONE: Record<string, Tone> = {
 
 export function ProjectStatusBadge({ status }: { status: string }) {
   const t = useTranslations("sales");
-  return <Badge tone={PROJECT_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+  return <Badge tone={PROJECT_STATUS_TONE[status] ?? "neutral"}>{t(status as Parameters<typeof t>[0])}</Badge>;
 }
 
 const QUOTE_STATUS_TONE: Record<string, Tone> = {
@@ -111,7 +111,7 @@ const QUOTE_STATUS_TONE: Record<string, Tone> = {
 
 export function QuoteStatusBadge({ status }: { status: string }) {
   const t = useTranslations("sales");
-  return <Badge tone={QUOTE_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+  return <Badge tone={QUOTE_STATUS_TONE[status] ?? "neutral"}>{t(status as Parameters<typeof t>[0])}</Badge>;
 }
 
 // Order lifecycle: cool grey while queued, warm while shop-floor work is
@@ -132,7 +132,7 @@ const ORDER_STATUS_TONE: Record<string, Tone> = {
 
 export function OrderStatusBadge({ status }: { status: string }) {
   const t = useTranslations("orders");
-  return <Badge tone={ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+  return <Badge tone={ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as Parameters<typeof t>[0])}</Badge>;
 }
 
 const WORK_ORDER_STATUS_TONE: Record<string, Tone> = {
@@ -146,7 +146,7 @@ const WORK_ORDER_STATUS_TONE: Record<string, Tone> = {
 
 export function WorkOrderStatusBadge({ status }: { status: string }) {
   const t = useTranslations("production");
-  return <Badge tone={WORK_ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+  return <Badge tone={WORK_ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as Parameters<typeof t>[0])}</Badge>;
 }
 
 // Same cool-to-warm urgency ramp as TASK_PRIORITY_TONE below.
@@ -159,7 +159,7 @@ const WORK_ORDER_PRIORITY_TONE: Record<string, Tone> = {
 
 export function WorkOrderPriorityBadge({ priority }: { priority: string }) {
   const t = useTranslations("production");
-  return <Badge tone={WORK_ORDER_PRIORITY_TONE[priority] ?? "neutral"}>{t(`priority_${priority}` as any)}</Badge>;
+  return <Badge tone={WORK_ORDER_PRIORITY_TONE[priority] ?? "neutral"}>{t(`priority_${priority}` as Parameters<typeof t>[0])}</Badge>;
 }
 
 const INSTALLATION_JOB_STATUS_TONE: Record<string, Tone> = {
@@ -172,7 +172,7 @@ const INSTALLATION_JOB_STATUS_TONE: Record<string, Tone> = {
 
 export function InstallationJobStatusBadge({ status }: { status: string }) {
   const t = useTranslations("installation");
-  return <Badge tone={INSTALLATION_JOB_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+  return <Badge tone={INSTALLATION_JOB_STATUS_TONE[status] ?? "neutral"}>{t(status as Parameters<typeof t>[0])}</Badge>;
 }
 
 const CREW_STATUS_TONE: Record<string, Tone> = {
@@ -182,7 +182,7 @@ const CREW_STATUS_TONE: Record<string, Tone> = {
 
 export function CrewStatusBadge({ status }: { status: string }) {
   const t = useTranslations("installation");
-  return <Badge tone={CREW_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+  return <Badge tone={CREW_STATUS_TONE[status] ?? "neutral"}>{t(status as Parameters<typeof t>[0])}</Badge>;
 }
 
 const INVOICE_STATUS_TONE: Record<string, Tone> = {
@@ -196,7 +196,7 @@ const INVOICE_STATUS_TONE: Record<string, Tone> = {
 
 export function InvoiceStatusBadge({ status }: { status: string }) {
   const t = useTranslations("finance");
-  return <Badge tone={INVOICE_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+  return <Badge tone={INVOICE_STATUS_TONE[status] ?? "neutral"}>{t(status as Parameters<typeof t>[0])}</Badge>;
 }
 
 const TASK_STATUS_TONE: Record<string, Tone> = {
@@ -208,7 +208,7 @@ const TASK_STATUS_TONE: Record<string, Tone> = {
 
 export function TaskStatusBadge({ status }: { status: string }) {
   const t = useTranslations("tasks");
-  return <Badge tone={TASK_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+  return <Badge tone={TASK_STATUS_TONE[status] ?? "neutral"}>{t(status as Parameters<typeof t>[0])}</Badge>;
 }
 
 // Cool-to-warm as urgency rises, matching the same "warning = needs
@@ -222,7 +222,7 @@ const TASK_PRIORITY_TONE: Record<string, Tone> = {
 
 export function TaskPriorityBadge({ priority }: { priority: string }) {
   const t = useTranslations("tasks");
-  return <Badge tone={TASK_PRIORITY_TONE[priority] ?? "neutral"}>{t(`priority_${priority}` as any)}</Badge>;
+  return <Badge tone={TASK_PRIORITY_TONE[priority] ?? "neutral"}>{t(`priority_${priority}` as Parameters<typeof t>[0])}</Badge>;
 }
 
 const CONVERSATION_STATUS_TONE: Record<string, Tone> = {
@@ -233,12 +233,12 @@ const CONVERSATION_STATUS_TONE: Record<string, Tone> = {
 
 export function ConversationStatusBadge({ status }: { status: string }) {
   const t = useTranslations("communication");
-  return <Badge tone={CONVERSATION_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+  return <Badge tone={CONVERSATION_STATUS_TONE[status] ?? "neutral"}>{t(status as Parameters<typeof t>[0])}</Badge>;
 }
 
 export function ChannelTypeBadge({ channelType }: { channelType: string }) {
   const t = useTranslations("communication");
-  return <Badge tone="info">{t(`channel_${channelType}` as any)}</Badge>;
+  return <Badge tone="info">{t(`channel_${channelType}` as Parameters<typeof t>[0])}</Badge>;
 }
 
 const PURCHASE_ORDER_STATUS_TONE: Record<string, Tone> = {
@@ -252,7 +252,7 @@ const PURCHASE_ORDER_STATUS_TONE: Record<string, Tone> = {
 
 export function PurchaseOrderStatusBadge({ status }: { status: string }) {
   const t = useTranslations("purchasing");
-  return <Badge tone={PURCHASE_ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+  return <Badge tone={PURCHASE_ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as Parameters<typeof t>[0])}</Badge>;
 }
 
 const CAMPAIGN_STATUS_TONE: Record<string, Tone> = {
@@ -264,5 +264,5 @@ const CAMPAIGN_STATUS_TONE: Record<string, Tone> = {
 
 export function CampaignStatusBadge({ status }: { status: string }) {
   const t = useTranslations("marketing");
-  return <Badge tone={CAMPAIGN_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+  return <Badge tone={CAMPAIGN_STATUS_TONE[status] ?? "neutral"}>{t(status as Parameters<typeof t>[0])}</Badge>;
 }

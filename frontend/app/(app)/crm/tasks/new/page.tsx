@@ -79,7 +79,7 @@ export default function NewTaskPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectField label={t("priority")} value={priority} onChange={(e) => setPriority(e.target.value)}>
               {TASK_PRIORITIES.map((p) => (
-                <option key={p} value={p}>{t(`priority_${p}` as any)}</option>
+                <option key={p} value={p}>{t(`priority_${p}` as Parameters<typeof t>[0])}</option>
               ))}
             </SelectField>
             <SelectField label={t("assignee")} value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
@@ -120,7 +120,7 @@ export default function NewTaskPage() {
                 onChange={(e) => setRecurrenceRule(e.target.value)}
               >
                 {TASK_RECURRENCE_RULES.map((r) => (
-                  <option key={r} value={r}>{t(`recurrence_${r}` as any)}</option>
+                  <option key={r} value={r}>{t(`recurrence_${r}` as Parameters<typeof t>[0])}</option>
                 ))}
               </SelectField>
               <TextField

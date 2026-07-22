@@ -19,13 +19,14 @@ import {
   useResizableColumns,
   useSavedFilters,
 } from "@/components/ui/data-table";
+import { SortableHeader } from "@/components/ui/sortable-header";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 const TABLE_ID = "finance-invoices";
 
-type InvoicesFilters = { statusFilter: string; search: string };
+type InvoicesFilters = { statusFilter: string; search: string; sort?: string };
 
 export default function InvoicesPage() {
   const t = useTranslations("finance");
@@ -35,6 +36,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [sort, setSort] = useState("-created_at");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const search = useDebouncedValue(searchInput, 250);
@@ -60,14 +62,19 @@ export default function InvoicesPage() {
 
   const load = useCallback(
     (options: { append?: boolean; cursor?: string } = {}) => {
-      listInvoices({ status: statusFilter || undefined, search: search || undefined, cursor: options.cursor })
+      listInvoices({
+        status: statusFilter || undefined,
+        search: search || undefined,
+        sort,
+        cursor: options.cursor,
+      })
         .then((r) => {
           setInvoices((prev) => (options.append && prev ? [...prev, ...r.items] : r.items));
           setNextCursor(r.next_cursor);
         })
         .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
     },
-    [statusFilter, search, t]
+    [statusFilter, search, sort, t]
   );
 
   useEffect(() => {
@@ -83,6 +90,7 @@ export default function InvoicesPage() {
   function applyFilters(filters: InvoicesFilters) {
     setStatusFilter(filters.statusFilter);
     setSearchInput(filters.search);
+    if (filters.sort) setSort(filters.sort);
   }
 
   return (
@@ -108,7 +116,7 @@ export default function InvoicesPage() {
           >
             <option value="">{tCommon("allStatuses")}</option>
             {INVOICE_STATUSES.map((s) => (
-              <option key={s} value={s}>{t(s as any)}</option>
+              <option key={s} value={s}>{t(s as Parameters<typeof t>[0])}</option>
             ))}
           </select>
         </div>
@@ -118,7 +126,7 @@ export default function InvoicesPage() {
       <SavedFiltersBar
         presets={savedFilters.presets}
         onApply={applyFilters}
-        onSave={(name) => savedFilters.save(name, { statusFilter, search: searchInput })}
+        onSave={(name) => savedFilters.save(name, { statusFilter, search: searchInput, sort })}
         onRemove={savedFilters.remove}
       />
 
@@ -137,22 +145,34 @@ export default function InvoicesPage() {
             <thead className={stickyTheadClass}>
               <tr>
                 {isVisible("number") && (
-                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("number") }}>
-                    {t("tableInvoice")}
-                    <ColumnResizeHandle onMouseDown={startResize("number")} />
-                  </th>
+                  <SortableHeader
+                    field="invoice_number"
+                    label={t("tableInvoice")}
+                    sort={sort}
+                    onSortChange={setSort}
+                    width={widthOf("number")}
+                    resizeHandle={<ColumnResizeHandle onMouseDown={startResize("number")} />}
+                  />
                 )}
                 {isVisible("status") && (
-                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("status") }}>
-                    {t("tableStatus")}
-                    <ColumnResizeHandle onMouseDown={startResize("status")} />
-                  </th>
+                  <SortableHeader
+                    field="status"
+                    label={t("tableStatus")}
+                    sort={sort}
+                    onSortChange={setSort}
+                    width={widthOf("status")}
+                    resizeHandle={<ColumnResizeHandle onMouseDown={startResize("status")} />}
+                  />
                 )}
                 {isVisible("total") && (
-                  <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("total") }}>
-                    {t("tableTotal")}
-                    <ColumnResizeHandle onMouseDown={startResize("total")} />
-                  </th>
+                  <SortableHeader
+                    field="total_amount"
+                    label={t("tableTotal")}
+                    sort={sort}
+                    onSortChange={setSort}
+                    width={widthOf("total")}
+                    resizeHandle={<ColumnResizeHandle onMouseDown={startResize("total")} />}
+                  />
                 )}
                 {isVisible("balance") && (
                   <th className="relative px-4 py-2 font-medium" style={{ width: widthOf("balance") }}>
@@ -167,9 +187,13 @@ export default function InvoicesPage() {
                   </th>
                 )}
                 {isVisible("dueDate") && (
-                  <th className="px-4 py-2 font-medium" style={{ width: widthOf("dueDate") }}>
-                    {t("tableDueDate")}
-                  </th>
+                  <SortableHeader
+                    field="due_date"
+                    label={t("tableDueDate")}
+                    sort={sort}
+                    onSortChange={setSort}
+                    width={widthOf("dueDate")}
+                  />
                 )}
               </tr>
             </thead>

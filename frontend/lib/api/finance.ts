@@ -10,6 +10,7 @@ export function listInvoices(
     customerId?: string;
     status?: string;
     search?: string;
+    sort?: string;
     limit?: number;
     cursor?: string;
   } = {}
@@ -19,6 +20,7 @@ export function listInvoices(
       customer_id: params.customerId,
       status: params.status,
       search: params.search || undefined,
+      sort: params.sort,
       limit: params.limit,
       cursor: params.cursor,
     },

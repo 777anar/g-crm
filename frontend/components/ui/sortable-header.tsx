@@ -32,13 +32,12 @@ export function SortableHeader({
   }
 
   return (
-    <th className="relative px-4 py-2 font-medium" style={width ? { width } : undefined}>
-      <button
-        type="button"
-        onClick={handleClick}
-        aria-sort={active ? (descending ? "descending" : "ascending") : undefined}
-        className="flex items-center gap-1 hover:text-text-primary"
-      >
+    <th
+      className="relative px-4 py-2 font-medium"
+      style={width ? { width } : undefined}
+      aria-sort={active ? (descending ? "descending" : "ascending") : undefined}
+    >
+      <button type="button" onClick={handleClick} className="flex items-center gap-1 hover:text-text-primary">
         {label}
         <span className="inline-flex w-3 flex-col leading-none text-[8px] text-text-secondary">
           <span className={active && !descending ? "text-primary" : ""}>▲</span>

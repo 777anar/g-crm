@@ -60,7 +60,7 @@ export default function PortalDashboardPage() {
                   <p className="font-mono text-sm text-text-primary">{o.order_number}</p>
                   <p className="text-xs text-text-secondary">{formatDate(o.created_at)}</p>
                 </div>
-                <span className="text-sm text-text-secondary">{tOrderStatus(o.status as any)}</span>
+                <span className="text-sm text-text-secondary">{tOrderStatus(o.status as Parameters<typeof tOrderStatus>[0])}</span>
               </div>
             ))}
           </div>

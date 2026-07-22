@@ -427,7 +427,7 @@ export default function QuoteBuilderPage() {
                 <tbody>
                   {items.map((item) => (
                     <tr key={item.id} className="border-t border-border">
-                      <td className="px-2 py-1 text-xs text-text-secondary">{t(`itemType_${item.item_type}` as any)}</td>
+                      <td className="px-2 py-1 text-xs text-text-secondary">{t(`itemType_${item.item_type}` as Parameters<typeof t>[0])}</td>
                       <td className="px-2 py-1">{item.description || "—"}</td>
                       <td className="px-2 py-1">
                         {isEditable ? (
@@ -470,7 +470,7 @@ export default function QuoteBuilderPage() {
                     onClick={() => handleAddItem(section.id, type)}
                     className="rounded-md border border-border px-2 py-1 text-xs text-text-primary hover:bg-bg"
                   >
-                    + {t(`itemType_${type}` as any)}
+                    + {t(`itemType_${type}` as Parameters<typeof t>[0])}
                   </button>
                 ))}
                 <button

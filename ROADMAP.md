@@ -623,6 +623,25 @@ Reports
 
 ---
 
+## Version 2.36.0 — Phase 17: Stabilization & Technical Debt Closeout
+
+**Theme:** `MASTER_DEVELOPMENT_ROADMAP.md`'s Part 3 opens with Phase 17 for a specific reason: every one of its eight items had already been independently re-identified across two or more prior audit passes (`RELEASE_CHECKLIST.md`, `PROJECT_AUDIT.md`, `IMPLEMENTATION_REPORT.md`) without being picked up. This release closes all eight in one pass, in full, so none of them resurface in a future audit. No new modules, no schema redesign, no business-logic changes.
+
+| Fix | Area | Business value |
+|---|---|---|
+| **Customer archive restore (B6)** — `RestoreCustomerUseCase`, `POST /crm/customers/{id}/restore`, a Restore action on the Customer list and detail page | Backend + Frontend — CRM | Closes a gap first named in `RELEASE_CHECKLIST.md` (2026-07-08) and re-confirmed open in every audit since: archiving a customer was a one-way door with no UI or API path back |
+| **Finance invoice / Production work-order `sort` params (B1)** — both repositories gained the same whitelisted-column `sort` pattern `OrderRepository` already used; both list pages gained `SortableHeader` columns | Backend + Frontend — Finance, Production | The two remaining list endpoints in the app that silently ignored a documented `?sort=` contract now actually honor it |
+| **Committed ESLint configuration** — `eslint.config.mjs`, wired into CI as a real gate | Frontend — tooling | `npm run lint` has been documented in `CLAUDE.md` since early on but never actually ran anything; closing this surfaced and fixed 93 real (if low-severity) violations across the codebase — see below |
+| **`module_permissions` wired up, not removed (B7)** — new `lib/permissions.ts` (`hasPermission`/`usePermission`), applied to the Customers list/detail as the demonstrated pattern | Frontend — CRM | The exact "a viewer sees the same Create/Edit/Archive buttons as an owner" gap `PROJECT_AUDIT.md` named is now closed on the one surface it was demonstrated on; the backend remains the authoritative permission check regardless |
+| **Circular FK cleanup (B5)** — `use_alter=True` on `crm_customers.primary_contact_id`'s FK | Backend — Database | Resolves a live SQLAlchemy "unresolvable cycles" warning before a future SQLAlchemy upgrade turns it into a hard error; confirmed via `alembic check` that no migration was actually needed |
+| **Tablet breakpoint fix** — a new icon-only `NavIconRail` at 768–1023px, matching `UI_UX_GUIDELINES.md` §7 | Frontend — navigation | Tablets no longer fall back to the phone-width slide-over drawer |
+| **Mobile nav focus trap** — new `useFocusTrap` hook applied to the mobile drawer | Frontend — accessibility | Keyboard `Tab` can no longer escape the open drawer into background page content |
+| **Icon library decision made and applied** — `lucide-react` adopted, all 9 hand-rolled inline SVG icons across 6 components replaced | Frontend — design system | Closes a documented `UI_UX_GUIDELINES.md` §2 deviation that had been deliberately deferred across every prior session rather than decided |
+
+**Verification:** full backend suite passing (706/706 — 695 prior + 11 new), `lint-imports` passing (1 contract kept, 0 broken), `alembic check` clean (the FK fix needed no migration), frontend `tsc --noEmit` clean, `npm run lint` clean (0 errors/warnings, genuinely fixed rather than suppressed — see `PHASE17_COMPLETION_REPORT.md` for the full breakdown of all 93 pre-existing lint violations closed), frontend production build clean (68 routes, unchanged — a stabilization pass, not a feature release).
+
+---
+
 ## Complexity key
 
 - **S** (Small): a few files, one focused PR, low risk
@@ -671,6 +690,7 @@ Reports
 | 2.33.0 | Customer Portal — a second, separate customer authentication identity (own JWT token type, own rate limit) with staff-side enable/disable/reset and a customer-facing read surface (orders/quotes/invoices/installation/documents, internal cost/margin fields whitelisted out); first module beyond the original ten-module plan | Yes (CustomerLogin) | Yes (Customer Portal) |
 | 2.34.0 | Stone Fabrication Workflow, Phase 1 — durable Material Reservation with a double-booking guard; full slab lifecycle (`received`/`offcut_created`/`consumed` added); configurable per-company Production Stages (8 defaults); Production Job enrichment (priority, operator assignment, one-call job view, a dedicated timeline table) — the first release built specifically for stone/slab fabrication rather than generic ERP capability | Yes (SlabReservation, ProductionStage, WorkOrderEvent) | No (deepens Catalog + Production) |
 | 2.35.0 | Stone Fabrication Workflow, Phase 2 — a pure shelf/guillotine cutting-optimization algorithm (kerf, rotation, waste/utilization, SVG visualization); Smart Offcut Management ranking every matching offcut by fit before ever recommending a new slab purchase; an Offcut Library search surface; reopenable Optimization History; a live Production Planning Dashboard (Kanban-by-stage, overdue highlighting, operator workload) | Yes (CutOptimizationRun) | Yes (Cut Optimization, the fourteenth installed module) |
+| 2.36.0 | Phase 17: Stabilization & Technical Debt Closeout — customer archive restore, Finance/Production list sorting, a committed and CI-enforced ESLint config (93 pre-existing violations genuinely fixed), `module_permissions` wired into a real frontend permission-gating utility, the `crm_customers`/`crm_contacts` circular FK warning resolved, a tablet-width icon-only sidebar, a mobile-nav focus trap, and Lucide adopted as the one icon library | No | No (closes eight long-standing technical-debt items across CRM/Finance/Production/frontend tooling) |
 
 ## Change log
 

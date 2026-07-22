@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import type { ReportPeriod } from "@/lib/types";
-import { REPORT_PERIODS } from "@/lib/types";
 
 export type DateRangeValue = {
   period: ReportPeriod;
@@ -37,7 +36,7 @@ export function DateRangeFilter({
               : "border border-border bg-surface text-text-primary hover:bg-bg"
           }`}
         >
-          {t(`period_${preset}` as any)}
+          {t(`period_${preset}` as Parameters<typeof t>[0])}
         </button>
       ))}
 

@@ -411,7 +411,7 @@ export default function DashboardPage() {
                 <Card className="p-6">
                   <CardHeader title={tReports("ordersByStatus")} />
                   <StatusBarList
-                    data={executive.orders_by_status.map((r) => ({ label: tOrders(r.status as any), count: r.count }))}
+                    data={executive.orders_by_status.map((r) => ({ label: tOrders(r.status as Parameters<typeof tOrders>[0]), count: r.count }))}
                     emptyLabel={tReports("noDataPeriod")}
                   />
                 </Card>

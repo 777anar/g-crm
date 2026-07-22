@@ -352,7 +352,7 @@ export default function ProjectDetailPage() {
   }
 
   function roomLabel(room: Room) {
-    const typeLabel = t(`roomType_${room.room_type}` as any);
+    const typeLabel = t(`roomType_${room.room_type}` as Parameters<typeof t>[0]);
     return room.name ? `${typeLabel} — ${room.name}` : typeLabel;
   }
 
@@ -362,7 +362,7 @@ export default function ProjectDetailPage() {
   }
 
   function itemLabel(item: ProjectItem) {
-    const typeLabel = t(`itemType_${item.item_type}` as any);
+    const typeLabel = t(`itemType_${item.item_type}` as Parameters<typeof t>[0]);
     return item.name ? `${typeLabel} — ${item.name}` : typeLabel;
   }
 
@@ -407,7 +407,7 @@ export default function ProjectDetailPage() {
         <div>
           <h1 className="text-xl font-semibold text-text-primary">{project.name}</h1>
           <p className="text-sm text-text-secondary">
-            {t(`projectType_${project.project_type || "other"}` as any)}
+            {t(`projectType_${project.project_type || "other"}` as Parameters<typeof t>[0])}
             {project.address ? ` · ${project.address}` : ""}
           </p>
         </div>
@@ -437,7 +437,7 @@ export default function ProjectDetailPage() {
                 tab === key ? "bg-primary text-white" : "text-text-secondary hover:bg-bg"
               }`}
             >
-              {t(`tab${key.charAt(0).toUpperCase()}${key.slice(1)}` as any)}
+              {t(`tab${key.charAt(0).toUpperCase()}${key.slice(1)}` as Parameters<typeof t>[0])}
             </button>
           )
         )}
@@ -509,7 +509,7 @@ export default function ProjectDetailPage() {
                 <SelectField label={t("roomType")} value={newRoomType} onChange={(e) => setNewRoomType(e.target.value)}>
                   {PROJECT_ROOM_TYPES.map((rt) => (
                     <option key={rt} value={rt}>
-                      {t(`roomType_${rt}` as any)}
+                      {t(`roomType_${rt}` as Parameters<typeof t>[0])}
                     </option>
                   ))}
                 </SelectField>
@@ -549,7 +549,7 @@ export default function ProjectDetailPage() {
                     <SelectField label={t("itemType")} value={newItemType} onChange={(e) => setNewItemType(e.target.value)}>
                       {PROJECT_ITEM_TYPES.map((it) => (
                         <option key={it} value={it}>
-                          {t(`itemType_${it}` as any)}
+                          {t(`itemType_${it}` as Parameters<typeof t>[0])}
                         </option>
                       ))}
                     </SelectField>
@@ -786,7 +786,7 @@ export default function ProjectDetailPage() {
                 <td className="px-4 py-2 text-text-secondary">{m.area_m2 ?? tCommon("dash")}</td>
                 <td className="px-4 py-2 text-text-secondary">{m.measurer_name || tCommon("dash")}</td>
                 <td className="px-4 py-2 text-text-secondary">{m.measured_at ? formatDate(m.measured_at) : tCommon("dash")}</td>
-                <td className="px-4 py-2 text-text-secondary">{t(`measurementStatus_${m.status}` as any)}</td>
+                <td className="px-4 py-2 text-text-secondary">{t(`measurementStatus_${m.status}` as Parameters<typeof t>[0])}</td>
               </tr>
             ))
           }
@@ -803,7 +803,7 @@ export default function ProjectDetailPage() {
             (drawingsByItem[item.id] || []).map((d) => (
               <tr key={d.id} className="border-b border-border last:border-0">
                 <td className="px-4 py-2 text-text-primary">{itemLabel(item)}</td>
-                <td className="px-4 py-2 text-text-secondary">{t(`drawingType_${d.drawing_type}` as any)}</td>
+                <td className="px-4 py-2 text-text-secondary">{t(`drawingType_${d.drawing_type}` as Parameters<typeof t>[0])}</td>
                 <td className="px-4 py-2 text-text-secondary">{d.label || tCommon("dash")}</td>
               </tr>
             ))
@@ -850,7 +850,7 @@ export default function ProjectDetailPage() {
                     >
                       <option value="">—</option>
                       {PROD_STATUSES.map((s) => (
-                        <option key={s} value={s}>{tOrders(`prodStatus_${s}` as any)}</option>
+                        <option key={s} value={s}>{tOrders(`prodStatus_${s}` as Parameters<typeof tOrders>[0])}</option>
                       ))}
                     </select>
                   </td>
@@ -885,7 +885,7 @@ export default function ProjectDetailPage() {
                     >
                       <option value="">—</option>
                       {INST_STATUSES.map((s) => (
-                        <option key={s} value={s}>{tOrders(`instStatus_${s}` as any)}</option>
+                        <option key={s} value={s}>{tOrders(`instStatus_${s}` as Parameters<typeof tOrders>[0])}</option>
                       ))}
                     </select>
                   </td>
@@ -932,7 +932,7 @@ export default function ProjectDetailPage() {
                       >
                         <option value="">—</option>
                         {COMPLETION_STATUSES.map((s) => (
-                          <option key={s} value={s}>{t(`completionStatus_${s}` as any)}</option>
+                          <option key={s} value={s}>{t(`completionStatus_${s}` as Parameters<typeof t>[0])}</option>
                         ))}
                       </select>
                     </td>
@@ -1104,7 +1104,7 @@ function ProjectItemRow({
               <div key={m.id} className="mb-1 flex items-center justify-between rounded border border-border bg-bg px-2 py-1 text-xs">
                 <span>
                   #{m.revision_number} · {m.length_mm ?? "—"}×{m.width_mm ?? "—"}mm · {m.area_m2 ?? "—"}m² ·{" "}
-                  {m.measurer_name || "—"} · {t(`measurementStatus_${m.status}` as any)}
+                  {m.measurer_name || "—"} · {t(`measurementStatus_${m.status}` as Parameters<typeof t>[0])}
                   {m.customer_signature_document_id ? ` · ${t("signatureAttached")}` : ""}
                 </span>
                 <span className="flex items-center gap-2">
@@ -1156,14 +1156,14 @@ function ProjectItemRow({
             <h3 className="mb-2 text-xs font-semibold uppercase text-text-secondary">{t("tabDrawings")}</h3>
             {(drawings || []).map((d) => (
               <div key={d.id} className="mb-1 flex items-center justify-between rounded border border-border bg-bg px-2 py-1 text-xs">
-                <span>{t(`drawingType_${d.drawing_type}` as any)} · {d.label || "—"}</span>
+                <span>{t(`drawingType_${d.drawing_type}` as Parameters<typeof t>[0])} · {d.label || "—"}</span>
                 <button onClick={() => onDeleteDrawing(d.id)} className="text-danger hover:underline">✕</button>
               </div>
             ))}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <select className={inputClasses} value={drawingType} onChange={(e) => setDrawingType(e.target.value)}>
                 {["dwg", "dxf", "sketch", "pdf"].map((dt) => (
-                  <option key={dt} value={dt}>{t(`drawingType_${dt}` as any)}</option>
+                  <option key={dt} value={dt}>{t(`drawingType_${dt}` as Parameters<typeof t>[0])}</option>
                 ))}
               </select>
               <input

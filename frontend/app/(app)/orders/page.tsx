@@ -88,7 +88,7 @@ export default function OrdersPage() {
         >
           <option value="">{tCommon("allStatuses")}</option>
           {ORDER_STATUSES.map((s) => (
-            <option key={s} value={s}>{t(s as any)}</option>
+            <option key={s} value={s}>{t(s as Parameters<typeof t>[0])}</option>
           ))}
         </select>
       </div>

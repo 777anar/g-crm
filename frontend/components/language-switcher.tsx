@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { ChevronDown } from "lucide-react";
 import { useLocaleSwitcher } from "@/lib/i18n/locale-context";
 import { SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
 import { DropdownItem, DropdownPanel, useDropdown } from "@/components/ui/dropdown";
@@ -26,9 +27,7 @@ export function LanguageSwitcher() {
       >
         <span aria-hidden>{LOCALE_FLAG[locale]}</span>
         <span className="uppercase">{locale}</span>
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-text-secondary" aria-hidden>
-          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <ChevronDown size={12} strokeWidth={1.5} className="text-text-secondary" aria-hidden />
       </button>
 
       {open && (

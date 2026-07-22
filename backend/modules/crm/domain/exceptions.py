@@ -6,6 +6,10 @@ class CustomerAlreadyArchivedError(CRMDomainError):
     pass
 
 
+class CustomerNotArchivedError(CRMDomainError):
+    """Raised when trying to restore a customer that is not currently archived."""
+
+
 class LeadAlreadyConvertedError(CRMDomainError):
     pass
 

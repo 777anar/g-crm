@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Columns3 } from "lucide-react";
 import { useLocalStorageState } from "@/lib/use-local-storage-state";
 import { useCloseOnEscape, useOutsideClick } from "@/lib/use-outside-click";
 
@@ -61,11 +62,7 @@ export function ColumnVisibilityMenu({
         aria-expanded={open}
         className="flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-primary hover:bg-bg"
       >
-        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
-          <rect x="1" y="1" width="3.5" height="12" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
-          <rect x="5.5" y="1" width="3.5" height="12" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
-          <rect x="10" y="1" width="3.5" height="12" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
-        </svg>
+        <Columns3 size={13} strokeWidth={1.2} aria-hidden />
         {t("columns")}
       </button>
       {open && (

@@ -62,6 +62,13 @@ class ArchiveCustomerInput:
 
 
 @dataclass
+class RestoreCustomerInput:
+    company_id: uuid.UUID
+    actor_user_id: uuid.UUID
+    customer_id: uuid.UUID
+
+
+@dataclass
 class AddCustomerNoteInput:
     company_id: uuid.UUID
     actor_user_id: uuid.UUID

@@ -103,7 +103,7 @@ export default function NewMaterialPage() {
               <option value="">{tCommon("dash")}</option>
               {SUGGESTED_MATERIAL_TYPES.map((type) => (
                 <option key={type} value={type}>
-                  {t(materialTypeKey(type) as any)}
+                  {t(materialTypeKey(type) as Parameters<typeof t>[0])}
                 </option>
               ))}
             </SelectField>

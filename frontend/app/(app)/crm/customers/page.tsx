@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { archiveCustomer, exportCustomers, listCustomers, updateCustomer } from "@/lib/api/crm";
+import { archiveCustomer, exportCustomers, listCustomers, restoreCustomer, updateCustomer } from "@/lib/api/crm";
 import { CUSTOMER_STATUSES, type Customer, type CustomerStatus } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { CustomerArchivedBadge, LeadChannelBadge } from "@/components/ui/badge";
@@ -27,6 +27,7 @@ import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import { useCustomerStatusLabel } from "@/lib/i18n/hooks";
+import { usePermission } from "@/lib/permissions";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useListShortcuts } from "@/lib/use-list-shortcuts";
 import { useUrlFilters } from "@/lib/use-url-filters";
@@ -55,6 +56,7 @@ function CustomersListPageInner() {
   const router = useRouter();
   const confirm = useConfirm();
   const toast = useToast();
+  const canWrite = usePermission("crm:customers:write");
 
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -64,6 +66,7 @@ function CustomersListPageInner() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<CustomerStatus | "">("");
@@ -217,6 +220,19 @@ function CustomersListPageInner() {
     }
   }
 
+  async function handleQuickRestore(customerId: string) {
+    setRestoringId(customerId);
+    try {
+      await restoreCustomer(customerId);
+      toast.success(t("restored"));
+      reload();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("restoreFailed"));
+    } finally {
+      setRestoringId(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <SalesSectionTabs />
@@ -226,9 +242,11 @@ function CustomersListPageInner() {
           <h1 className="text-xl font-semibold text-text-primary">{t("title")}</h1>
           <p className="text-sm text-text-secondary">{t("subtitle")}</p>
         </div>
-        <Link href="/crm/customers/new">
-          <Button>{t("createCustomer")}</Button>
-        </Link>
+        {canWrite && (
+          <Link href="/crm/customers/new">
+            <Button>{t("createCustomer")}</Button>
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -285,7 +303,7 @@ function CustomersListPageInner() {
         onRemove={savedFilters.remove}
       />
 
-      {selected.size > 0 && (
+      {canWrite && selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface px-3 py-2">
           <span className="text-sm font-medium text-text-primary">{t("selectedCount", { count: selected.size })}</span>
           <Button variant="secondary" onClick={() => setSelected(new Set())}>
@@ -337,12 +355,14 @@ function CustomersListPageInner() {
             <thead className={stickyTheadClass}>
               <tr>
                 <th className="w-8 px-4 py-2">
-                  <input
-                    type="checkbox"
-                    aria-label={t("selectAllCustomers")}
-                    checked={selected.size > 0 && selected.size === customers.length}
-                    onChange={toggleSelectAll}
-                  />
+                  {canWrite && (
+                    <input
+                      type="checkbox"
+                      aria-label={t("selectAllCustomers")}
+                      checked={selected.size > 0 && selected.size === customers.length}
+                      onChange={toggleSelectAll}
+                    />
+                  )}
                 </th>
                 {isVisible("name") && (
                   <SortableHeader
@@ -401,12 +421,14 @@ function CustomersListPageInner() {
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-bg"
                 >
                   <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      aria-label={t("selectCustomer", { name: customer.name })}
-                      checked={selected.has(customer.id)}
-                      onChange={() => toggleSelected(customer.id)}
-                    />
+                    {canWrite && (
+                      <input
+                        type="checkbox"
+                        aria-label={t("selectCustomer", { name: customer.name })}
+                        checked={selected.has(customer.id)}
+                        onChange={() => toggleSelected(customer.id)}
+                      />
+                    )}
                   </td>
                   {isVisible("name") && (
                     <td className="px-4 py-2">
@@ -447,8 +469,20 @@ function CustomersListPageInner() {
                     <td className="px-4 py-2 text-text-secondary">{formatDate(customer.created_at)}</td>
                   )}
                   {isVisible("archived") && (
-                    <td className="px-4 py-2">
-                      <CustomerArchivedBadge archived={customer.deleted_at !== null} />
+                    <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        <CustomerArchivedBadge archived={customer.deleted_at !== null} />
+                        {canWrite && customer.deleted_at !== null && (
+                          <button
+                            type="button"
+                            onClick={() => handleQuickRestore(customer.id)}
+                            disabled={restoringId === customer.id}
+                            className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
+                          >
+                            {restoringId === customer.id ? t("restoring") : t("restoreCustomer")}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
