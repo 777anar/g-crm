@@ -53,6 +53,7 @@ class CreateSlabUseCase:
             created_by=data.actor_user_id,
             parent_slab_id=data.parent_slab_id,
             is_offcut=data.is_offcut,
+            image_document_id=data.image_document_id,
         )
         self.slabs.add(slab)
 

@@ -273,6 +273,36 @@ export function createOffcut(
   return apiRequest<Slab>(`/api/v1/catalog/slabs/${slabId}/offcuts`, { method: "POST", body: input });
 }
 
+// --- Offcut Library (Phase 2) ---------------------------------------------
+
+export function searchOffcuts(
+  params: {
+    materialId?: string;
+    thicknessMm?: string;
+    finish?: string;
+    warehouseId?: string;
+    minLengthMm?: string;
+    minWidthMm?: string;
+    minAreaM2?: string;
+    search?: string;
+    limit?: number;
+  } = {}
+) {
+  return apiRequest<{ items: Slab[] }>("/api/v1/catalog/slabs/offcuts", {
+    searchParams: {
+      material_id: params.materialId,
+      thickness_mm: params.thicknessMm,
+      finish: params.finish,
+      warehouse_id: params.warehouseId,
+      min_length_mm: params.minLengthMm,
+      min_width_mm: params.minWidthMm,
+      min_area_m2: params.minAreaM2,
+      search: params.search || undefined,
+      limit: params.limit,
+    },
+  });
+}
+
 // --- Price Lists ---------------------------------------------------------
 
 export function listPriceLists(params: { includeHidden?: boolean } = {}) {

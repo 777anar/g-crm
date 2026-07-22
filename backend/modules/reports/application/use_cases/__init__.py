@@ -3,6 +3,7 @@ from modules.reports.application.use_cases.finance_analytics_use_case import Fin
 from modules.reports.application.use_cases.installation_analytics_use_case import InstallationAnalyticsUseCase
 from modules.reports.application.use_cases.inventory_analytics_use_case import InventoryAnalyticsUseCase
 from modules.reports.application.use_cases.production_analytics_use_case import ProductionAnalyticsUseCase
+from modules.reports.application.use_cases.production_planning_use_case import ProductionPlanningUseCase
 from modules.reports.application.use_cases.sales_analytics_use_case import SalesAnalyticsUseCase
 
 __all__ = [
@@ -11,5 +12,6 @@ __all__ = [
     "InstallationAnalyticsUseCase",
     "InventoryAnalyticsUseCase",
     "ProductionAnalyticsUseCase",
+    "ProductionPlanningUseCase",
     "SalesAnalyticsUseCase",
 ]

@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -33,6 +34,7 @@ from modules.catalog.infrastructure.repositories.slab_repository import SlabRepo
 from modules.catalog.infrastructure.repositories.slab_reservation_repository import SlabReservationRepository
 from modules.catalog.presentation.schemas.slab import (
     OffcutCreate,
+    OffcutListOut,
     SlabCreate,
     SlabListOut,
     SlabOut,
@@ -75,6 +77,42 @@ def list_slabs(
     page = items[:limit]
     next_cursor = encode_cursor(offset=offset + limit) if has_more else None
     return SlabListOut(items=[SlabOut.model_validate(s) for s in page], next_cursor=next_cursor)
+
+
+@router.get("/slabs/offcuts", response_model=OffcutListOut)
+def search_offcuts(
+    material_id: Optional[uuid.UUID] = Query(default=None),
+    thickness_mm: Optional[str] = Query(default=None),
+    finish: Optional[str] = Query(default=None),
+    warehouse_id: Optional[uuid.UUID] = Query(default=None),
+    min_length_mm: Optional[str] = Query(default=None),
+    min_width_mm: Optional[str] = Query(default=None),
+    min_area_m2: Optional[str] = Query(default=None),
+    search: Optional[str] = Query(default=None, description="Matches slab number"),
+    limit: int = Query(default=50, le=200),
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("catalog:slabs:read")),
+) -> OffcutListOut:
+    """The Offcut Library search (Phase 2 requirement #3) -- always
+    `is_offcut=true` and `status=available`, filterable by material,
+    thickness, finish, warehouse, minimum usable dimensions, and minimum
+    available area. Registered ahead of `GET /slabs/{slab_id}` below so
+    the literal `offcuts` path segment is never swallowed by that
+    catch-all id route."""
+    repo = SlabRepository(db)
+    items = repo.search_offcuts(
+        company_id=current_user.active_company_id,
+        material_id=material_id,
+        thickness_mm=thickness_mm,
+        finish=finish,
+        warehouse_id=warehouse_id,
+        min_length_mm=Decimal(min_length_mm) if min_length_mm else None,
+        min_width_mm=Decimal(min_width_mm) if min_width_mm else None,
+        min_area_m2=Decimal(min_area_m2) if min_area_m2 else None,
+        search=search,
+        limit=limit,
+    )
+    return OffcutListOut(items=[SlabOut.model_validate(s) for s in items])
 
 
 @router.post("/slabs", response_model=SlabOut)

@@ -103,6 +103,7 @@ class CreateSlabInput(ActorContext):
     status: Optional[str] = None
     parent_slab_id: Optional[uuid.UUID] = None
     is_offcut: bool = False
+    image_document_id: Optional[uuid.UUID] = None
 
 
 @dataclass

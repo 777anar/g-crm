@@ -19,6 +19,7 @@ from modules.reports.application.use_cases import (
     InstallationAnalyticsUseCase,
     InventoryAnalyticsUseCase,
     ProductionAnalyticsUseCase,
+    ProductionPlanningUseCase,
     SalesAnalyticsUseCase,
 )
 from modules.reports.domain.value_objects import (
@@ -33,6 +34,7 @@ from modules.reports.presentation.schemas.reports import (
     InstallationAnalyticsOut,
     InventoryAnalyticsOut,
     ProductionAnalyticsOut,
+    ProductionPlanningOut,
     SalesAnalyticsOut,
 )
 
@@ -141,6 +143,21 @@ def get_inventory_analytics(
         _filter_input(current_user=current_user, period=period, date_from=date_from, date_to=date_to)
     )
     return InventoryAnalyticsOut(**data)
+
+
+@router.get("/production-planning", response_model=ProductionPlanningOut)
+def get_production_planning(
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("reports:read")),
+) -> ProductionPlanningOut:
+    """Phase 2 requirement #5. A live snapshot like Inventory Analytics --
+    no date range affects which jobs are on the shop floor right now, so
+    none is accepted here."""
+    data = ProductionPlanningUseCase(db).execute(
+        _filter_input(current_user=current_user, period=DEFAULT_REPORT_PERIOD, date_from=None, date_to=None)
+    )
+    db.commit()  # only write this read-mostly endpoint can cause: lazily seeding default stages
+    return ProductionPlanningOut(**data)
 
 
 @router.get("/{report_type}/export/{export_format}")

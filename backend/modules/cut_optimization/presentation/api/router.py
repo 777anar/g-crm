@@ -1,0 +1,3 @@
+from modules.cut_optimization.presentation.api.cut_optimization import router as cut_optimization_router
+
+cut_optimization_router_main = cut_optimization_router

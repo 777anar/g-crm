@@ -1,7 +1,7 @@
 # G-ERP — Database Design
 
 _Originally a Phase 1 design document (2026-06-29); rewritten 2026-07-21 against the actual current SQLAlchemy models (every `infrastructure/models/*.py` file in `backend/`, not the original design) to close `PROJECT_AUDIT.md` Priority #4 — the previous revision described a superseded Phase-1 CRM/Sales schema that was never actually built that way, and still listed Production/Installation/Finance as "conceptual, not migrated" long after all three shipped._
-_Status: covers every table in every one of the thirteen installed modules, as implemented as of Version 2.33.0, verified directly against model source files and Alembic migrations._
+_Status: covers every table in every one of the fourteen installed modules, as implemented as of Version 2.35.0, verified directly against model source files and Alembic migrations._
 
 ---
 
@@ -16,7 +16,7 @@ _Status: covers every table in every one of the thirteen installed modules, as i
 - Several business-date columns (`scheduled_date`, `expense_date`, `valid_until`, etc.) are stored as plain `TEXT(10)` ISO date strings rather than a `DATE` column — a deliberate SQLite/Postgres portability choice made early and kept consistent since, not an inconsistency to "fix."
 - Status/enum-like columns are plain `TEXT` with the valid-value set enforced in the domain layer (`domain/value_objects.py` per module, typically a `VALID_*` frozenset plus, for stateful entities, an explicit transition graph), not a DB-level `CHECK` constraint or native enum type — this is a real, consistent choice across every module, not a Phase-1-only shortcut.
 
-## 2. Entity-Relationship Diagram (current, all thirteen installed modules)
+## 2. Entity-Relationship Diagram (current, all fourteen installed modules)
 
 ```
 companies ──┬──────< user_company_roles >────────────────── users
@@ -363,8 +363,11 @@ Normalized per-Stone option lists — a Stone can be offered in several thicknes
 | status | TEXT | NOT NULL, DEFAULT `available`, indexed — full lifecycle as of Version 2.34.0 (Stone Fabrication Workflow Phase 1): `received`\|`available`\|`reserved`\|`in_production`\|`offcut_created`\|`consumed`\|`sold`\|`scrap`, a domain-layer transition graph (`offcut_created`/`consumed`/`sold`/`scrap` terminal). `received`/`consumed`/`offcut_created` are additive to the original five ­— existing rows/behavior for `available`/`reserved`/`in_production`/`sold`/`scrap` are unchanged |
 | parent_slab_id | UUID | nullable, REFERENCES catalog_slabs(id), indexed — **Version 2.34.0.** Set on an offcut/remnant slab registered from a parent slab that was cut in Production; self-referential, no cascade |
 | is_offcut | BOOLEAN | NOT NULL, DEFAULT `false` — **Version 2.34.0.** Flags a slab as a registered remnant rather than an originally-received piece; otherwise behaves as a completely normal, independently reservable `Slab` row |
+| image_document_id | UUID | nullable, REFERENCES documents(id) — **Version 2.35.0.** A placeholder for a real photo of the slab/offcut, same single-optional-image pattern as `catalog_brands.logo_document_id`; the frontend renders a generic placeholder graphic whenever this is unset (no upload flow was built for it yet — see the Phase 2 report's limitations) |
 
 A Slab is consumed by exactly one `work_order_items` row once fabrication starts (§8.2).
+
+**Offcut Library (Version 2.35.0, Phase 2 requirement #3)** is a query surface over this same table, not a new one — `GET /catalog/slabs/offcuts` (§11 of `API_SPECIFICATION.md`) filters `is_offcut=true AND status='available'`, joined against `catalog_materials` for `thickness_mm`/`finish`, with optional minimum-dimension/area filters. Deliberately not a separate table: an offcut is a completely normal physical slab, and a parallel table would just be a second, driftable source of truth for the same row.
 
 ### 5.6a `catalog_slab_reservations` (Material Reservation, Version 2.34.0)
 The durable, queryable record of "this slab is allocated to this order item" — richer than `catalog_slabs.status` alone, which only tells you a slab *is* reserved, never for whom. Owned by Catalog (not Production or Orders) so every module downstream of Catalog can create/consult reservations without Catalog ever having to depend on them.
@@ -542,6 +545,9 @@ One row per change to a work order's status/stage/priority/assigned operator —
 | notes | TEXT | nullable |
 | changed_by | UUID | nullable, REFERENCES users(id) |
 | changed_at | TIMESTAMPTZ | nullable |
+
+### 8.6 Production Planning Dashboard (Version 2.35.0, Phase 2 requirement #5)
+No new table — `GET /reports/production-planning` (Reports module, which gained `"production"` in its `depends_on` this version) is a live read over `work_orders`/`production_stages` plus `orders`/`crm_customers` for enrichment, computing `is_overdue` (`scheduled_completion_date` earlier than today) and per-operator workload counts entirely in the application layer at request time — nothing here is denormalized or cached.
 
 ## 9. Installation Module Tables
 
@@ -772,9 +778,35 @@ _A module beyond the original ten-module plan — same category as Communication
 
 **No new tables for Orders/Quotes/Invoices/InstallationJobs/Documents.** The customer-facing read endpoints query the existing tables from §6 (`sales_quotes`), §7 (`orders`), §9 (`installation_jobs`), §10 (`invoices`), and §3 (`documents`) directly, scoped to `(company_id, customer_id)` from the caller's token — never a client-supplied filter. Response shapes are deliberately whitelisted at the Pydantic layer (`PortalOrderOut`/`PortalQuoteOut`/etc.), never a raw `model_validate()` of the staff-facing schemas: `orders.total_internal_cost`/`total_profit` and `sales_quotes.total_internal_cost`/`total_profit`/`profit_margin_pct`/`internal_notes` (real COGS/margin data) are never returned to a customer. `sales_quotes`/`invoices` rows with `status = 'draft'` are excluded from every customer-facing query entirely (`404` on direct fetch by id) — a customer never sees an internal working copy before staff sends it.
 
-## 16. Unbuilt Modules (conceptual only)
+## 16. Cut Optimization Module Tables (Version 2.35.0 — Stone Fabrication Workflow Phase 2)
 
-Every module named in the original 10-module roadmap has now shipped (`PROJECT_AUDIT.md` §3; Purchasing in Version 2.31.0, Marketing in Version 2.32.0). Nothing remains in this section — kept as a placeholder heading so downstream section numbers below don't shift again if a genuinely new module is proposed later.
+_The section previously reserved here as "Unbuilt Modules (conceptual only)" is exactly what this heading number was held open for: a genuinely new module proposed after every module on the original ten-module roadmap had shipped. `depends_on=["catalog"]` — reads `catalog_materials`/`catalog_slabs` directly for dimensions and offcut candidates; nothing downstream of Cut Optimization exists yet, so nothing depends back on it._
+
+### 16.1 `cut_optimization_runs` (Optimization History, Phase 2 requirement #4)
+One immutable row per run of the nesting algorithm (`API_SPECIFICATION.md` §23) — a snapshot of exactly what was requested and what the algorithm computed, so "reopen this layout" is a plain read, never a recompute.
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| material_id | UUID | nullable, REFERENCES catalog_materials(id), indexed |
+| slab_id | UUID | nullable, REFERENCES catalog_slabs(id), indexed — null when the run was against hypothetical (not-yet-purchased) dimensions rather than a real slab |
+| source | TEXT(30) | NOT NULL, DEFAULT `manual`, indexed — `manual` (a direct run) or `offcut_recommendation` (auto-persisted as the winning candidate of a Smart Offcut search) |
+| slab_length_mm / slab_width_mm | NUMERIC(10,2) | NOT NULL |
+| kerf_mm | NUMERIC(6,2) | NOT NULL |
+| pieces | JSON | NOT NULL — the requested piece list (`label`, `length_mm`, `width_mm`, `quantity`, `allow_rotation`) |
+| placements | JSON | NOT NULL — one entry per placed piece instance (`label`, `instance_index`, `x_mm`, `y_mm`, `length_mm`, `width_mm`, `rotated`), in real millimeter coordinates so the frontend SVG renders directly via `viewBox` with no unit conversion |
+| unplaced | JSON | NOT NULL, DEFAULT `[]` — pieces that didn't fit, each with a `reason` |
+| total_area_m2 / placed_area_m2 / waste_area_m2 | NUMERIC(10,3) | NOT NULL |
+| utilization_pct | NUMERIC(5,2) | NOT NULL |
+| related_order_item_id / related_quote_item_id | UUID | nullable, indexed — **plain UUID, no FK**, the same polymorphic-reference pattern as `catalog_slab_reservations.order_id` (§5.6a), so Cut Optimization never has to depend on Sales or Orders |
+| notes | TEXT | nullable |
+| created_by | UUID | nullable, REFERENCES users(id) |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL |
+
+**Why JSON, not normalized child tables**: a run is written once and read back whole (reopen = one row fetch); there is no query need to filter or aggregate across individual placements, so normalizing would add join overhead for zero benefit — deliberately different from, say, `sales_quote_section_items`, which genuinely is queried/edited row-by-row.
+
+**The nesting algorithm itself** (shelf/guillotine packing, largest-piece-first, best-fit-decreasing-width tie-break) is pure domain logic (`modules/cut_optimization/domain/cutting_algorithm.py`) with no database dependency at all — it operates purely on the `pieces` input and returns the `placements`/`unplaced`/area figures that get persisted above.
 
 ## 17. Row-Level Security Strategy
 
@@ -794,7 +826,7 @@ CREATE POLICY tenant_isolation ON crm_customers
 
 ## 18. Migration Strategy
 
-- Alembic revision history is a single linear chain (currently 22 migrations deep, head `67e0a8a55a5a` — `stone_fabrication_workflow_phase1`, Version 2.34.0) — unified at the database level, but each module owns the migration scripts that create/alter its own tables.
+- Alembic revision history is a single linear chain (currently 23 migrations deep, head `98b251470b25` — `cut_optimization_phase2`, Version 2.35.0) — unified at the database level, but each module owns the migration scripts that create/alter its own tables.
 - Core platform tables (`companies`, `users`, `user_company_roles`, `documents`, `audit_log`, `event_log`, `ai_jobs`) were created in the earliest migration, before any module's tables.
 - **Correction from the previous revision of this document**: there is no CI step that runs `alembic upgrade head` against a disposable database on every PR — that claim was aspirational, not built. What actually runs today: the test suite (`pytest`, wired into `.github/workflows/ci.yml` as of Version 2.28.0) builds its schema via SQLAlchemy's `Base.metadata.create_all()` directly from the current model definitions, entirely bypassing the Alembic migration chain — so a passing test suite does not, by itself, prove the migration chain is consistent with the models. `alembic check` (run manually, most recently confirmed clean during the Version 2.28.0 audit pass) is the actual verification that the migration chain matches the models; it is not yet part of the CI workflow. A real gap worth closing in a future pass, not claimed as already closed here.
 - Module removal does not auto-drop tables; a deliberate downgrade migration is required if data removal is intended.

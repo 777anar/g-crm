@@ -28,6 +28,7 @@ from modules.ai.infrastructure import models as ai_models  # noqa: F401
 from modules.purchasing.infrastructure import models as purchasing_models  # noqa: F401
 from modules.marketing.infrastructure import models as marketing_models  # noqa: F401
 from modules.customer_portal.infrastructure import models as customer_portal_models  # noqa: F401
+from modules.cut_optimization.infrastructure import models as cut_optimization_models  # noqa: F401
 
 
 @pytest.fixture()

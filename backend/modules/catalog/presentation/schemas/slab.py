@@ -50,6 +50,7 @@ class SlabOut(BaseModel):
     status: str
     parent_slab_id: Optional[uuid.UUID] = None
     is_offcut: bool = False
+    image_document_id: Optional[uuid.UUID] = None
     created_at: datetime
     updated_at: datetime
 
@@ -57,6 +58,17 @@ class SlabOut(BaseModel):
 class SlabListOut(BaseModel):
     items: list[SlabOut]
     next_cursor: Optional[str] = None
+
+
+class OffcutListOut(BaseModel):
+    """Offcut Library search results (Phase 2). Unlike the main Slab list,
+    this is unbounded per page up to a generous cap rather than cursor-
+    paginated -- offcut inventory is naturally small per company (it's a
+    subset of an already-small slab table), the same "genuinely small,
+    per-tenant" reasoning this codebase already applies to Warehouses/
+    Price Lists."""
+
+    items: list[SlabOut]
 
 
 class SlabReservationCreate(BaseModel):

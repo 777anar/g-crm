@@ -199,3 +199,42 @@ class InventoryAnalyticsOut(BaseModel):
     kpis: InventoryKpis
     slabs_by_status: List[StatusCount]
     available_slabs_by_warehouse: List[WarehouseCount]
+
+
+# ── Production Planning Dashboard (Phase 2) ──────────────────────────────────
+
+class ProductionPlanningStageOut(BaseModel):
+    id: str
+    name: str
+    sort_order: int
+
+
+class ProductionPlanningJobOut(BaseModel):
+    id: str
+    work_order_number: str
+    order_id: str
+    order_number: str
+    customer_name: Optional[str]
+    status: str
+    priority: str
+    stage_id: Optional[str]
+    stage_name: Optional[str]
+    assigned_to: Optional[str]
+    assigned_operator_name: Optional[str]
+    due_date: Optional[str]
+    is_overdue: bool
+
+
+class OperatorWorkloadOut(BaseModel):
+    operator_id: str
+    operator_name: str
+    job_count: int
+    overdue_count: int
+
+
+class ProductionPlanningOut(BaseModel):
+    stages: List[ProductionPlanningStageOut]
+    jobs: List[ProductionPlanningJobOut]
+    operator_workload: List[OperatorWorkloadOut]
+    overdue_count: int
+    total_active_jobs: int

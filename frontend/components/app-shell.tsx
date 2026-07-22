@@ -57,6 +57,8 @@ const SECONDARY_ROUTES = [
   { labelKey: "suppliers", href: "/purchasing/suppliers" },
   { labelKey: "purchaseOrders", href: "/purchasing/orders" },
   { labelKey: "campaigns", href: "/marketing/campaigns" },
+  { labelKey: "cutOptimization", href: "/cut-optimization" },
+  { labelKey: "offcutLibrary", href: "/catalog/offcuts" },
 ] as const;
 
 // Minimal inline line-icons matched to each section, drawn in the same style

@@ -289,6 +289,7 @@ export type Slab = {
   status: SlabStatus;
   parent_slab_id: string | null;
   is_offcut: boolean;
+  image_document_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -304,6 +305,78 @@ export type SlabReservation = {
   reserved_at: string | null;
   released_at: string | null;
   created_at: string;
+};
+
+// ── Cut Optimization module (Phase 2) ─────────────────────────────────────────
+
+export type PieceSpec = {
+  label: string;
+  length_mm: string;
+  width_mm: string;
+  quantity: number;
+  allow_rotation: boolean;
+};
+
+export type PlacedPiece = {
+  label: string;
+  instance_index: number;
+  x_mm: string;
+  y_mm: string;
+  length_mm: string;
+  width_mm: string;
+  rotated: boolean;
+};
+
+export type UnplacedPiece = {
+  label: string;
+  instance_index: number;
+  length_mm: string;
+  width_mm: string;
+  reason: string;
+};
+
+export const CUT_OPTIMIZATION_RUN_SOURCES = ["manual", "offcut_recommendation"] as const;
+export type CutOptimizationRunSource = (typeof CUT_OPTIMIZATION_RUN_SOURCES)[number];
+
+export type CutOptimizationRun = {
+  id: string;
+  material_id: string | null;
+  slab_id: string | null;
+  source: CutOptimizationRunSource;
+  slab_length_mm: string;
+  slab_width_mm: string;
+  kerf_mm: string;
+  pieces: PieceSpec[];
+  placements: PlacedPiece[];
+  unplaced: UnplacedPiece[];
+  total_area_m2: string;
+  placed_area_m2: string;
+  waste_area_m2: string;
+  utilization_pct: string;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type OffcutCandidate = {
+  slab_id: string;
+  slab_number: string;
+  warehouse_id: string;
+  slab_length_mm: string;
+  slab_width_mm: string;
+  fits: boolean;
+  utilization_pct: string;
+  waste_area_m2: string;
+  total_area_m2: string;
+  explanation: string;
+  placements: PlacedPiece[];
+};
+
+export type RecommendOffcutsResponse = {
+  candidates: OffcutCandidate[];
+  recommend_new_slab: boolean;
+  reason: string;
+  persisted_run_id: string | null;
 };
 
 export type PriceList = {
@@ -866,6 +939,41 @@ export type WorkOrderEvent = {
   changed_by: string | null;
   changed_at: string | null;
   created_at: string;
+};
+
+// ── Production Planning Dashboard (Phase 2) ───────────────────────────────────
+
+export type ProductionPlanningStage = { id: string; name: string; sort_order: number };
+
+export type ProductionPlanningJob = {
+  id: string;
+  work_order_number: string;
+  order_id: string;
+  order_number: string;
+  customer_name: string | null;
+  status: WorkOrderStatus;
+  priority: WorkOrderPriority;
+  stage_id: string | null;
+  stage_name: string | null;
+  assigned_to: string | null;
+  assigned_operator_name: string | null;
+  due_date: string | null;
+  is_overdue: boolean;
+};
+
+export type OperatorWorkload = {
+  operator_id: string;
+  operator_name: string;
+  job_count: number;
+  overdue_count: number;
+};
+
+export type ProductionPlanning = {
+  stages: ProductionPlanningStage[];
+  jobs: ProductionPlanningJob[];
+  operator_workload: OperatorWorkload[];
+  overdue_count: number;
+  total_active_jobs: number;
 };
 
 // ── Installation module ───────────────────────────────────────────────────────

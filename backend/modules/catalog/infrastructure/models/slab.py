@@ -40,3 +40,9 @@ class Slab(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # even though it's otherwise a normal, independently reservable Slab row.
     parent_slab_id: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("catalog_slabs.id"), nullable=True, index=True)
     is_offcut: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+
+    # Offcut Library (Phase 2): a placeholder for a real photo of the
+    # remnant -- same single-optional-image pattern as Brand.logo_document_id.
+    # The frontend renders a generic placeholder graphic whenever this is
+    # unset, exactly as Brand's own logo field has always allowed.
+    image_document_id: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("documents.id"), nullable=True)

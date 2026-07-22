@@ -9,7 +9,7 @@ in production).
 """
 import uuid
 from collections import defaultdict
-from datetime import datetime, time, timezone
+from datetime import date, datetime, time, timezone
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 
@@ -17,6 +17,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from core.audit.models import AuditLog
+from core.auth.models import User
 from modules.catalog.domain.value_objects import MATERIAL_STATUS_ACTIVE, SLAB_STATUS_AVAILABLE
 from modules.catalog.infrastructure.models.material import StoneMaterial
 from modules.catalog.infrastructure.models.slab import Slab
@@ -27,6 +28,8 @@ from modules.installation.infrastructure.models.crew import Crew
 from modules.installation.infrastructure.models.installation_job import InstallationJob
 from modules.orders.infrastructure.models.order import Order
 from modules.orders.infrastructure.models.order_item import OrderItem
+from modules.production.domain.value_objects import TERMINAL_WORK_ORDER_STATUSES
+from modules.production.infrastructure.models.work_order import WorkOrder
 from modules.reports.domain.value_objects import DateRange
 from modules.sales.infrastructure.models.project import Project
 from modules.sales.infrastructure.models.quote import Quote
@@ -299,3 +302,31 @@ class ReportsRepository:
             Warehouse.company_id == company_id, Warehouse.status == "active"
         )
         return self.db.scalar(stmt) or 0
+
+    # ── Production Planning Dashboard (Phase 2) ────────────────────────────────
+
+    def active_work_orders_with_order_and_customer(
+        self, *, company_id: uuid.UUID
+    ) -> List[Tuple[WorkOrder, Order, Optional[Customer]]]:
+        """Every work order not yet completed/cancelled -- the Production
+        Planning Dashboard's whole subject -- joined with its Order (for
+        the order number) and Customer (for a human-readable name), the
+        same enrichment shape Production's own `GET /production/{id}/job`
+        endpoint already assembles for a single job, here done for all of
+        them at once."""
+        stmt = (
+            select(WorkOrder, Order, Customer)
+            .join(Order, Order.id == WorkOrder.order_id)
+            .outerjoin(Customer, Customer.id == Order.customer_id)
+            .where(
+                WorkOrder.company_id == company_id,
+                WorkOrder.status.notin_(TERMINAL_WORK_ORDER_STATUSES),
+            )
+        )
+        return list(self.db.execute(stmt).all())
+
+    def user_names_by_id(self, *, company_id: uuid.UUID, user_ids) -> Dict[str, str]:
+        if not user_ids:
+            return {}
+        stmt = select(User.id, User.full_name).where(User.id.in_(user_ids))
+        return {str(user_id): name for user_id, name in self.db.execute(stmt).all()}

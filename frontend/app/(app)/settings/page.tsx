@@ -40,6 +40,9 @@ export default function SettingsPage() {
       heading: t("groupProduction"),
       items: [
         { title: t("productionStages"), description: t("productionStagesDesc"), href: "/production/stages" },
+        { title: tNav("cutOptimization"), description: t("cutOptimizationDesc"), href: "/cut-optimization" },
+        { title: tNav("offcutLibrary"), description: t("offcutLibraryDesc"), href: "/catalog/offcuts" },
+        { title: t("productionPlanning"), description: t("productionPlanningDesc"), href: "/reports/production-planning" },
       ],
     },
     {

@@ -5,6 +5,7 @@ import type {
   InstallationAnalytics,
   InventoryAnalytics,
   ProductionAnalytics,
+  ProductionPlanning,
   ReportPeriod,
   SalesAnalytics,
 } from "../types";
@@ -47,6 +48,10 @@ export function getFinanceAnalytics(params: ReportFilterParams = {}) {
 
 export function getInventoryAnalytics(params: ReportFilterParams = {}) {
   return apiRequest<InventoryAnalytics>(`${BASE}/inventory`, { searchParams: searchParams(params) });
+}
+
+export function getProductionPlanning() {
+  return apiRequest<ProductionPlanning>(`${BASE}/production-planning`);
 }
 
 export type ReportType = "executive" | "sales" | "production" | "installation" | "finance" | "inventory";
