@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from modules.catalog.infrastructure.models.material import StoneMaterial
 from modules.catalog.infrastructure.models.slab import Slab
 from modules.orders.infrastructure.models.order_item import OrderItem
 from modules.production.infrastructure.models.work_order_item import WorkOrderItem
@@ -33,6 +34,21 @@ class WorkOrderItemRepository:
             select(WorkOrderItem, OrderItem, Slab)
             .join(OrderItem, OrderItem.id == WorkOrderItem.order_item_id)
             .join(Slab, Slab.id == WorkOrderItem.slab_id)
+            .where(WorkOrderItem.company_id == company_id, WorkOrderItem.work_order_id == work_order_id)
+        )
+        return list(self.db.execute(stmt).all())
+
+    def list_with_material_details(
+        self, *, company_id: uuid.UUID, work_order_id: uuid.UUID
+    ) -> List[Tuple[WorkOrderItem, OrderItem, Slab, StoneMaterial]]:
+        """Joined view for the "Production Job" detail page -- adds the
+        Material row so thickness/finish can be shown per item without a
+        second round-trip."""
+        stmt = (
+            select(WorkOrderItem, OrderItem, Slab, StoneMaterial)
+            .join(OrderItem, OrderItem.id == WorkOrderItem.order_item_id)
+            .join(Slab, Slab.id == WorkOrderItem.slab_id)
+            .join(StoneMaterial, StoneMaterial.id == Slab.material_id)
             .where(WorkOrderItem.company_id == company_id, WorkOrderItem.work_order_id == work_order_id)
         )
         return list(self.db.execute(stmt).all())

@@ -37,6 +37,12 @@ export default function SettingsPage() {
       ],
     },
     {
+      heading: t("groupProduction"),
+      items: [
+        { title: t("productionStages"), description: t("productionStagesDesc"), href: "/production/stages" },
+      ],
+    },
+    {
       heading: t("groupPurchasing"),
       items: [
         { title: tNav("suppliers"), description: t("suppliersDesc"), href: "/purchasing/suppliers" },

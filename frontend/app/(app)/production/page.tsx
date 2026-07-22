@@ -7,7 +7,7 @@ import { listWorkOrders } from "@/lib/api/production";
 import { getOrder } from "@/lib/api/orders";
 import { WORK_ORDER_STATUSES, type WorkOrder } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { WorkOrderStatusBadge } from "@/components/ui/badge";
+import { WorkOrderPriorityBadge, WorkOrderStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
@@ -104,7 +104,9 @@ export default function ProductionPage() {
                 <tr>
                   <th className="px-4 py-2 font-medium">{t("tableWorkOrder")}</th>
                   <th className="px-4 py-2 font-medium">{t("tableStatus")}</th>
+                  <th className="px-4 py-2 font-medium">{t("tablePriority")}</th>
                   <th className="px-4 py-2 font-medium">{t("tableOrder")}</th>
+                  <th className="px-4 py-2 font-medium">{t("tableDueDate")}</th>
                   <th className="px-4 py-2 font-medium">{t("tableCreated")}</th>
                 </tr>
               </thead>
@@ -117,7 +119,11 @@ export default function ProductionPage() {
                   >
                     <td className="px-4 py-2 font-mono font-medium text-text-primary">{wo.work_order_number}</td>
                     <td className="px-4 py-2"><WorkOrderStatusBadge status={wo.status} /></td>
+                    <td className="px-4 py-2"><WorkOrderPriorityBadge priority={wo.priority} /></td>
                     <td className="px-4 py-2 text-text-secondary">{orderNumbers[wo.order_id] ?? tCommon("loading")}</td>
+                    <td className="px-4 py-2 text-text-secondary">
+                      {wo.scheduled_completion_date ? formatDate(wo.scheduled_completion_date) : tCommon("dash")}
+                    </td>
                     <td className="px-4 py-2 text-text-secondary">{formatDate(wo.created_at)}</td>
                   </tr>
                 ))}

@@ -18,6 +18,12 @@ from modules.catalog.application.use_cases.price_list_use_cases import (
     CreatePriceListUseCase,
     UpsertPriceListEntryUseCase,
 )
+from modules.catalog.application.use_cases.slab_reservation_use_cases import (
+    ConsumeSlabReservationUseCase,
+    CreateOffcutUseCase,
+    CreateSlabReservationUseCase,
+    ReleaseSlabReservationUseCase,
+)
 from modules.catalog.application.use_cases.slab_use_cases import CreateSlabUseCase, UpdateSlabStatusUseCase
 from modules.catalog.application.use_cases.warehouse_use_cases import (
     CreateWarehouseUseCase,
@@ -35,6 +41,10 @@ __all__ = [
     "UpdateWarehouseUseCase",
     "CreateSlabUseCase",
     "UpdateSlabStatusUseCase",
+    "CreateSlabReservationUseCase",
+    "ReleaseSlabReservationUseCase",
+    "ConsumeSlabReservationUseCase",
+    "CreateOffcutUseCase",
     "CreatePriceListUseCase",
     "UpsertPriceListEntryUseCase",
     "AddMaterialImageUseCase",

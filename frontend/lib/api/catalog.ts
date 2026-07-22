@@ -14,6 +14,7 @@ import type {
   PriceList,
   PriceListEntry,
   Slab,
+  SlabReservation,
   SlabStatus,
   Warehouse,
 } from "../types";
@@ -238,6 +239,38 @@ export function createSlab(input: CreateSlabInput) {
 
 export function updateSlabStatus(id: string, status: SlabStatus) {
   return apiRequest<Slab>(`/api/v1/catalog/slabs/${id}/status`, { method: "PATCH", body: { status } });
+}
+
+// --- Material Reservation (Phase 1: Stone Fabrication Workflow) ----------
+
+export function listSlabReservations(slabId: string) {
+  return apiRequest<{ items: SlabReservation[] }>(`/api/v1/catalog/slabs/${slabId}/reservations`);
+}
+
+export function reserveSlab(
+  slabId: string,
+  input: { order_id: string; order_item_id: string; notes?: string }
+) {
+  return apiRequest<SlabReservation>(`/api/v1/catalog/slabs/${slabId}/reserve`, { method: "POST", body: input });
+}
+
+export function releaseSlabReservation(reservationId: string) {
+  return apiRequest<SlabReservation>(`/api/v1/catalog/slabs/reservations/${reservationId}/release`, {
+    method: "POST",
+  });
+}
+
+export function listReservationsForOrder(orderId: string) {
+  return apiRequest<{ items: SlabReservation[] }>("/api/v1/catalog/reservations", {
+    searchParams: { order_id: orderId },
+  });
+}
+
+export function createOffcut(
+  slabId: string,
+  input: { warehouse_id: string; slab_number: string; length_mm?: string; width_mm?: string; weight_kg?: string; notes?: string }
+) {
+  return apiRequest<Slab>(`/api/v1/catalog/slabs/${slabId}/offcuts`, { method: "POST", body: input });
 }
 
 // --- Price Lists ---------------------------------------------------------

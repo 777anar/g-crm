@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlalchemy import ForeignKey, Numeric, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.db.base import Base
@@ -33,3 +33,10 @@ class Slab(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     status: Mapped[str] = mapped_column(String, nullable=False, default=DEFAULT_SLAB_STATUS, index=True)
     created_by: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
+
+    # Offcut lineage (Phase 1): a remnant piece registered from a slab that
+    # was cut in Production points back at the original via parent_slab_id
+    # and is flagged is_offcut so it can be told apart in inventory reports
+    # even though it's otherwise a normal, independently reservable Slab row.
+    parent_slab_id: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("catalog_slabs.id"), nullable=True, index=True)
+    is_offcut: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")

@@ -101,12 +101,44 @@ class CreateSlabInput(ActorContext):
     width_mm: Optional[Decimal] = None
     weight_kg: Optional[Decimal] = None
     status: Optional[str] = None
+    parent_slab_id: Optional[uuid.UUID] = None
+    is_offcut: bool = False
 
 
 @dataclass
 class UpdateSlabStatusInput(ActorContext):
     slab_id: uuid.UUID
     status: str
+
+
+@dataclass
+class CreateSlabReservationInput(ActorContext):
+    slab_id: uuid.UUID
+    order_id: uuid.UUID
+    order_item_id: uuid.UUID
+    notes: Optional[str] = None
+    require_available: bool = True
+
+
+@dataclass
+class ReleaseSlabReservationInput(ActorContext):
+    reservation_id: uuid.UUID
+
+
+@dataclass
+class ConsumeSlabReservationInput(ActorContext):
+    order_item_id: uuid.UUID
+
+
+@dataclass
+class CreateOffcutInput(ActorContext):
+    parent_slab_id: uuid.UUID
+    warehouse_id: uuid.UUID
+    slab_number: str
+    length_mm: Optional[Decimal] = None
+    width_mm: Optional[Decimal] = None
+    weight_kg: Optional[Decimal] = None
+    notes: Optional[str] = None
 
 
 @dataclass

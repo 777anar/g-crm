@@ -262,3 +262,84 @@ def test_update_item_production_status(app_client, owner_headers, accepted_quote
     body = resp.json()
     assert body["production_status"] == "cutting"
     assert body["installation_status"] == "pending"
+
+
+def test_create_order_adopts_reservation_for_slab_linked_item(
+    app_client, owner_headers, db_session, company, project, customer
+):
+    """Phase 1 (Material Reservation): a quote item with a slab already
+    attached is `reserved` at quote-acceptance time (Sales'
+    UpdateQuoteStatusUseCase); creating the Order from that quote must
+    backfill a formal, queryable SlabReservation row for it -- without
+    re-validating availability, since the slab is already known-reserved."""
+    from modules.catalog.infrastructure.models.brand import Brand
+    from modules.catalog.infrastructure.models.material import StoneMaterial
+    from modules.catalog.infrastructure.models.slab import Slab
+    from modules.catalog.infrastructure.models.warehouse import Warehouse
+    from modules.sales.infrastructure.models.quote import Quote
+    from modules.sales.infrastructure.models.quote_section import QuoteSection
+    from modules.sales.infrastructure.models.quote_section_item import QuoteSectionItem
+
+    brand = Brand(company_id=company.id, name="NEOLITH")
+    db_session.add(brand)
+    db_session.flush()
+    material = StoneMaterial(company_id=company.id, brand_id=brand.id, name="Calacatta Gold")
+    db_session.add(material)
+    db_session.flush()
+    warehouse = Warehouse(company_id=company.id, name="Main Warehouse")
+    db_session.add(warehouse)
+    db_session.flush()
+    slab = Slab(
+        company_id=company.id,
+        material_id=material.id,
+        warehouse_id=warehouse.id,
+        slab_number="SL-ADOPT-1",
+        status="reserved",
+    )
+    db_session.add(slab)
+    db_session.flush()
+
+    quote = Quote(
+        company_id=company.id,
+        project_id=project.id,
+        customer_id=customer.id,
+        version=1,
+        quote_number="QT-2026-ADOPT-v1",
+        status="accepted",
+        currency="AZN",
+    )
+    db_session.add(quote)
+    db_session.flush()
+    section = QuoteSection(company_id=company.id, quote_id=quote.id, name="Main Section", sort_order=0)
+    db_session.add(section)
+    db_session.flush()
+    db_session.add(QuoteSectionItem(
+        company_id=company.id,
+        section_id=section.id,
+        quote_id=quote.id,
+        item_type="material",
+        sort_order=0,
+        description="Marble countertop",
+        slab_id=slab.id,
+        quantity="2.5",
+        unit="m2",
+        unit_sale_price="150.00",
+        unit_cost_price="100.00",
+        line_total_sale="375.00",
+        line_total_cost="250.00",
+    ))
+    db_session.commit()
+
+    order = app_client.post("/api/v1/orders", headers=owner_headers, json={"quote_id": str(quote.id)}).json()
+
+    reservations = app_client.get(
+        "/api/v1/catalog/reservations", headers=owner_headers, params={"order_id": order["id"]}
+    ).json()["items"]
+    assert len(reservations) == 1
+    assert reservations[0]["slab_id"] == str(slab.id)
+    assert reservations[0]["status"] == "active"
+
+    # The slab's own status is untouched (already `reserved` before the
+    # order existed) -- adoption only records the bookkeeping row.
+    db_session.refresh(slab)
+    assert slab.status == "reserved"

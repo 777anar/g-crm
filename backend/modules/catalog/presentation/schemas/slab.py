@@ -48,6 +48,8 @@ class SlabOut(BaseModel):
     area_m2: Optional[Decimal]
     weight_kg: Optional[Decimal]
     status: str
+    parent_slab_id: Optional[uuid.UUID] = None
+    is_offcut: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -55,3 +57,37 @@ class SlabOut(BaseModel):
 class SlabListOut(BaseModel):
     items: list[SlabOut]
     next_cursor: Optional[str] = None
+
+
+class SlabReservationCreate(BaseModel):
+    order_id: uuid.UUID
+    order_item_id: uuid.UUID
+    notes: Optional[str] = None
+
+
+class SlabReservationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    slab_id: uuid.UUID
+    order_id: uuid.UUID
+    order_item_id: uuid.UUID
+    status: str
+    notes: Optional[str]
+    reserved_by: Optional[uuid.UUID]
+    reserved_at: Optional[datetime]
+    released_at: Optional[datetime]
+    created_at: datetime
+
+
+class SlabReservationListOut(BaseModel):
+    items: list[SlabReservationOut]
+
+
+class OffcutCreate(BaseModel):
+    warehouse_id: uuid.UUID
+    slab_number: str
+    length_mm: Optional[Decimal] = None
+    width_mm: Optional[Decimal] = None
+    weight_kg: Optional[Decimal] = None
+    notes: Optional[str] = None

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from core.db.base import Base
 from core.db.mixins import GUID, TimestampMixin, UUIDPrimaryKeyMixin
-from modules.production.domain.value_objects import WORK_ORDER_STATUS_QUEUED
+from modules.production.domain.value_objects import DEFAULT_PRIORITY, WORK_ORDER_STATUS_QUEUED
 
 
 class WorkOrder(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -23,6 +23,13 @@ class WorkOrder(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     assigned_to: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
     scheduled_start_date: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     scheduled_completion_date: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+
+    priority: Mapped[str] = mapped_column(
+        String(10), nullable=False, default=DEFAULT_PRIORITY, server_default=DEFAULT_PRIORITY, index=True
+    )
+    current_stage_id: Mapped[Optional[str]] = mapped_column(
+        GUID(), ForeignKey("production_stages.id"), nullable=True, index=True
+    )
 
     completed_at: Mapped[Optional[str]] = mapped_column(DateTime(timezone=True), nullable=True)
     cancelled_at: Mapped[Optional[str]] = mapped_column(DateTime(timezone=True), nullable=True)

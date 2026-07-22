@@ -17,15 +17,21 @@ from core.api.errors import NotFoundError
 from core.audit.service import record_audit
 from core.events.event_bus import event_bus
 from core.events.event_envelope import Event
-from modules.catalog.application.dtos import UpdateSlabStatusInput
-from modules.catalog.application.use_cases import UpdateSlabStatusUseCase
+from modules.catalog.application.dtos import ConsumeSlabReservationInput, ReleaseSlabReservationInput, UpdateSlabStatusInput
+from modules.catalog.application.use_cases import (
+    ConsumeSlabReservationUseCase,
+    ReleaseSlabReservationUseCase,
+    UpdateSlabStatusUseCase,
+)
 from modules.catalog.domain.value_objects import (
     SLAB_STATUS_AVAILABLE,
+    SLAB_STATUS_CONSUMED,
     SLAB_STATUS_IN_PRODUCTION,
     SLAB_STATUS_RESERVED,
-    SLAB_STATUS_SOLD,
+    TERMINAL_SLAB_STATUSES,
 )
 from modules.catalog.infrastructure.repositories.slab_repository import SlabRepository
+from modules.catalog.infrastructure.repositories.slab_reservation_repository import SlabReservationRepository
 from modules.orders.application.dtos import UpdateOrderItemInput, UpdateOrderStatusInput
 from modules.orders.application.use_cases import UpdateOrderItemUseCase, UpdateOrderStatusUseCase
 from modules.orders.domain.value_objects import (
@@ -45,13 +51,19 @@ from modules.production.domain.exceptions import (
     WorkOrderAlreadyExistsError,
 )
 from modules.production.domain.value_objects import (
+    DEFAULT_PRIORITY,
+    VALID_PRIORITIES,
+    WORK_ORDER_EVENT_CREATED,
+    WORK_ORDER_EVENT_STATUS_CHANGED,
     WORK_ORDER_STATUS_CANCELLED,
     WORK_ORDER_STATUS_COMPLETED,
     WORK_ORDER_STATUS_QUEUED,
     is_valid_work_order_transition,
 )
 from modules.production.infrastructure.models.work_order import WorkOrder
+from modules.production.infrastructure.models.work_order_event import WorkOrderEvent
 from modules.production.infrastructure.models.work_order_item import WorkOrderItem
+from modules.production.infrastructure.repositories.work_order_event_repository import WorkOrderEventRepository
 from modules.production.infrastructure.repositories.work_order_item_repository import WorkOrderItemRepository
 from modules.production.infrastructure.repositories.work_order_repository import WorkOrderRepository
 
@@ -70,6 +82,7 @@ class CreateWorkOrderUseCase:
         self.orders = OrderRepository(db)
         self.order_items = OrderItemRepository(db)
         self.slabs = SlabRepository(db)
+        self.events = WorkOrderEventRepository(db)
 
     def execute(self, data: CreateWorkOrderInput) -> WorkOrder:
         order = self.orders.get(company_id=data.company_id, order_id=data.order_id)
@@ -101,6 +114,8 @@ class CreateWorkOrderUseCase:
                     f"(status: {slab.status if slab else 'not found'})"
                 )
 
+        priority = data.priority if data.priority in VALID_PRIORITIES else DEFAULT_PRIORITY
+
         year = _now().year
         work_order_number = self.work_orders.next_work_order_number(company_id=data.company_id, year=year)
         work_order = WorkOrder(
@@ -109,8 +124,19 @@ class CreateWorkOrderUseCase:
             work_order_number=work_order_number,
             status=WORK_ORDER_STATUS_QUEUED,
             created_by=data.actor_user_id,
+            priority=priority,
+            scheduled_completion_date=data.due_date,
         )
         self.work_orders.add(work_order)
+        self.events.add(WorkOrderEvent(
+            company_id=data.company_id,
+            work_order_id=work_order.id,
+            event_type=WORK_ORDER_EVENT_CREATED,
+            from_value=None,
+            to_value=WORK_ORDER_STATUS_QUEUED,
+            changed_by=data.actor_user_id,
+            changed_at=_now(),
+        ))
 
         slab_use_case = UpdateSlabStatusUseCase(self.db)
         for item in items:
@@ -167,6 +193,8 @@ class UpdateWorkOrderStatusUseCase:
         self.db = db
         self.work_orders = WorkOrderRepository(db)
         self.work_order_items = WorkOrderItemRepository(db)
+        self.events = WorkOrderEventRepository(db)
+        self.reservations = SlabReservationRepository(db)
 
     def execute(self, data: UpdateWorkOrderStatusInput) -> WorkOrder:
         work_order = self.work_orders.get(company_id=data.company_id, work_order_id=data.work_order_id)
@@ -186,8 +214,13 @@ class UpdateWorkOrderStatusUseCase:
 
         if data.status == WORK_ORDER_STATUS_COMPLETED:
             work_order.completed_at = now
-            self._cascade_slabs(items, data, target_status=SLAB_STATUS_SOLD)
+            # Physically consumed by fabrication -- distinct from `sold`,
+            # which remains available for a slab moved/sold outside any
+            # work order. A slab already moved on another way (e.g. an
+            # offcut was registered mid-job) is left exactly as it is.
+            self._cascade_slabs(items, data, target_status=SLAB_STATUS_CONSUMED)
             self._cascade_item_progress(items, data, production_status="done")
+            self._cascade_reservations(items, data, consumed=True)
             UpdateOrderStatusUseCase(self.db).execute(UpdateOrderStatusInput(
                 company_id=data.company_id,
                 actor_user_id=data.actor_user_id,
@@ -199,11 +232,23 @@ class UpdateWorkOrderStatusUseCase:
             if data.cancelled_reason is not None:
                 work_order.cancelled_reason = data.cancelled_reason
             self._cascade_slabs(items, data, target_status=SLAB_STATUS_AVAILABLE)
+            self._cascade_reservations(items, data, consumed=False)
         else:
             # Intermediate shop-floor stages (cutting/polishing/quality_check) --
             # mirror the work order's own status onto each item's production_status
             # so the Order detail screen shows real progress without polling.
             self._cascade_item_progress(items, data, production_status=data.status)
+
+        self.events.add(WorkOrderEvent(
+            company_id=data.company_id,
+            work_order_id=work_order.id,
+            event_type=WORK_ORDER_EVENT_STATUS_CHANGED,
+            from_value=old_status,
+            to_value=work_order.status,
+            notes=data.cancelled_reason if data.status == WORK_ORDER_STATUS_CANCELLED else None,
+            changed_by=data.actor_user_id,
+            changed_at=now,
+        ))
 
         record_audit(
             self.db,
@@ -256,13 +301,44 @@ class UpdateWorkOrderStatusUseCase:
 
     def _cascade_slabs(self, items, data: UpdateWorkOrderStatusInput, *, target_status: str) -> None:
         slab_use_case = UpdateSlabStatusUseCase(self.db)
+        slabs = SlabRepository(self.db)
         for item in items:
+            slab = slabs.get(company_id=data.company_id, slab_id=item.slab_id)
+            if slab is None or slab.status in TERMINAL_SLAB_STATUSES:
+                # Already moved on a different way (e.g. registered as an
+                # offcut mid-job) -- leave it exactly as it is rather than
+                # raising an invalid-transition error on an already-final slab.
+                continue
             slab_use_case.execute(UpdateSlabStatusInput(
                 company_id=data.company_id,
                 actor_user_id=data.actor_user_id,
                 slab_id=item.slab_id,
                 status=target_status,
             ))
+
+    def _cascade_reservations(self, items, data: UpdateWorkOrderStatusInput, *, consumed: bool) -> None:
+        for item in items:
+            reservation = self.reservations.get_active_for_order_item(
+                company_id=data.company_id, order_item_id=item.order_item_id
+            )
+            if reservation is None:
+                continue
+            if consumed:
+                ConsumeSlabReservationUseCase(self.db).execute(
+                    ConsumeSlabReservationInput(
+                        company_id=data.company_id,
+                        actor_user_id=data.actor_user_id,
+                        order_item_id=item.order_item_id,
+                    )
+                )
+            else:
+                ReleaseSlabReservationUseCase(self.db).execute(
+                    ReleaseSlabReservationInput(
+                        company_id=data.company_id,
+                        actor_user_id=data.actor_user_id,
+                        reservation_id=reservation.id,
+                    )
+                )
 
     def _cascade_item_progress(self, items, data: UpdateWorkOrderStatusInput, *, production_status: str) -> None:
         item_use_case = UpdateOrderItemUseCase(self.db)

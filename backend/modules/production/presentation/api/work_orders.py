@@ -76,6 +76,8 @@ def create_work_order(
                 company_id=current_user.active_company_id,
                 actor_user_id=current_user.user_id,
                 order_id=payload.order_id,
+                priority=payload.priority,
+                due_date=payload.due_date,
             )
         )
     except _BUSINESS_RULE_ERRORS as exc:

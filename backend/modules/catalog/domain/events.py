@@ -13,3 +13,10 @@ SLAB_CREATED = "SlabCreated"
 SLAB_STATUS_CHANGED = "SlabStatusChanged"
 PRICE_LIST_CREATED = "PriceListCreated"
 PRICE_LIST_ENTRY_UPSERTED = "PriceListEntryUpserted"
+
+# Material Reservation + offcut tracking (Phase 1 of the Purchasing ->
+# Inventory -> Production stone-fabrication workflow).
+SLAB_RESERVATION_CREATED = "SlabReservationCreated"
+SLAB_RESERVATION_RELEASED = "SlabReservationReleased"
+SLAB_RESERVATION_CONSUMED = "SlabReservationConsumed"
+SLAB_OFFCUT_CREATED = "SlabOffcutCreated"

@@ -183,8 +183,20 @@ export type EntityStatus = (typeof ENTITY_STATUSES)[number];
 export const MATERIAL_STATUSES = ["active", "hidden"] as const;
 export type MaterialStatus = (typeof MATERIAL_STATUSES)[number];
 
-export const SLAB_STATUSES = ["available", "reserved", "sold", "in_production", "scrap"] as const;
+export const SLAB_STATUSES = [
+  "received",
+  "available",
+  "reserved",
+  "in_production",
+  "offcut_created",
+  "consumed",
+  "sold",
+  "scrap",
+] as const;
 export type SlabStatus = (typeof SLAB_STATUSES)[number];
+
+export const RESERVATION_STATUSES = ["active", "released", "consumed"] as const;
+export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
 
 export const IMAGE_TYPES = ["gallery", "thumbnail", "bookmatch_left", "bookmatch_right"] as const;
 export type ImageType = (typeof IMAGE_TYPES)[number];
@@ -275,8 +287,23 @@ export type Slab = {
   area_m2: string | null;
   weight_kg: string | null;
   status: SlabStatus;
+  parent_slab_id: string | null;
+  is_offcut: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type SlabReservation = {
+  id: string;
+  slab_id: string;
+  order_id: string;
+  order_item_id: string;
+  status: ReservationStatus;
+  notes: string | null;
+  reserved_by: string | null;
+  reserved_at: string | null;
+  released_at: string | null;
+  created_at: string;
 };
 
 export type PriceList = {
@@ -743,12 +770,17 @@ export const WORK_ORDER_STATUSES = [
 ] as const;
 export type WorkOrderStatus = (typeof WORK_ORDER_STATUSES)[number];
 
+export const WORK_ORDER_PRIORITIES = ["low", "normal", "high", "urgent"] as const;
+export type WorkOrderPriority = (typeof WORK_ORDER_PRIORITIES)[number];
+
 export type WorkOrder = {
   id: string;
   company_id: string;
   order_id: string;
   work_order_number: string;
   status: WorkOrderStatus;
+  priority: WorkOrderPriority;
+  current_stage_id: string | null;
   assigned_to: string | null;
   scheduled_start_date: string | null;
   scheduled_completion_date: string | null;
@@ -770,6 +802,70 @@ export type WorkOrderItem = {
   quantity: string;
   unit: string;
   area_m2: string | null;
+};
+
+export type ProductionStage = {
+  id: string;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
+};
+
+export type EntityRef = { id: string; name: string };
+export type StageRef = { id: string; name: string };
+
+export type ProductionJobItem = {
+  id: string;
+  order_item_id: string;
+  slab_id: string;
+  slab_number: string;
+  description: string;
+  quantity: string;
+  unit: string;
+  area_m2: string | null;
+  material_id: string;
+  material_name: string;
+  thickness_mm: string | null;
+  finish: string | null;
+};
+
+export type ProductionJob = {
+  id: string;
+  work_order_number: string;
+  status: WorkOrderStatus;
+  priority: WorkOrderPriority;
+  due_date: string | null;
+  assigned_operator: string | null;
+  current_stage: StageRef | null;
+  order: EntityRef;
+  customer: EntityRef;
+  project: EntityRef;
+  items: ProductionJobItem[];
+  notes: string | null;
+  created_at: string;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  cancelled_reason: string | null;
+};
+
+export const WORK_ORDER_EVENT_TYPES = [
+  "created",
+  "status_changed",
+  "stage_changed",
+  "priority_changed",
+  "operator_assigned",
+] as const;
+export type WorkOrderEventType = (typeof WORK_ORDER_EVENT_TYPES)[number];
+
+export type WorkOrderEvent = {
+  id: string;
+  event_type: WorkOrderEventType;
+  from_value: string | null;
+  to_value: string | null;
+  notes: string | null;
+  changed_by: string | null;
+  changed_at: string | null;
+  created_at: string;
 };
 
 // ── Installation module ───────────────────────────────────────────────────────

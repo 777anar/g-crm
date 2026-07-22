@@ -157,7 +157,7 @@ def test_work_order_items_lists_slab_details(app_client, owner_headers, approved
     assert items[0]["description"] == "Marble countertop"
 
 
-def test_full_work_order_lifecycle_completes_order_and_sells_slab(
+def test_full_work_order_lifecycle_completes_order_and_consumes_slab(
     app_client, owner_headers, approved_order, slab, db_session
 ):
     work_order = app_client.post(
@@ -174,7 +174,7 @@ def test_full_work_order_lifecycle_completes_order_and_sells_slab(
         assert resp.json()["status"] == status
 
     db_session.refresh(slab)
-    assert slab.status == "sold"
+    assert slab.status == "consumed"
 
     order_resp = app_client.get(f"/api/v1/orders/{approved_order['id']}", headers=owner_headers)
     assert order_resp.json()["status"] == "ready"

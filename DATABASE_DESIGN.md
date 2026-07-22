@@ -360,9 +360,28 @@ Normalized per-Stone option lists — a Stone can be offered in several thicknes
 | length_mm / width_mm | NUMERIC(10,2) | nullable |
 | area_m2 | NUMERIC(10,3) | nullable — computed in the application layer (`length_mm * width_mm / 1_000_000`) at create time, not a DB-generated column |
 | weight_kg | NUMERIC(10,2) | nullable |
-| status | TEXT | NOT NULL, DEFAULT `available`, indexed — `available`\|`reserved`\|`sold`\|`in_production`\|`scrap`, a domain-layer transition graph (`sold`/`scrap` terminal) |
+| status | TEXT | NOT NULL, DEFAULT `available`, indexed — full lifecycle as of Version 2.34.0 (Stone Fabrication Workflow Phase 1): `received`\|`available`\|`reserved`\|`in_production`\|`offcut_created`\|`consumed`\|`sold`\|`scrap`, a domain-layer transition graph (`offcut_created`/`consumed`/`sold`/`scrap` terminal). `received`/`consumed`/`offcut_created` are additive to the original five ­— existing rows/behavior for `available`/`reserved`/`in_production`/`sold`/`scrap` are unchanged |
+| parent_slab_id | UUID | nullable, REFERENCES catalog_slabs(id), indexed — **Version 2.34.0.** Set on an offcut/remnant slab registered from a parent slab that was cut in Production; self-referential, no cascade |
+| is_offcut | BOOLEAN | NOT NULL, DEFAULT `false` — **Version 2.34.0.** Flags a slab as a registered remnant rather than an originally-received piece; otherwise behaves as a completely normal, independently reservable `Slab` row |
 
 A Slab is consumed by exactly one `work_order_items` row once fabrication starts (§8.2).
+
+### 5.6a `catalog_slab_reservations` (Material Reservation, Version 2.34.0)
+The durable, queryable record of "this slab is allocated to this order item" — richer than `catalog_slabs.status` alone, which only tells you a slab *is* reserved, never for whom. Owned by Catalog (not Production or Orders) so every module downstream of Catalog can create/consult reservations without Catalog ever having to depend on them.
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| slab_id | UUID | NOT NULL, REFERENCES catalog_slabs(id), indexed |
+| order_id | UUID | NOT NULL, indexed — **plain UUID, no FK** (the same "polymorphic reference, application-layer only" pattern already used by `documents.related_entity_id` and `crm_leads.campaign_id`), so Catalog never has to depend on Orders |
+| order_item_id | UUID | NOT NULL, indexed — plain UUID, same reasoning |
+| status | TEXT | NOT NULL, DEFAULT `active`, indexed — `active`\|`released`\|`consumed` (`released`/`consumed` terminal) |
+| notes | TEXT | nullable |
+| reserved_by | UUID | nullable, REFERENCES users(id) |
+| reserved_at / released_at | TIMESTAMPTZ | nullable |
+
+The double-booking guard (only one *active* reservation per slab) is enforced the same way this codebase already enforces comparable invariants elsewhere (PO-number sequences, Sales' own quote-acceptance slab check): a check-then-set inside one use-case execution, not a partial unique index. Orders' `CreateOrderUseCase` backfills a reservation row (`require_available=False`) for every slab-linked item copied from an accepted quote, since that slab was already moved to `reserved` at quote-acceptance time by Sales — this is the only mechanism that gives 100% reservation-record coverage without any change to the Sales module.
 
 ### 5.7 `catalog_price_lists` / `catalog_price_list_entries`
 Company-specific pricing as a named header (`catalog_price_lists`: `name`, `currency` default `AZN`, `is_default`, `status`) with per-material line items (`catalog_price_list_entries`: `price_list_id`, `material_id`, `cost_price NUMERIC(14,2)`, `sale_price NUMERIC(14,2)`, `UNIQUE(price_list_id, material_id)`) — multiple price lists per company (retail vs. wholesale) rather than one price column on `catalog_materials`.
@@ -473,7 +492,7 @@ Same shape as `sales_quote_number_sequences` (§6.4): `company_id`, `year`, `las
 
 ## 8. Production Module Tables
 
-One `work_orders` row per Order (1:1, gated on the Order reaching `approved_for_production`), consuming every slab-linked Order Item via a join row.
+One `work_orders` row ("Production Job") per Order (1:1, gated on the Order reaching `approved_for_production`), consuming every slab-linked Order Item via a join row. **Version 2.34.0 (Stone Fabrication Workflow Phase 1)** added `priority`/`current_stage_id` to `work_orders`, plus two new tables (`production_stages`, `work_order_events`) — all additive; the pre-existing `status` lifecycle and its Order/slab cascades are unchanged.
 
 ### 8.1 `work_orders`
 | Column | Type | Constraints |
@@ -483,8 +502,10 @@ One `work_orders` row per Order (1:1, gated on the Order reaching `approved_for_
 | order_id | UUID | NOT NULL, REFERENCES orders(id), **UNIQUE**, indexed |
 | work_order_number | TEXT(50) | NOT NULL, indexed |
 | status | TEXT(50) | NOT NULL, DEFAULT `queued`, indexed |
+| priority | TEXT(10) | NOT NULL, DEFAULT `normal`, indexed — **Version 2.34.0.** `low`\|`normal`\|`high`\|`urgent`, a simple shop-floor triage vocabulary, not a numeric weight |
+| current_stage_id | UUID | nullable, REFERENCES production_stages(id), indexed — **Version 2.34.0.** Independent of `status`: a finer-grained position within the company's configurable stage pipeline (§8.4), not gated by or driving the status transitions below |
 | assigned_to | UUID | nullable, REFERENCES users(id) |
-| scheduled_start_date / scheduled_completion_date | TEXT(10) | nullable |
+| scheduled_start_date / scheduled_completion_date | TEXT(10) | nullable — `scheduled_completion_date` doubles as the job's "due date" in the UI (Version 2.34.0), no separate column |
 | completed_at / cancelled_at | TIMESTAMPTZ | nullable |
 | cancelled_reason / notes | TEXT | nullable |
 | created_by | UUID | nullable, REFERENCES users(id) |
@@ -492,10 +513,35 @@ One `work_orders` row per Order (1:1, gated on the Order reaching `approved_for_
 **`status`** (default `queued`): `queued` → `cutting` → `polishing` → `quality_check` → `completed`, with `cancelled` reachable from any non-terminal state; `completed`/`cancelled` terminal.
 
 ### 8.2 `work_order_items`
-One row per slab consumed. `work_order_id` (FK, indexed), `order_item_id` (FK order_items, **UNIQUE**, indexed — one work-order item per order item), `slab_id` (FK catalog_slabs, indexed). Completing the parent work order sells its slabs (`catalog_slabs.status → sold`), marks each item's `production_status: done` on the Order, and advances the Order to `ready`; cancelling releases slabs back to `available`.
+One row per slab consumed. `work_order_id` (FK, indexed), `order_item_id` (FK order_items, **UNIQUE**, indexed — one work-order item per order item), `slab_id` (FK catalog_slabs, indexed). Completing the parent work order moves its slabs to the terminal `consumed` status (Version 2.34.0 — previously `sold`; a slab already moved on a different way, e.g. registered as an offcut mid-job, is left untouched) and marks the corresponding `catalog_slab_reservations` rows `consumed`, marks each item's `production_status: done` on the Order, and advances the Order to `ready`; cancelling releases slabs back to `available` and their reservations to `released`.
 
 ### 8.3 `work_order_number_sequences`
 Same shape as §6.4/§7.3: `company_id`, `year`, `last_number`, `UNIQUE(company_id, year)`.
+
+### 8.4 `production_stages` (configurable pipeline, Version 2.34.0)
+Per-company, freely renamable/reorderable/hideable — not a hardcoded enum. Lazily seeded with 8 stone-fabrication defaults (Measuring, Design, CNC, Waterjet, Cutting, Polishing, Quality Control, Ready for Installation) the first time a company's stage list is requested and none exist yet.
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| name | TEXT(100) | NOT NULL, **UNIQUE** per `(company_id, name)` |
+| sort_order | INTEGER | NOT NULL, DEFAULT `0` |
+| is_active | BOOLEAN | NOT NULL, DEFAULT `true` |
+
+### 8.5 `work_order_events` (production timeline, Version 2.34.0)
+One row per change to a work order's status/stage/priority/assigned operator — the backbone of the "complete production timeline" requirement, sitting *alongside*, not instead of, the mandatory `core.audit_log` entry every one of these writes already records. Deliberately denormalized (`from_value`/`to_value` as display strings, e.g. a stage's `name` rather than its id) so a timeline UI renders directly without re-joining at read time.
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| work_order_id | UUID | NOT NULL, REFERENCES work_orders(id), indexed |
+| event_type | TEXT(30) | NOT NULL — `created`\|`status_changed`\|`stage_changed`\|`priority_changed`\|`operator_assigned` |
+| from_value / to_value | TEXT(200) | nullable |
+| notes | TEXT | nullable |
+| changed_by | UUID | nullable, REFERENCES users(id) |
+| changed_at | TIMESTAMPTZ | nullable |
 
 ## 9. Installation Module Tables
 
@@ -748,7 +794,7 @@ CREATE POLICY tenant_isolation ON crm_customers
 
 ## 18. Migration Strategy
 
-- Alembic revision history is a single linear chain (currently 21 migrations deep, head `2b84b718b162`) — unified at the database level, but each module owns the migration scripts that create/alter its own tables.
+- Alembic revision history is a single linear chain (currently 22 migrations deep, head `67e0a8a55a5a` — `stone_fabrication_workflow_phase1`, Version 2.34.0) — unified at the database level, but each module owns the migration scripts that create/alter its own tables.
 - Core platform tables (`companies`, `users`, `user_company_roles`, `documents`, `audit_log`, `event_log`, `ai_jobs`) were created in the earliest migration, before any module's tables.
 - **Correction from the previous revision of this document**: there is no CI step that runs `alembic upgrade head` against a disposable database on every PR — that claim was aspirational, not built. What actually runs today: the test suite (`pytest`, wired into `.github/workflows/ci.yml` as of Version 2.28.0) builds its schema via SQLAlchemy's `Base.metadata.create_all()` directly from the current model definitions, entirely bypassing the Alembic migration chain — so a passing test suite does not, by itself, prove the migration chain is consistent with the models. `alembic check` (run manually, most recently confirmed clean during the Version 2.28.0 audit pass) is the actual verification that the migration chain matches the models; it is not yet part of the CI workflow. A real gap worth closing in a future pass, not claimed as already closed here.
 - Module removal does not auto-drop tables; a deliberate downgrade migration is required if data removal is intended.

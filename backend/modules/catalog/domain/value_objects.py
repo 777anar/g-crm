@@ -17,30 +17,62 @@ ENTITY_STATUS_HIDDEN = "hidden"
 VALID_ENTITY_STATUSES = {ENTITY_STATUS_ACTIVE, ENTITY_STATUS_HIDDEN}
 DEFAULT_ENTITY_STATUS = ENTITY_STATUS_ACTIVE
 
-# Slab lifecycle -- a physical, individually tracked piece of stone.
+# Slab lifecycle -- a physical, individually tracked piece of stone. Phase 1
+# of the Purchasing -> Inventory -> Production workflow adds three states
+# either side of the original five (received/consumed/offcut_created), so a
+# slab's life reads as a real fabrication-shop story: delivered, shelved,
+# allocated to a job, cut, and either fully used up or leaving a remnant --
+# without touching the meaning or transitions of the five original states,
+# so every existing quote/order/work-order flow keeps working unchanged.
+SLAB_STATUS_RECEIVED = "received"
 SLAB_STATUS_AVAILABLE = "available"
 SLAB_STATUS_RESERVED = "reserved"
-SLAB_STATUS_SOLD = "sold"
 SLAB_STATUS_IN_PRODUCTION = "in_production"
+SLAB_STATUS_OFFCUT_CREATED = "offcut_created"
+SLAB_STATUS_CONSUMED = "consumed"
+SLAB_STATUS_SOLD = "sold"
 SLAB_STATUS_SCRAP = "scrap"
 VALID_SLAB_STATUSES = {
+    SLAB_STATUS_RECEIVED,
     SLAB_STATUS_AVAILABLE,
     SLAB_STATUS_RESERVED,
-    SLAB_STATUS_SOLD,
     SLAB_STATUS_IN_PRODUCTION,
+    SLAB_STATUS_OFFCUT_CREATED,
+    SLAB_STATUS_CONSUMED,
+    SLAB_STATUS_SOLD,
     SLAB_STATUS_SCRAP,
 }
 DEFAULT_SLAB_STATUS = SLAB_STATUS_AVAILABLE
 
+# Terminal statuses: once here, a slab's status can never change again via
+# `UpdateSlabStatusUseCase`. Production's work-order completion cascade uses
+# this to skip a slab that already left the pipeline a different way (e.g.
+# an offcut was registered mid-job) instead of raising a transition error.
+TERMINAL_SLAB_STATUSES = {
+    SLAB_STATUS_OFFCUT_CREATED,
+    SLAB_STATUS_CONSUMED,
+    SLAB_STATUS_SOLD,
+    SLAB_STATUS_SCRAP,
+}
+
 # Slab status transitions a single PATCH is allowed to make. Modeled as a
 # directed graph rather than "any status to any status" so the lifecycle
-# means something: a sold slab can't bounce back to available by mistake,
-# but a reservation can be released, and scrap is reachable from anywhere
-# (a slab can break at any stage).
+# means something: a consumed slab can't bounce back to available by
+# mistake, but a reservation can be released, and scrap is reachable from
+# anywhere (a slab can break at any stage).
 _VALID_SLAB_TRANSITIONS = {
+    SLAB_STATUS_RECEIVED: {SLAB_STATUS_AVAILABLE, SLAB_STATUS_SCRAP},
     SLAB_STATUS_AVAILABLE: {SLAB_STATUS_RESERVED, SLAB_STATUS_IN_PRODUCTION, SLAB_STATUS_SCRAP},
     SLAB_STATUS_RESERVED: {SLAB_STATUS_AVAILABLE, SLAB_STATUS_SOLD, SLAB_STATUS_IN_PRODUCTION, SLAB_STATUS_SCRAP},
-    SLAB_STATUS_IN_PRODUCTION: {SLAB_STATUS_SOLD, SLAB_STATUS_SCRAP, SLAB_STATUS_AVAILABLE},
+    SLAB_STATUS_IN_PRODUCTION: {
+        SLAB_STATUS_SOLD,
+        SLAB_STATUS_CONSUMED,
+        SLAB_STATUS_OFFCUT_CREATED,
+        SLAB_STATUS_SCRAP,
+        SLAB_STATUS_AVAILABLE,
+    },
+    SLAB_STATUS_OFFCUT_CREATED: set(),  # terminal
+    SLAB_STATUS_CONSUMED: set(),  # terminal
     SLAB_STATUS_SOLD: set(),  # terminal
     SLAB_STATUS_SCRAP: set(),  # terminal
 }
@@ -50,6 +82,21 @@ def is_valid_slab_transition(*, current: str, target: str) -> bool:
     if current == target:
         return True
     return target in _VALID_SLAB_TRANSITIONS.get(current, set())
+
+
+# Material Reservation lifecycle (Phase 1): a reservation is the durable,
+# queryable record of "this slab is allocated to this order item" -- richer
+# than the Slab's own `status` field alone, which only tells you a slab
+# *is* reserved, not for whom. `active` mirrors the slab currently being
+# reserved/in_production; `released` and `consumed` are terminal.
+RESERVATION_STATUS_ACTIVE = "active"
+RESERVATION_STATUS_RELEASED = "released"
+RESERVATION_STATUS_CONSUMED = "consumed"
+VALID_RESERVATION_STATUSES = {
+    RESERVATION_STATUS_ACTIVE,
+    RESERVATION_STATUS_RELEASED,
+    RESERVATION_STATUS_CONSUMED,
+}
 
 
 # Product Images, per requirements: "Multiple images, Full resolution,

@@ -51,6 +51,8 @@ class CreateSlabUseCase:
             weight_kg=data.weight_kg,
             status=data.status or DEFAULT_SLAB_STATUS,
             created_by=data.actor_user_id,
+            parent_slab_id=data.parent_slab_id,
+            is_offcut=data.is_offcut,
         )
         self.slabs.add(slab)
 

@@ -7,6 +7,7 @@ from modules.catalog.infrastructure.models.material_size import MaterialSize
 from modules.catalog.infrastructure.models.material_thickness import MaterialThickness
 from modules.catalog.infrastructure.models.price_list import PriceList, PriceListEntry
 from modules.catalog.infrastructure.models.slab import Slab
+from modules.catalog.infrastructure.models.slab_reservation import SlabReservation
 from modules.catalog.infrastructure.models.warehouse import Warehouse
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     "StoneMaterial",
     "Warehouse",
     "Slab",
+    "SlabReservation",
     "PriceList",
     "PriceListEntry",
     "MaterialImage",

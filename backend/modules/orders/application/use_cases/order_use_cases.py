@@ -8,6 +8,8 @@ from core.api.errors import NotFoundError
 from core.audit.service import record_audit
 from core.events.event_bus import event_bus
 from core.events.event_envelope import Event
+from modules.catalog.application.dtos import CreateSlabReservationInput
+from modules.catalog.application.use_cases import CreateSlabReservationUseCase
 from modules.orders.application.dtos import (
     CreateOrderInput,
     UpdateOrderInput,
@@ -114,7 +116,7 @@ class CreateOrderUseCase:
             for orig_item in self.items.list_for_section(
                 company_id=data.company_id, section_id=orig_sec.id
             ):
-                self.db.add(OrderItem(
+                new_item = OrderItem(
                     company_id=data.company_id,
                     order_id=order.id,
                     section_id=new_sec.id,
@@ -130,7 +132,11 @@ class CreateOrderUseCase:
                     line_total_sale=orig_item.line_total_sale,
                     line_total_cost=orig_item.line_total_cost,
                     notes=orig_item.notes,
-                ))
+                )
+                self.db.add(new_item)
+                if new_item.slab_id is not None:
+                    self.db.flush()
+                    self._adopt_reservation(data, order, new_item)
 
             for orig_m in self.measurements.list_for_section(
                 company_id=data.company_id, section_id=orig_sec.id
@@ -181,6 +187,23 @@ class CreateOrderUseCase:
             self.db,
         )
         return order
+
+    def _adopt_reservation(self, data: CreateOrderInput, order: Order, order_item: "OrderItem") -> None:
+        """Backfills a `SlabReservation` bookkeeping row for an item copied
+        from the quote with a slab already attached -- the slab itself was
+        already moved to `reserved` at quote-acceptance time (Sales'
+        `UpdateQuoteStatusUseCase._reserve_slabs`), so this only records the
+        formal reservation, it never re-validates availability."""
+        CreateSlabReservationUseCase(self.db).execute(
+            CreateSlabReservationInput(
+                company_id=data.company_id,
+                actor_user_id=data.actor_user_id,
+                slab_id=order_item.slab_id,
+                order_id=order.id,
+                order_item_id=order_item.id,
+                require_available=False,
+            )
+        )
 
 
 class UpdateOrderUseCase:

@@ -74,10 +74,13 @@ export function EntityStatusBadge({ status }: { status: string }) {
 }
 
 const SLAB_STATUS_TONE: Record<string, Tone> = {
+  received: "neutral",
   available: "success",
   reserved: "warning",
-  sold: "info",
   in_production: "info",
+  offcut_created: "info",
+  consumed: "info",
+  sold: "info",
   scrap: "danger",
 };
 
@@ -144,6 +147,19 @@ const WORK_ORDER_STATUS_TONE: Record<string, Tone> = {
 export function WorkOrderStatusBadge({ status }: { status: string }) {
   const t = useTranslations("production");
   return <Badge tone={WORK_ORDER_STATUS_TONE[status] ?? "neutral"}>{t(status as any)}</Badge>;
+}
+
+// Same cool-to-warm urgency ramp as TASK_PRIORITY_TONE below.
+const WORK_ORDER_PRIORITY_TONE: Record<string, Tone> = {
+  low: "neutral",
+  normal: "info",
+  high: "warning",
+  urgent: "danger",
+};
+
+export function WorkOrderPriorityBadge({ priority }: { priority: string }) {
+  const t = useTranslations("production");
+  return <Badge tone={WORK_ORDER_PRIORITY_TONE[priority] ?? "neutral"}>{t(`priority_${priority}` as any)}</Badge>;
 }
 
 const INSTALLATION_JOB_STATUS_TONE: Record<string, Tone> = {

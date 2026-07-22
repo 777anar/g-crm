@@ -187,8 +187,13 @@ Built ahead of Sales per `ROADMAP.md`'s dependency chain. Permission suffix conv
 | GET\|PATCH | `/catalog/warehouses/{id}` | `catalog:warehouses:read\|write` | Get / update |
 | GET | `/catalog/slabs?material_id=&warehouse_id=&status=&search=&sort=&limit=&cursor=` | `catalog:slabs:read` | List slabs, cursor-paginated (search across slab number/lot/barcode) |
 | POST | `/catalog/slabs` | `catalog:slabs:write` | Create slab (computes `area_m2` server-side; rejects a duplicate `slab_number` within the company → `409`) |
-| GET | `/catalog/slabs/{id}` | `catalog:slabs:read` | Get slab |
-| PATCH | `/catalog/slabs/{id}/status` | `catalog:slabs:write` | Change status; illegal transitions (e.g. `sold` → `available`) → `409` |
+| GET | `/catalog/slabs/{id}` | `catalog:slabs:read` | Get slab (now also returns `parent_slab_id`/`is_offcut`, Version 2.34.0) |
+| PATCH | `/catalog/slabs/{id}/status` | `catalog:slabs:write` | Change status; illegal transitions (e.g. `consumed` → `available`) → `409`. Full lifecycle as of Version 2.34.0 (Stone Fabrication Workflow Phase 1): `received → available → reserved → in_production → {consumed, offcut_created, sold, scrap}`, with `scrap` reachable from anywhere and `received`/`available`/`reserved` each independently reachable back to `available`/`scrap` per the transition graph in `modules/catalog/domain/value_objects.py` |
+| GET | `/catalog/slabs/{id}/reservations` | `catalog:slabs:read` | **Version 2.34.0.** Full reservation history for one slab (active + released + consumed) |
+| POST | `/catalog/slabs/{id}/reserve` | `catalog:slabs:write` | **Version 2.34.0 (Material Reservation).** Body: `{order_id, order_item_id, notes?}`. Reserves the slab for that order item (`available → reserved`) and creates a durable `SlabReservation` row. Idempotent for the same `order_item_id` (returns the existing reservation); `409` if the slab is already actively reserved for a *different* item (the double-booking guard), or if the slab isn't in a reservable status (e.g. still `received`) |
+| POST | `/catalog/slabs/reservations/{reservation_id}/release` | `catalog:slabs:write` | **Version 2.34.0.** Releases an active reservation; returns the slab to `available` if it's still `reserved` (no-ops the slab side if something else already moved it on, e.g. into production) |
+| GET | `/catalog/reservations?order_id=` | `catalog:slabs:read` | **Version 2.34.0.** All slab reservations for a given order — backs the Production Job page's "reserved slabs" view |
+| POST | `/catalog/slabs/{id}/offcuts` | `catalog:slabs:write` | **Version 2.34.0 (offcut tracking).** Body: `{warehouse_id, slab_number, length_mm?, width_mm?, weight_kg?, notes?}`. Only legal while the parent slab is `in_production` (`422` otherwise) — registers a new, independently reservable child `Slab` (`is_offcut: true`, `parent_slab_id` set, status `available`) and moves the parent to the terminal `offcut_created` status |
 | GET | `/catalog/price-lists?include_hidden=` | `catalog:price_lists:read` | List price lists (unbounded, same as warehouses) |
 | POST | `/catalog/price-lists` | `catalog:price_lists:write` | Create price list |
 | GET | `/catalog/price-lists/{id}` | `catalog:price_lists:read` | Get price list |
@@ -280,18 +285,34 @@ An Order is created from a single accepted Quote and owns its own independent, m
 
 ## 14. Production Module Endpoints (`/api/v1/production/...`)
 
-One `WorkOrder` per Order (1:1, gated on the Order reaching `approved_for_production`), consuming every slab-linked `OrderItem` via a `WorkOrderItem` join row.
+One `WorkOrder` ("Production Job") per Order (1:1, gated on the Order reaching `approved_for_production`), consuming every slab-linked `OrderItem` via a `WorkOrderItem` join row. **Version 2.34.0 (Stone Fabrication Workflow Phase 1)** added priority, a configurable multi-stage pipeline, operator assignment, an enriched "Production Job" detail view, and a production timeline — all additive to the pre-existing status lifecycle below, which is unchanged.
 
 | Method | Path | Permission | Description |
 |---|---|---|---|
-| GET | `/production?status=&search=&limit=&cursor=` | `production:read` | List work orders, cursor-paginated |
-| POST | `/production` | `production:write` | Create from an order. Body: `{order_id}`. `422` for `OrderNotReadyForProductionError`/`WorkOrderAlreadyExistsError`/`NoProductionItemsError`/`SlabNotReservedError` |
-| GET | `/production/{id}` | `production:read` | Retrieve |
+| GET | `/production?status=&search=&limit=&cursor=` | `production:read` | List work orders, cursor-paginated. Response now includes `priority`/`current_stage_id` (Version 2.34.0) |
+| POST | `/production` | `production:write` | Create from an order. Body: `{order_id, priority?, due_date?}` (`priority`/`due_date` added Version 2.34.0; `priority` defaults to `normal`). `422` for `OrderNotReadyForProductionError`/`WorkOrderAlreadyExistsError`/`NoProductionItemsError`/`SlabNotReservedError` |
+| GET | `/production/{id}` | `production:read` | Retrieve (raw `WorkOrder` shape) |
 | GET | `/production/by-order/{order_id}` | `production:read` | Get the work order for a given order (`404` if none) |
 | POST | `/production/{id}/status` | `production:write` | Transition status. Body: `{status, cancelled_reason?}`. Valid statuses/transitions: `queued→cutting→polishing→quality_check→completed`, with `cancelled` reachable from any non-terminal state; `completed`/`cancelled` terminal |
 | GET | `/production/{id}/items` | `production:read` | List items, joined with the order item and slab details (`slab_number`, `description`, `quantity`, `unit`, `area_m2`) |
+| PATCH | `/production/{id}` | `production:write` | **Version 2.34.0.** Update `due_date`/`notes` — the same mutable-fields pattern as `PATCH /orders/{id}` |
+| POST | `/production/{id}/priority` | `production:write` | **Version 2.34.0.** Body: `{priority}` (`low`\|`normal`\|`high`\|`urgent`) — schema-level invalid value → `400` |
+| POST | `/production/{id}/assign` | `production:write` | **Version 2.34.0.** Body: `{operator_user_id}` (nullable, to unassign) — `422` if the user isn't a member of the active company |
+| POST | `/production/{id}/stage` | `production:write` | **Version 2.34.0.** Body: `{stage_id}` (nullable). Moves the job to a different point in the company's configurable stage pipeline (§14a) — independent of, and not gated by, the coarse status above; stages may move backward as well as forward (real fabrication shops send pieces back for rework). `422` if `stage_id` doesn't belong to this company |
+| GET | `/production/{id}/job` | `production:read` | **Version 2.34.0 ("Production Job" view).** Everything a job needs to display in one call: `customer`/`project`/`order` (id+name), `priority`, `due_date`, `assigned_operator`, `current_stage` (id+name), and `items[]` enriched with `material_name`/`thickness_mm`/`finish` per reserved slab (joins Order → CRM Customer / Sales Project, and WorkOrderItem → Slab → Material) |
+| GET | `/production/{id}/timeline` | `production:read` | **Version 2.34.0.** Ordered list of every status/stage/priority/operator change on this job (`event_type`, `from_value`, `to_value`, `notes`, `changed_by`, `changed_at`) — a dedicated, human-readable timeline log distinct from (and in addition to) the generic `core.audit_log` entry every one of these writes also records |
 
-Completing a work order sells its consumed slabs (`catalog_slabs.status → sold`), marks each item's `production_status: done` on the parent Order, and advances the Order to `ready`; cancelling releases the slabs back to `available`.
+Completing a work order moves its consumed slabs to the terminal `consumed` status (not `sold` — see §11's slab lifecycle; a slab already moved a different way, e.g. an offcut was registered mid-job, is left untouched), marks the corresponding `SlabReservation` rows `consumed`, marks each item's `production_status: done` on the parent Order, and advances the Order to `ready`. Cancelling releases the slabs back to `available` and their reservations to `released`.
+
+### 14a. Configurable Production Stages (`/api/v1/production/stages`, Version 2.34.0)
+
+Per-company, freely renamable/reorderable/hideable stages — not a hardcoded enum. Lazily seeded with 8 stone-fabrication defaults (Measuring, Design, CNC, Waterjet, Cutting, Polishing, Quality Control, Ready for Installation) the first time a company's stage list is requested and none exist yet.
+
+| Method | Path | Permission | Description |
+|---|---|---|---|
+| GET | `/production/stages` | `production:read` | List (seeds the 8 defaults on first call for a company) |
+| POST | `/production/stages` | `production:write` | Create a custom stage. Body: `{name, sort_order?}` (appended to the end if `sort_order` omitted) |
+| PATCH | `/production/stages/{id}` | `production:write` | Rename / reorder / hide (`is_active: false`) |
 
 ---
 
