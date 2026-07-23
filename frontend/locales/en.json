@@ -72,7 +72,8 @@
     "cutOptimization": "Cut Optimization",
     "offcutLibrary": "Offcut Library",
     "security": "Security",
-    "auditLog": "Audit Log"
+    "auditLog": "Audit Log",
+    "reservations": "Reservations"
   },
   "language": {
     "switchLanguage": "Language",
@@ -524,7 +525,29 @@
       "technical_pdf": "Technical PDF",
       "installation_guide": "Installation Guide",
       "cleaning_guide": "Cleaning Guide"
-    }
+    },
+    "viewReservations": "View reservations",
+    "bulkReserveSelected": "{count} slab(s) selected",
+    "orderId": "Order ID",
+    "orderItemId": "Order Item ID",
+    "reserveSelected": "Reserve selected",
+    "selectAllAvailable": "Select all available slabs",
+    "selectSlab": "Select slab {number}",
+    "bulkReservePartialFailure": "Reserved {succeeded} of {count} slabs -- some failed.",
+    "bulkReserveSucceeded": "Reserved {count} slab(s).",
+    "reservationsTitle": "Slab Reservations",
+    "reservationsSubtitle": "Every slab reservation across the company, active or historical.",
+    "noReservationsYet": "No reservations yet",
+    "noReservationsDesc": "Reservations appear here once a slab is reserved for an order.",
+    "colOrderId": "Order ID",
+    "colOrderItemId": "Order Item ID",
+    "colSlabId": "Slab ID",
+    "colReservedAt": "Reserved At",
+    "release": "Release",
+    "reservationReleased": "Reservation released.",
+    "reservationStatus_active": "Active",
+    "reservationStatus_released": "Released",
+    "reservationStatus_consumed": "Consumed"
   },
   "sales": {
     "projectsTitle": "Projects",
@@ -780,7 +803,14 @@
     "invoice": "Invoice",
     "viewInvoice": "View Invoice",
     "noInvoiceYet": "No invoice yet for this order.",
-    "createInvoice": "Create Invoice"
+    "createInvoice": "Create Invoice",
+    "reservedSlabs": "Reserved Slabs",
+    "colOrderItemId": "Order Item ID",
+    "colSlabId": "Slab ID",
+    "release": "Release",
+    "reservationStatus_active": "Active",
+    "reservationStatus_released": "Released",
+    "reservationStatus_consumed": "Consumed"
   },
   "reports": {
     "title": "Reports",
@@ -872,7 +902,13 @@
     "operatorWorkload": "Workload by Operator",
     "noOperatorsAssigned": "No operators assigned to active jobs yet.",
     "overdueSince": "Overdue —",
-    "overdueAbbrev": "overdue"
+    "overdueAbbrev": "overdue",
+    "jobsSelected": "{count} job(s) selected",
+    "moveSelectedToStage": "Move selected to stage",
+    "clearSelection": "Clear selection",
+    "dragDropHint": "Drag a job card onto a different column to move it, or select multiple jobs to move them together.",
+    "stageMovePartialFailure": "Moved {succeeded} of {count} jobs -- some failed.",
+    "selectJob": "Select job {number}"
   },
   "production": {
     "title": "Production",
@@ -937,7 +973,9 @@
     "updateFailed": "Failed to update.",
     "stageOrder": "#",
     "stageActive": "Active",
-    "stageHidden": "Hidden"
+    "stageHidden": "Hidden",
+    "moveStageUp": "Move stage up",
+    "moveStageDown": "Move stage down"
   },
   "installation": {
     "title": "Installation",
@@ -1475,7 +1513,8 @@
     "groupOffice": "Office",
     "groupSecurity": "Security",
     "securityDesc": "Multi-factor authentication for your own login.",
-    "auditLogDesc": "Compliance-grade audit trail export and retention policy."
+    "auditLogDesc": "Compliance-grade audit trail export and retention policy.",
+    "reservationsDesc": "Browse and manage all active slab reservations across the company."
   },
   "marketing": {
     "title": "Marketing Campaigns",

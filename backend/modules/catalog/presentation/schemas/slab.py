@@ -94,6 +94,7 @@ class SlabReservationOut(BaseModel):
 
 class SlabReservationListOut(BaseModel):
     items: list[SlabReservationOut]
+    next_cursor: Optional[str] = None
 
 
 class OffcutCreate(BaseModel):

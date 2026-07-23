@@ -25,6 +25,7 @@ export default function ProductionStagesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [reorderingId, setReorderingId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -79,6 +80,35 @@ export default function ProductionStagesPage() {
     }
   }
 
+  async function handleMove(index: number, direction: -1 | 1) {
+    if (!stages) return;
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= stages.length) return;
+    const current = stages[index];
+    const target = stages[targetIndex];
+
+    setReorderingId(current.id);
+    try {
+      const [updatedCurrent, updatedTarget] = await Promise.all([
+        updateProductionStage(current.id, { sort_order: target.sort_order }),
+        updateProductionStage(target.id, { sort_order: current.sort_order }),
+      ]);
+      setStages((prev) => {
+        if (!prev) return prev;
+        const next = prev.map((s) => {
+          if (s.id === updatedCurrent.id) return updatedCurrent;
+          if (s.id === updatedTarget.id) return updatedTarget;
+          return s;
+        });
+        return [...next].sort((a, b) => a.sort_order - b.sort_order);
+      });
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("updateFailed"));
+    } finally {
+      setReorderingId(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <Breadcrumb items={[{ label: tNav("production"), href: "/production" }, { label: t("stagesTitle") }]} />
@@ -118,9 +148,33 @@ export default function ProductionStagesPage() {
               </tr>
             </thead>
             <tbody>
-              {stages.map((stage) => (
+              {stages.map((stage, index) => (
                 <tr key={stage.id} className="border-b border-border last:border-0 hover:bg-bg">
-                  <td className="px-4 py-2 text-text-secondary">{stage.sort_order + 1}</td>
+                  <td className="px-4 py-2 text-text-secondary">
+                    <div className="flex items-center gap-1">
+                      <span>{stage.sort_order + 1}</span>
+                      {canWrite && (
+                        <span className="flex flex-col">
+                          <button
+                            className="leading-none text-text-secondary hover:text-text-primary disabled:opacity-30"
+                            aria-label={t("moveStageUp")}
+                            disabled={index === 0 || reorderingId !== null}
+                            onClick={() => handleMove(index, -1)}
+                          >
+                            ▲
+                          </button>
+                          <button
+                            className="leading-none text-text-secondary hover:text-text-primary disabled:opacity-30"
+                            aria-label={t("moveStageDown")}
+                            disabled={index === stages.length - 1 || reorderingId !== null}
+                            onClick={() => handleMove(index, 1)}
+                          >
+                            ▼
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-2 font-medium text-text-primary">
                     {renamingId === stage.id ? (
                       <input

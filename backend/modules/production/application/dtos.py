@@ -61,3 +61,8 @@ class UpdateProductionStageInput(ActorContext):
     name: Optional[str] = None
     sort_order: Optional[int] = None
     is_active: Optional[bool] = None
+
+
+@dataclass
+class MarkNotificationReadInput(ActorContext):
+    notification_id: uuid.UUID

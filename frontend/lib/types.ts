@@ -1089,6 +1089,18 @@ export type InstallationNotification = {
   created_at: string;
 };
 
+// ── Production notifications (Phase 19) ───────────────────────────────────────
+
+export type ProductionNotification = {
+  id: string;
+  notification_type: string;
+  title: string;
+  message: string;
+  work_order_id: string | null;
+  read_at: string | null;
+  created_at: string;
+};
+
 // ── Reports module ────────────────────────────────────────────────────────────
 
 export const REPORT_PERIODS = ["7d", "30d", "90d", "12m", "custom"] as const;

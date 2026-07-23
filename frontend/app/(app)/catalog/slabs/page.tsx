@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { createSlab, listMaterials, listSlabs, listWarehouses, updateSlabStatus } from "@/lib/api/catalog";
+import { createSlab, listMaterials, listSlabs, listWarehouses, reserveSlab, updateSlabStatus } from "@/lib/api/catalog";
 import { SLAB_STATUSES, type Material, type Slab, type SlabStatus, type Warehouse } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -16,12 +17,14 @@ import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-ta
 import { useSlabStatusLabel } from "@/lib/i18n/hooks";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { usePermission } from "@/lib/permissions";
+import { useToast } from "@/components/ui/toast";
 
 export default function SlabsPage() {
   const t = useTranslations("catalog");
   const tCommon = useTranslations("common");
   const statusLabel = useSlabStatusLabel();
   const canWrite = usePermission("catalog:slabs:write");
+  const toast = useToast();
 
   const [slabs, setSlabs] = useState<Slab[] | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -35,6 +38,11 @@ export default function SlabsPage() {
   const [changingId, setChangingId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const search = useDebouncedValue(searchInput, 250);
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [reserveOrderId, setReserveOrderId] = useState("");
+  const [reserveOrderItemId, setReserveOrderItemId] = useState("");
+  const [reserving, setReserving] = useState(false);
 
   const [materialId, setMaterialId] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
@@ -121,11 +129,56 @@ export default function SlabsPage() {
     }
   }
 
+  const availableSlabs = (slabs ?? []).filter((s) => s.status === "available");
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllAvailable() {
+    setSelected((prev) =>
+      prev.size === availableSlabs.length ? new Set() : new Set(availableSlabs.map((s) => s.id))
+    );
+  }
+
+  async function handleBulkReserve() {
+    const ids = Array.from(selected);
+    if (ids.length === 0 || !reserveOrderId || !reserveOrderItemId) return;
+    setReserving(true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => reserveSlab(id, { order_id: reserveOrderId, order_item_id: reserveOrderItemId }))
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed > 0) {
+        toast.error(t("bulkReservePartialFailure", { succeeded: ids.length - failed, count: ids.length }));
+      } else {
+        toast.success(t("bulkReserveSucceeded", { count: ids.length }));
+      }
+      setSelected(new Set());
+      setReserveOrderId("");
+      setReserveOrderItemId("");
+      await reload();
+    } finally {
+      setReserving(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-xl font-semibold text-text-primary">{t("slabsTitle")}</h1>
-        <p className="text-sm text-text-secondary">{t("slabsSubtitle")}</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-text-primary">{t("slabsTitle")}</h1>
+          <p className="text-sm text-text-secondary">{t("slabsSubtitle")}</p>
+        </div>
+        <Link href="/catalog/reservations" className="text-sm text-primary hover:underline">
+          {t("viewReservations")} →
+        </Link>
       </div>
 
       {canWrite && (
@@ -229,6 +282,32 @@ export default function SlabsPage() {
         </div>
       </div>
 
+      {canWrite && selected.size > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <div className="flex flex-wrap items-end gap-3">
+            <p className="text-sm font-medium text-text-primary">
+              {t("bulkReserveSelected", { count: selected.size })}
+            </p>
+            <TextField label={t("orderId")} value={reserveOrderId} onChange={(e) => setReserveOrderId(e.target.value)} />
+            <TextField
+              label={t("orderItemId")}
+              value={reserveOrderItemId}
+              onChange={(e) => setReserveOrderItemId(e.target.value)}
+            />
+            <Button
+              loading={reserving}
+              disabled={!reserveOrderId || !reserveOrderItemId}
+              onClick={handleBulkReserve}
+            >
+              {t("reserveSelected")}
+            </Button>
+            <Button variant="secondary" onClick={() => setSelected(new Set())}>
+              {tCommon("cancel")}
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {slabs === null && !error && <TableSkeleton rows={5} columns={6} />}
@@ -240,6 +319,16 @@ export default function SlabsPage() {
           <table className="w-full text-left text-sm">
             <thead className={stickyTheadClass}>
               <tr>
+                {canWrite && (
+                  <th className="px-4 py-2">
+                    <input
+                      type="checkbox"
+                      aria-label={t("selectAllAvailable")}
+                      checked={selected.size > 0 && selected.size === availableSlabs.length}
+                      onChange={toggleSelectAllAvailable}
+                    />
+                  </th>
+                )}
                 <SortableHeader field="slab_number" label={t("tableSlabNumber")} sort={sort} onSortChange={setSort} />
                 <th className="px-4 py-2 font-medium">{t("tableMaterial")}</th>
                 <th className="px-4 py-2 font-medium">{t("tableWarehouse")}</th>
@@ -251,6 +340,18 @@ export default function SlabsPage() {
             <tbody>
               {slabs.map((slab) => (
                 <tr key={slab.id} className="border-b border-border last:border-0 hover:bg-bg">
+                  {canWrite && (
+                    <td className="px-4 py-2">
+                      {slab.status === "available" && (
+                        <input
+                          type="checkbox"
+                          aria-label={t("selectSlab", { number: slab.slab_number })}
+                          checked={selected.has(slab.id)}
+                          onChange={() => toggleSelect(slab.id)}
+                        />
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-2 font-medium text-text-primary">{slab.slab_number}</td>
                   <td className="px-4 py-2 text-text-secondary">{materialName(slab.material_id)}</td>
                   <td className="px-4 py-2 text-text-secondary">{warehouseName(slab.warehouse_id)}</td>

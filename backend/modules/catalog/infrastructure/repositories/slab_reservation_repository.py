@@ -59,3 +59,24 @@ class SlabReservationRepository:
             .order_by(SlabReservation.created_at.desc())
         )
         return list(self.db.scalars(stmt).all())
+
+    def list_for_company(
+        self,
+        *,
+        company_id: uuid.UUID,
+        order_id: Optional[uuid.UUID] = None,
+        status: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[SlabReservation]:
+        """Company-wide reservation browsing (Phase 19) -- `order_id`
+        optional (unlike `list_for_order`), so staff can see every active
+        reservation across the company, not only ones reached by first
+        knowing which order to look at."""
+        stmt = select(SlabReservation).where(SlabReservation.company_id == company_id)
+        if order_id is not None:
+            stmt = stmt.where(SlabReservation.order_id == order_id)
+        if status is not None:
+            stmt = stmt.where(SlabReservation.status == status)
+        stmt = stmt.order_by(SlabReservation.created_at.desc()).offset(offset).limit(limit)
+        return list(self.db.scalars(stmt).all())

@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { checkTaskReminders, getCustomer, listLeads, listTaskNotifications, listTasks } from "@/lib/api/crm";
 import { me } from "@/lib/api/auth";
 import { listOrders } from "@/lib/api/orders";
-import { listWorkOrders } from "@/lib/api/production";
+import { listProductionNotifications, listWorkOrders } from "@/lib/api/production";
 import { listInstallationJobs, listNotifications as listInstallationNotifications } from "@/lib/api/installation";
 import { getProject, listMeasurementsForCompany } from "@/lib/api/sales";
 import { getExecutiveDashboard, getInventoryAnalytics } from "@/lib/api/reports";
@@ -18,6 +18,7 @@ import type {
   InstallationNotification,
   Lead,
   Order,
+  ProductionNotification,
   ProjectItemMeasurement,
   Task,
   TaskNotification,
@@ -99,6 +100,7 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [taskNotifications, setTaskNotifications] = useState<TaskNotification[] | null>(null);
   const [installationNotifications, setInstallationNotifications] = useState<InstallationNotification[] | null>(null);
+  const [productionNotifications, setProductionNotifications] = useState<ProductionNotification[] | null>(null);
   const [executive, setExecutive] = useState<ExecutiveDashboard | null>(null);
   const [inventory, setInventory] = useState<InventoryAnalytics | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -160,17 +162,20 @@ export default function DashboardPage() {
           Promise.all([
             listTaskNotifications({ unreadOnly: true }),
             listInstallationNotifications({ unreadOnly: true }),
+            listProductionNotifications({ unreadOnly: true }),
           ])
         )
         .then((result) => {
           if (!result) return;
-          const [taskNotifRes, installationNotifRes] = result;
+          const [taskNotifRes, installationNotifRes, productionNotifRes] = result;
           setTaskNotifications(taskNotifRes.items);
           setInstallationNotifications(installationNotifRes.items);
+          setProductionNotifications(productionNotifRes.items);
         })
         .catch(() => {
           setTaskNotifications([]);
           setInstallationNotifications([]);
+          setProductionNotifications([]);
         });
     });
   }, [t]);
@@ -332,10 +337,17 @@ export default function DashboardPage() {
       created_at: n.created_at,
       href: n.installation_job_id ? `/installation/jobs/${n.installation_job_id}` : "/installation",
     }));
-    return [...fromTasks, ...fromInstallation]
+    const fromProduction = (productionNotifications ?? []).map((n) => ({
+      id: `production-${n.id}`,
+      title: n.title,
+      message: n.message,
+      created_at: n.created_at,
+      href: n.work_order_id ? `/production/${n.work_order_id}` : "/production",
+    }));
+    return [...fromTasks, ...fromInstallation, ...fromProduction]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 8);
-  }, [taskNotifications, installationNotifications]);
+  }, [taskNotifications, installationNotifications, productionNotifications]);
 
   return (
     <div className="flex flex-col gap-8">

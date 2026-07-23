@@ -26,3 +26,16 @@ class SlabNotInProductionError(CatalogDomainError):
     """Raised when registering an offcut against a slab that isn't
     currently `in_production` -- an offcut can only come from a slab
     actively being cut."""
+
+
+class OffcutTooLargeError(CatalogDomainError):
+    """Raised when a registered offcut's dimensions don't plausibly fit
+    within its parent slab (in either orientation) -- a data-entry
+    plausibility check, not a physical measurement (Phase 19)."""
+
+
+class SlabStatusRequiresSystemActionError(CatalogDomainError):
+    """Raised when a manual status PATCH targets a status that may only be
+    reached automatically (currently just `consumed`, set exclusively by
+    Production's work-order-completion cascade) -- see
+    `SYSTEM_ONLY_SLAB_STATUSES` (Phase 19)."""

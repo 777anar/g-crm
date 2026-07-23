@@ -26,9 +26,11 @@ from modules.catalog.application.use_cases import (
 from modules.catalog.domain.exceptions import (
     DuplicateSlabNumberError,
     InvalidSlabTransitionError,
+    OffcutTooLargeError,
     SlabAlreadyReservedError,
     SlabNotInProductionError,
     SlabNotReservableError,
+    SlabStatusRequiresSystemActionError,
 )
 from modules.catalog.infrastructure.repositories.slab_repository import SlabRepository
 from modules.catalog.infrastructure.repositories.slab_reservation_repository import SlabReservationRepository
@@ -47,6 +49,7 @@ from modules.catalog.presentation.schemas.slab import (
 router = APIRouter()
 
 _RESERVATION_BUSINESS_ERRORS = (SlabAlreadyReservedError, SlabNotReservableError, SlabNotInProductionError)
+_OFFCUT_BUSINESS_ERRORS = (SlabNotInProductionError, OffcutTooLargeError)
 
 
 @router.get("/slabs", response_model=SlabListOut)
@@ -176,7 +179,7 @@ def update_slab_status(
                 status=payload.status,
             )
         )
-    except InvalidSlabTransitionError as exc:
+    except (InvalidSlabTransitionError, SlabStatusRequiresSystemActionError) as exc:
         raise ConflictError(str(exc)) from exc
     db.commit()
     db.refresh(slab)
@@ -239,13 +242,31 @@ def release_slab_reservation(
 
 
 @router.get("/reservations", response_model=SlabReservationListOut)
-def list_reservations_for_order(
-    order_id: uuid.UUID = Query(...),
+def list_reservations(
+    order_id: Optional[uuid.UUID] = Query(default=None),
+    status: Optional[str] = Query(default=None),
+    limit: int = Query(default=50, le=200),
+    cursor: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_permission("catalog:slabs:read")),
 ) -> SlabReservationListOut:
-    rows = SlabReservationRepository(db).list_for_order(company_id=current_user.active_company_id, order_id=order_id)
-    return SlabReservationListOut(items=[SlabReservationOut.model_validate(r) for r in rows])
+    """Lists reservations for one order (`order_id` given -- the original
+    Phase 1 shape) or, since Phase 19, browses every reservation across the
+    company (`order_id` omitted) so staff can manage active reservations
+    directly instead of only reaching them by already knowing which order
+    to look at."""
+    offset = decode_cursor(cursor)
+    rows = SlabReservationRepository(db).list_for_company(
+        company_id=current_user.active_company_id,
+        order_id=order_id,
+        status=status,
+        limit=limit + 1,
+        offset=offset,
+    )
+    has_more = len(rows) > limit
+    page = rows[:limit]
+    next_cursor = encode_cursor(offset=offset + limit) if has_more else None
+    return SlabReservationListOut(items=[SlabReservationOut.model_validate(r) for r in page], next_cursor=next_cursor)
 
 
 @router.post("/slabs/{slab_id}/offcuts", response_model=SlabOut)
@@ -272,7 +293,7 @@ def create_offcut(
         )
     except DuplicateSlabNumberError as exc:
         raise ConflictError(str(exc)) from exc
-    except _RESERVATION_BUSINESS_ERRORS as exc:
+    except _OFFCUT_BUSINESS_ERRORS as exc:
         raise BusinessRuleViolationError(str(exc)) from exc
     db.commit()
     db.refresh(offcut)

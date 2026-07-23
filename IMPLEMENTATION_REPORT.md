@@ -1,7 +1,7 @@
 # G-STONE ERP — Implementation Report
 
-_Date: 2026-07-22 (original report), addended 2026-07-22 (Version 2.36.0 / Phase 17), addended again 2026-07-23 (Version 2.37.0 / Phase 18)_
-_Scope: everything implemented since the last audit (`PROJECT_AUDIT.md`, dated 2026-07-21, frozen at commit `521428e` / Version 2.25.0), through current HEAD (Version 2.37.0). Sections 1–8 below are the original report, kept as written — they describe what was true at the time. §9 is a same-day addendum covering Phase 17 (Version 2.36.0); §10 is a later addendum covering Phase 18 (Version 2.37.0), added because it directly resolves several items §8/§9.5 listed as "Still open"; those table rows are annotated below rather than silently rewritten, consistent with this project's practice of recording corrections rather than erasing history. (Versions 2.34.0 and 2.35.0, the two Stone Fabrication Workflow phases, are covered by their own dedicated `STONE_WORKFLOW_REPORT.md`, not repeated here.)_
+_Date: 2026-07-22 (original report), addended 2026-07-22 (Version 2.36.0 / Phase 17), addended again 2026-07-23 (Version 2.37.0 / Phase 18), addended again 2026-07-23 (Version 2.38.0 / Phase 19)_
+_Scope: everything implemented since the last audit (`PROJECT_AUDIT.md`, dated 2026-07-21, frozen at commit `521428e` / Version 2.25.0), through current HEAD (Version 2.38.0). Sections 1–8 below are the original report, kept as written — they describe what was true at the time. §9 is a same-day addendum covering Phase 17 (Version 2.36.0); §10 covers Phase 18 (Version 2.37.0); §11 covers Phase 19 (Version 2.38.0), closing the eight gaps `STONE_WORKFLOW_REPORT.md` §12 deliberately deferred from Phases 1–2. Corrections are recorded as annotations on prior sections rather than silent rewrites, consistent with this project's practice. (Versions 2.34.0 and 2.35.0, the two Stone Fabrication Workflow phases, are covered by their own dedicated `STONE_WORKFLOW_REPORT.md`, not repeated here.)_
 _Method: `git log`/`git diff --stat` against the audit baseline commit, cross-checked against `CHANGELOG.md` entries for each release, plus direct re-verification of every "remaining issue" claim against the current source (not assumed from the prior audit text)._
 
 This window covers **9 commits, 179 files changed, +11,409 / −945 lines**, and the backend test suite grew from 553 to 630 passing. Every numbered item in the prior audit's Priority List (§11, items 1–5) was addressed in this window, in order, plus three entirely new modules were shipped beyond what the audit's remaining-work estimate scoped for a single window.
@@ -269,3 +269,53 @@ Full backend suite passing (722/722), migrations round-trip clean (`upgrade head
 | — | Real AI provider, payments, mobile client | Not started — `MASTER_DEVELOPMENT_ROADMAP.md` Phases 21/22/25 |
 
 Full detail is in `CHANGELOG.md` [2.37.0].
+
+---
+
+## 11. Addendum — Phase 19: Stone Fabrication Workflow, Phase 3 (Version 2.38.0)
+
+_Added 2026-07-23, after `MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 19 was executed in full. Covers HEAD commit at time of writing (post-Phase 18/Version 2.37.0)._
+
+### 11.1 Theme
+
+`STONE_WORKFLOW_REPORT.md` §12 named eight items as deliberate, deferred gaps in Phases 1–2 (Versions 2.34.0/2.35.0): a reservation UI outside the Production Job page, drag-and-drop stage movement, stage reordering UI, priority/stage-change notifications, bulk operations, finer-grained production permissions, offcut dimension validation, and the sold-vs-consumed status ambiguity. This addendum closes all eight in one pass, the same "close everything a prior phase deliberately deferred, in one dedicated pass" shape as Phase 17 (§9) and Phase 18 (§10).
+
+### 11.2 Features Added / Fixed
+
+- **Reservation UI** — `/catalog/slabs` gained checkbox-based multi-select (available slabs only) + a bulk "Reserve selected" toolbar; a new `/catalog/reservations` page browses every reservation company-wide (not just per-order) with status filtering and a Release action; `/orders/{id}` gained a "Reserved Slabs" card. Backend: `GET /catalog/reservations`'s `order_id` query param became optional (previously required) and the endpoint gained cursor pagination + a `status` filter — the same endpoint now serves both the original per-order view and the new company-wide browse.
+- **Drag-and-drop stage movement** — `/reports/production-planning`'s Kanban board gained native HTML5 drag-and-drop (job card → stage column) plus a checkbox multi-select + "Move selected to stage" bulk toolbar, both calling the existing `POST /production/{id}/stage` endpoint.
+- **Stage reordering UI** — `/production/stages` gained move-up/move-down buttons, swapping `sort_order` between adjacent stages via two `PATCH` calls — no new backend endpoint needed, `sort_order` was already settable, just never exposed.
+- **Priority/stage-change notifications** — new `production_notifications` table + `notify_user` helper (mirrors `modules/installation/application/notification_helper.py`'s `notify_crew` exactly), wired into `UpdateWorkOrderPriorityUseCase` (fires on a change to `urgent` with an assigned operator), `UpdateWorkOrderStageUseCase` (fires on any stage change with an assigned operator — deliberately not keyed to a specific stage name, since `production_stages.name` is per-company configurable), and `AssignWorkOrderOperatorUseCase` (fires on a new assignment). New `GET/POST /production/notifications` endpoints mirror Installation's shape exactly. Frontend: a third notification source merged into the Dashboard's existing task/installation notification feed.
+- **Bulk operations** — confirmed there is no backend "bulk endpoint" pattern anywhere in this codebase (Customers' Phase 9 bulk actions are pure frontend `Promise.allSettled` fan-outs over single-item endpoints); both new bulk flows (reserve multiple slabs, move multiple jobs to a stage) follow that exact same convention rather than introducing a new backend pattern.
+- **Finer-grained production permissions** — `production:priority:write`/`production:operator:write`/`production:stage:write` added alongside (not replacing) `production:write`, applied to the three specific tracking endpoints. Additive: default role-rank behavior is unchanged (the action suffix is still `write`), but `module_permissions` overrides can now grant one of the three independently.
+- **Offcut dimension/area validation** — `CreateOffcutUseCase` now checks the offcut's `length_mm`/`width_mm` against the parent slab's own recorded dimensions in both orientations before creating it, raising a new `OffcutTooLargeError` (422) when it couldn't plausibly fit. Silently skipped when either slab is missing a dimension.
+- **`sold` vs. `consumed` reconciliation** — `consumed` is now reachable only via Production's own completion cascade (`UpdateSlabStatusInput.system_triggered`, defaulted `False`, set `True` only inside `work_order_use_cases.py`'s `_cascade_slabs`); a manual PATCH to `consumed` now raises a new `SlabStatusRequiresSystemActionError` (409). `UpdateSlabStatusUseCase` also now auto-releases a slab's dangling active reservation when a user manually transitions it to `sold` or `scrap` — closing the specific "reservation left stuck `active` forever" data-quality gap `STONE_WORKFLOW_REPORT.md` flagged, without changing which transitions are legal (the existing `reserved → sold` test still passes unmodified).
+
+### 11.3 Tests Added
+
+**15 new backend tests: 722 → 737 passing.**
+
+| Area | New tests |
+|---|---|
+| Offcut validation (`tests/catalog/test_phase19_offcut_validation_and_status_boundary.py`) | 3 — too-large rejected, fits-when-rotated accepted, no-dimensions-on-file skips validation |
+| Sold/consumed boundary (same file) | 3 — manual PATCH to `consumed` rejected, selling a reserved slab releases its reservation, scrapping an in-production slab releases its reservation |
+| Company-wide reservation browsing (same file) | 2 — `order_id`-omitted lists the whole company, `status` filter works |
+| Finer-grained permissions (`tests/production/test_phase19_permissions_and_notifications.py`) | 2 — viewer rejected from all three endpoints by default, a targeted `module_permissions` override grants exactly one of the three |
+| Notifications (same file) | 5 — urgent-priority-with-operator notifies, priority-change-without-operator notifies no one, operator assignment notifies, stage change notifies, mark-read + `unread_only` filter |
+
+No frontend unit-test framework exists in this codebase (consistent with §5/§9.3/§10.3); frontend changes verified via `tsc --noEmit`, `npm run lint`, and a full production build.
+
+### 11.4 Verification
+
+Full backend suite passing (737/737), migrations round-trip clean (`upgrade head` → `downgrade -1` → `upgrade head` against a scratch SQLite database), frontend `tsc --noEmit` clean, `npm run lint` clean (0 errors, 0 warnings), frontend production build clean (60 routes, +1 new: `/catalog/reservations`).
+
+### 11.5 Remaining Issues (re-verified, current as of this addendum)
+
+| # | Issue | Status |
+|---|---|---|
+| — | RLS full efficacy in production (non-owner runtime DB role) | Still open — infra step, tracked since Phase 18 (§10.5) |
+| — | Per-session/device token revocation | Still open — tracked since Phase 18 (§10.5) |
+| — | Multi-slab/cross-job batch optimization, CNC export, supplier catalog import | Not started — `MASTER_DEVELOPMENT_ROADMAP.md` Phase 20 |
+| — | Real AI provider, payments, mobile client | Not started — Phases 21/22/25 |
+
+Full detail is in `CHANGELOG.md` [2.38.0].

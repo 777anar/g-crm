@@ -70,7 +70,8 @@
     "purchaseOrders": "Alış sifarişləri",
     "campaigns": "Kampaniyalar",
     "cutOptimization": "Kəsim Optimallaşdırması",
-    "offcutLibrary": "Qırıntı Kitabxanası"
+    "offcutLibrary": "Qırıntı Kitabxanası",
+    "reservations": "Rezervasiyalar"
   },
   "language": {
     "switchLanguage": "Dil",
@@ -522,7 +523,29 @@
       "technical_pdf": "Texniki PDF",
       "installation_guide": "Quraşdırma Təlimatı",
       "cleaning_guide": "Təmizlik Təlimatı"
-    }
+    },
+    "viewReservations": "Rezervasiyalara bax",
+    "bulkReserveSelected": "{count} slab seçildi",
+    "orderId": "Sifariş ID",
+    "orderItemId": "Sifariş Maddəsi ID",
+    "reserveSelected": "Seçilənləri rezerv et",
+    "selectAllAvailable": "Bütün mövcud slabları seç",
+    "selectSlab": "{number} slabını seç",
+    "bulkReservePartialFailure": "{count} slabdan {succeeded} rezerv edildi — bəziləri uğursuz oldu.",
+    "bulkReserveSucceeded": "{count} slab rezerv edildi.",
+    "reservationsTitle": "Slab Rezervasiyaları",
+    "reservationsSubtitle": "Şirkət daxilində bütün slab rezervasiyaları, aktiv və tarixi.",
+    "noReservationsYet": "Hələ rezervasiya yoxdur",
+    "noReservationsDesc": "Bir slab sifariş üçün rezerv edildikdə burada görünəcək.",
+    "colOrderId": "Sifariş ID",
+    "colOrderItemId": "Sifariş Maddəsi ID",
+    "colSlabId": "Slab ID",
+    "colReservedAt": "Rezerv Edilib",
+    "release": "Buraxın",
+    "reservationReleased": "Rezervasiya buraxıldı.",
+    "reservationStatus_active": "Aktiv",
+    "reservationStatus_released": "Buraxılıb",
+    "reservationStatus_consumed": "İstifadə edilib"
   },
   "sales": {
     "projectsTitle": "Layihələr",
@@ -778,7 +801,14 @@
     "invoice": "Faktura",
     "viewInvoice": "Fakturaya bax",
     "noInvoiceYet": "Bu sifariş üçün hələ faktura yoxdur.",
-    "createInvoice": "Faktura yarat"
+    "createInvoice": "Faktura yarat",
+    "reservedSlabs": "Rezerv Edilmiş Slablar",
+    "colOrderItemId": "Sifariş Maddəsi ID",
+    "colSlabId": "Slab ID",
+    "release": "Buraxın",
+    "reservationStatus_active": "Aktiv",
+    "reservationStatus_released": "Buraxılıb",
+    "reservationStatus_consumed": "İstifadə edilib"
   },
   "reports": {
     "title": "Hesabatlar",
@@ -870,7 +900,13 @@
     "operatorWorkload": "Operator üzrə iş yükü",
     "noOperatorsAssigned": "Aktiv tapşırıqlara hələ operator təyin edilməyib.",
     "overdueSince": "Gecikib —",
-    "overdueAbbrev": "gecikib"
+    "overdueAbbrev": "gecikib",
+    "jobsSelected": "{count} tapşırıq seçildi",
+    "moveSelectedToStage": "Seçilənləri mərhələyə köçür",
+    "clearSelection": "Seçimi təmizlə",
+    "dragDropHint": "Tapşırıq kartını başqa sütuna sürükləyərək köçürün, ya da bir neçə tapşırığı birlikdə köçürmək üçün seçin.",
+    "stageMovePartialFailure": "{count} tapşırıqdan {succeeded} köçürüldü — bəziləri uğursuz oldu.",
+    "selectJob": "{number} tapşırığını seç"
   },
   "production": {
     "title": "İstehsal",
@@ -935,7 +971,9 @@
     "updateFailed": "Yeniləmək alınmadı.",
     "stageOrder": "№",
     "stageActive": "Aktiv",
-    "stageHidden": "Gizli"
+    "stageHidden": "Gizli",
+    "moveStageUp": "Mərhələni yuxarı köçür",
+    "moveStageDown": "Mərhələni aşağı köçür"
   },
   "installation": {
     "title": "Quraşdırma",
@@ -1473,7 +1511,8 @@
     "groupOffice": "Ofis",
     "groupSecurity": "Təhlükəsizlik",
     "securityDesc": "Sizin daxil olmanız üçün iki faktorlu autentifikasiya.",
-    "auditLogDesc": "Uyğunluq üçün audit jurnalının ixracı və saxlama siyasəti."
+    "auditLogDesc": "Uyğunluq üçün audit jurnalının ixracı və saxlama siyasəti.",
+    "reservationsDesc": "Şirkət daxilində bütün aktiv slab rezervasiyalarına baxın və idarə edin."
   },
   "marketing": {
     "title": "Marketinq kampaniyaları",

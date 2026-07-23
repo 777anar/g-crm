@@ -72,3 +72,11 @@ WORK_ORDER_EVENT_STATUS_CHANGED = "status_changed"
 WORK_ORDER_EVENT_STAGE_CHANGED = "stage_changed"
 WORK_ORDER_EVENT_PRIORITY_CHANGED = "priority_changed"
 WORK_ORDER_EVENT_OPERATOR_ASSIGNED = "operator_assigned"
+
+# In-app notification types (Phase 19: Stone Fabrication Workflow, Phase 3)
+# -- mirrors modules/installation/domain/value_objects.py's notification
+# vocabulary, one type per moment a work order's assigned operator needs to
+# know something changed without polling the timeline.
+NOTIFICATION_TYPE_OPERATOR_ASSIGNED = "operator_assigned"
+NOTIFICATION_TYPE_PRIORITY_URGENT = "priority_urgent"
+NOTIFICATION_TYPE_STAGE_CHANGED = "stage_changed"

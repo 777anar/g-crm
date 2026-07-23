@@ -314,6 +314,10 @@ class UpdateWorkOrderStatusUseCase:
                 actor_user_id=data.actor_user_id,
                 slab_id=item.slab_id,
                 status=target_status,
+                # This cascade is the one legitimate path to `consumed`
+                # (Phase 19's sold/consumed boundary -- see
+                # catalog/domain/value_objects.py's SYSTEM_ONLY_SLAB_STATUSES).
+                system_triggered=True,
             ))
 
     def _cascade_reservations(self, items, data: UpdateWorkOrderStatusInput, *, consumed: bool) -> None:

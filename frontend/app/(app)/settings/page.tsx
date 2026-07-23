@@ -43,6 +43,7 @@ export default function SettingsPage() {
         { title: tNav("cutOptimization"), description: t("cutOptimizationDesc"), href: "/cut-optimization" },
         { title: tNav("offcutLibrary"), description: t("offcutLibraryDesc"), href: "/catalog/offcuts" },
         { title: t("productionPlanning"), description: t("productionPlanningDesc"), href: "/reports/production-planning" },
+        { title: tNav("reservations"), description: t("reservationsDesc"), href: "/catalog/reservations" },
       ],
     },
     {

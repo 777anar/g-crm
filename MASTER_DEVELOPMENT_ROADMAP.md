@@ -1,7 +1,8 @@
 # G-STONE ERP — Master Development Roadmap
 
 _Date: 2026-07-23_
-_Current state: Version **2.37.0**. 14 installed modules, 722/722 backend tests passing, CI-enforced core/module architecture boundary (including a CI-enforced ESLint gate — see Phase 17), Postgres Row-Level Security + httpOnly-cookie auth + staff MFA + a compliance audit-log surface (see Phase 18), live in daily use by G-STONE GALLERY._
+_Current state: Version **2.38.0**. 14 installed modules, 737/737 backend tests passing, CI-enforced core/module architecture boundary (including a CI-enforced ESLint gate — see Phase 17), Postgres Row-Level Security + httpOnly-cookie auth + staff MFA + a compliance audit-log surface (see Phase 18), a fully operable reservation/stage/notification UI closing every Phase 1/2 Stone Fabrication Workflow gap (see Phase 19), live in daily use by G-STONE GALLERY._
+_Updated 2026-07-23: Phase 19 (Stone Fabrication Workflow, Phase 3) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.38.0] and `IMPLEMENTATION_REPORT.md` §11 for the complete record._
 _Updated 2026-07-23: Phase 18 (Security & Compliance Hardening) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.37.0] and `IMPLEMENTATION_REPORT.md` §10 for the complete record._
 _Updated 2026-07-22: Phase 17 (Stabilization & Technical Debt Closeout) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.36.0] and `PHASE17_COMPLETION_REPORT.md` for the complete record._
 _Built from: the codebase as it stands (`backend/modules/`, `frontend/app/(app)/`), `PROJECT_AUDIT.md` (2026-07-21, commit `521428e`/v2.25.0), `IMPLEMENTATION_REPORT.md` (2026-07-22, v2.25.0→v2.33.0), `STONE_WORKFLOW_REPORT.md` (Phase 1, v2.34.0), the v2.35.0 `CHANGELOG.md` entry (Phase 2), `ROADMAP.md`'s full version history, and `PROJECT_ANALYSIS.md`'s original 11-phase plan._
@@ -12,8 +13,8 @@ _Scope: this document does not implement anything. It records what is done (so i
 ## How to read this document
 
 - **Part 1** defines what "world-class" means for this specific product, so later phases have a target instead of being an arbitrary backlog.
-- **Part 2** is the delivery history, compressed from 60+ point releases into 19 coherent phases, each marked ✅ **Completed** with its real version numbers and dates. Nothing here needs to be redone.
-- **Part 3** is everything not yet built, sequenced into phases in the order they should be executed, with the reasoning for that order. Phase numbering continues from Part 2 (Phase 19 onward) so the whole platform history reads as one continuous list.
+- **Part 2** is the delivery history, compressed from 60+ point releases into 20 coherent phases, each marked ✅ **Completed** with its real version numbers and dates. Nothing here needs to be redone.
+- **Part 3** is everything not yet built, sequenced into phases in the order they should be executed, with the reasoning for that order. Phase numbering continues from Part 2 (Phase 20 onward) so the whole platform history reads as one continuous list.
 - Every remaining phase cites the source finding it comes from (`PROJECT_AUDIT.md` §, `IMPLEMENTATION_REPORT.md` §, `STONE_WORKFLOW_REPORT.md` §12, or `PROJECT_ANALYSIS.md`'s original Phase 9/10) rather than being invented fresh — this roadmap extends the project's own audit trail, it doesn't restart it.
 
 ---
@@ -113,27 +114,15 @@ Eight findings independently re-identified across two or more prior audit passes
 **v2.37 · 2026-07-23**
 Closed every gap Part 1's pillar #2 named: Postgres Row-Level Security (RLS enabled + a `company_isolation` policy on all 75 tenant-owned tables, wired automatically per-request via a new `CompanyContextMiddleware` + a SQLAlchemy `after_begin` hook — zero router/repository changes needed, no-ops on SQLite); staff and Customer Portal auth tokens moved from `localStorage` to httpOnly/`Secure`/`SameSite=Lax` cookies (both auth flows now accept either the cookie or a Bearer header, so existing API clients/tests were unaffected while the browser frontend now never touches a raw token); CORS `allow_methods`/`allow_headers` no longer wildcarded; and the `usePermission()` frontend-gating utility Phase 17 introduced on the Customers pages only rolled out to all 32 remaining files with a write action across every module. Two items beyond that pillar's original list, both explicitly named in this phase's own scope: staff TOTP MFA (self-service enroll/enable/disable, a login-time challenge/response step, and a per-company-per-role mandatory-MFA policy — the "optional-then-mandatory-per-role" control), and a compliance audit-log export/retention admin surface (filterable CSV export, a configurable retention window, and a manual, owner-triggered purge — deliberately manual since no background job queue exists yet). 16 new backend tests (706→722). Full detail in `CHANGELOG.md` [2.37.0] and `IMPLEMENTATION_REPORT.md` §10.
 
+### ✅ Phase 19 — Stone Fabrication Workflow, Phase 3: Operational Completion
+**v2.38 · 2026-07-23**
+Closed every one of the eight gaps `STONE_WORKFLOW_REPORT.md` §12 named as the deliberately-scoped Phase 1/2 boundary: a reservation UI outside the Production Job page (bulk-select-and-reserve on `/catalog/slabs`, a new company-wide `/catalog/reservations` browse-and-release page, and a Reserved Slabs card on `/orders/{id}`); real drag-and-drop stage movement plus a multi-select bulk-move toolbar on the Production Planning Dashboard; move-up/move-down stage reordering on `/production/stages`; a new Production notification subsystem (mirroring Installation's `notify_crew` pattern) firing on urgent-priority, stage-change, and operator-assignment moments, surfaced on the Dashboard; bulk slab reservation and bulk stage movement (both frontend `Promise.allSettled` fan-outs, matching the only bulk-action convention this codebase actually has); `production:priority:write`/`production:operator:write`/`production:stage:write` splitting the previously-coarse `production:write`; offcut dimension/area plausibility validation (checked in both orientations against the parent slab); and the `sold`-vs-`consumed` boundary closed two ways (`consumed` now reachable only via Production's own completion cascade; selling/scrapping a still-reserved slab now auto-releases its dangling reservation instead of leaving it stuck `active`). 15 new backend tests (722→737). Full detail in `CHANGELOG.md` [2.38.0] and `IMPLEMENTATION_REPORT.md` §11.
+
 ---
 
 ## Part 3 — Remaining Phases (Execution Order)
 
 _Sequencing logic: close known debt and security gaps first (cheap, and every later phase inherits a cleaner/safer base) → finish the stone-fabrication domain the last two phases started (the platform's actual competitive differentiator) → extend that domain further (advanced optimization, real supply-chain automation) → replace the one remaining major mock (AI) → close the money/paperwork loop (payments, accounting export) → make analytics scale-ready → prove the system at real scale → extend to mobile → formal hardening and launch, exactly as `PROJECT_ANALYSIS.md`'s own Phase 9/10 always intended to come last._
-
----
-
-### 🔲 Phase 19 — Stone Fabrication Workflow, Phase 3: Operational Completion
-**Priority: High · Size: M · Directly extends Phases 15–16, this platform's core differentiator**
-
-`STONE_WORKFLOW_REPORT.md` §12 named these as deliberate, scoped-out gaps in Phase 1, still open after Phase 2. This phase closes them, turning the reservation/stage/offcut data model into a fully operable daily tool rather than an API-only capability partially surfaced through one page.
-
-- **Reservation UI outside the Production Job page** — today, explicit slab reservation is API-only; there is no "reserve this slab for this order" button anywhere in the UI (Catalog slab list, Order detail). Build it so staff can browse and manage all active reservations directly, not only via quote acceptance.
-- **Drag-and-drop stage movement** — Phase 2's Production Planning Dashboard is a real Kanban-by-stage board, but it's a report (read + overdue/workload view), not an interaction surface; moving a job between stages still requires the separate `/production/{id}` panel. Wire drag-and-drop directly on the board.
-- **Stage reordering UI** — `sort_order` can only be changed via a direct API call today; expose it on the `/production/stages` settings page (rename/hide already exist there).
-- **Priority/stage-change notifications** — an `urgent` job or a stage move to "Quality Control" triggers nothing today; the timeline is pull-only. Wire into the existing in-app notification system Installation already uses.
-- **Bulk operations** — reserving multiple slabs, or moving multiple jobs to a new stage together, both require one API call per item today; add bulk endpoints and UI, matching the precedent Customers' bulk actions (Phase 9) already set.
-- **Finer-grained production permissions** — every new Phase 1/2 endpoint reuses the same coarse `production:read`/`production:write`; split out at minimum "change priority" from "reassign operator" if role requirements get more specific during Phase 18's RBAC review.
-- **Offcut dimension/area validation** — `POST /catalog/slabs/{id}/offcuts` currently accepts any length/width with no plausibility check against the parent slab.
-- **`sold` vs. `consumed` reconciliation** — the two terminal slab statuses now overlap in real-world meaning (direct sale vs. fabrication completion) as a convention, not a system-enforced boundary; document or enforce the distinction before it causes a data-quality issue.
 
 ---
 
@@ -220,9 +209,8 @@ The closing phase, not because there's nothing left after it, but because it's w
 
 | # | Phase | Status | Size | Depends on |
 |---|---|---|---|---|
-| 0–18 | Foundation through Security & Compliance Hardening | ✅ Completed (v1.0–v2.37.0) | — | — |
-| 19 | Stone Fabrication Workflow, Phase 3 | 🔲 Next | M | Phases 15–16 |
-| 20 | Advanced Cut Optimization & Supply Chain Intelligence | 🔲 | L | Phase 19 |
+| 0–19 | Foundation through Stone Fabrication Workflow, Phase 3 | ✅ Completed (v1.0–v2.38.0) | — | — |
+| 20 | Advanced Cut Optimization & Supply Chain Intelligence | 🔲 Next | L | Phase 19 ✅ |
 | 21 | Real AI Provider Integration | 🔲 | L | Phase 18 ✅ |
 | 22 | Payments & Financial Ecosystem Integration | 🔲 | L | Phase 18 ✅ |
 | 23 | Reporting & Business Intelligence Maturity | 🔲 | M | None |

@@ -32,7 +32,12 @@ from modules.catalog.application.dtos import (
 )
 from modules.catalog.application.use_cases.slab_use_cases import CreateSlabUseCase, UpdateSlabStatusUseCase
 from modules.catalog.domain import events as catalog_events
-from modules.catalog.domain.exceptions import SlabAlreadyReservedError, SlabNotInProductionError, SlabNotReservableError
+from modules.catalog.domain.exceptions import (
+    OffcutTooLargeError,
+    SlabAlreadyReservedError,
+    SlabNotInProductionError,
+    SlabNotReservableError,
+)
 from modules.catalog.domain.value_objects import (
     RESERVATION_STATUS_ACTIVE,
     RESERVATION_STATUS_CONSUMED,
@@ -42,6 +47,7 @@ from modules.catalog.domain.value_objects import (
     SLAB_STATUS_OFFCUT_CREATED,
     SLAB_STATUS_RESERVED,
 )
+from modules.catalog.infrastructure.models.slab import Slab
 from modules.catalog.infrastructure.models.slab_reservation import SlabReservation
 from modules.catalog.infrastructure.repositories.slab_repository import SlabRepository
 from modules.catalog.infrastructure.repositories.slab_reservation_repository import SlabReservationRepository
@@ -248,6 +254,7 @@ class CreateOffcutUseCase:
                 f"Slab '{parent.slab_number}' must be '{SLAB_STATUS_IN_PRODUCTION}' to register an offcut "
                 f"from it (current status: '{parent.status}')"
             )
+        self._validate_fits_within_parent(parent, data)
 
         offcut = CreateSlabUseCase(self.db).execute(
             CreateSlabInput(
@@ -298,3 +305,25 @@ class CreateOffcutUseCase:
             self.db,
         )
         return offcut
+
+    @staticmethod
+    def _validate_fits_within_parent(parent: Slab, data: CreateOffcutInput) -> None:
+        """A plausibility check, not a physical measurement (Phase 19):
+        rejects an offcut that couldn't possibly have come from its parent
+        slab, tried in either orientation since a cut piece is routinely
+        rotated relative to the parent's own recorded length/width. Silent
+        (no check at all) when either the parent or the offcut is missing a
+        dimension, since dimensions are optional on Slab and a plausibility
+        check needs both sides to compare."""
+        if data.length_mm is None or data.width_mm is None:
+            return
+        if parent.length_mm is None or parent.width_mm is None:
+            return
+
+        fits_as_is = data.length_mm <= parent.length_mm and data.width_mm <= parent.width_mm
+        fits_rotated = data.length_mm <= parent.width_mm and data.width_mm <= parent.length_mm
+        if not (fits_as_is or fits_rotated):
+            raise OffcutTooLargeError(
+                f"Offcut dimensions {data.length_mm}x{data.width_mm}mm don't fit within parent slab "
+                f"'{parent.slab_number}' ({parent.length_mm}x{parent.width_mm}mm), in either orientation"
+            )

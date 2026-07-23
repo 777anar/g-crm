@@ -13,6 +13,7 @@ import type {
   Paginated,
   PriceList,
   PriceListEntry,
+  ReservationStatus,
   Slab,
   SlabReservation,
   SlabStatus,
@@ -263,6 +264,23 @@ export function releaseSlabReservation(reservationId: string) {
 export function listReservationsForOrder(orderId: string) {
   return apiRequest<{ items: SlabReservation[] }>("/api/v1/catalog/reservations", {
     searchParams: { order_id: orderId },
+  });
+}
+
+/** Company-wide reservation browsing (Phase 19) -- `order_id` omitted lists
+ * every active-or-not reservation across the company, cursor-paginated, so
+ * staff can manage reservations directly instead of only reaching them by
+ * already knowing which order to look at. */
+export function listReservations(
+  params: { orderId?: string; status?: ReservationStatus; limit?: number; cursor?: string } = {}
+) {
+  return apiRequest<Paginated<SlabReservation>>("/api/v1/catalog/reservations", {
+    searchParams: {
+      order_id: params.orderId,
+      status: params.status,
+      limit: params.limit,
+      cursor: params.cursor,
+    },
   });
 }
 

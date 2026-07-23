@@ -178,3 +178,19 @@ class ProductionStageOut(BaseModel):
 
 class ProductionStageListOut(BaseModel):
     items: List[ProductionStageOut]
+
+
+class NotificationOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    notification_type: str
+    title: str
+    message: str
+    work_order_id: Optional[uuid.UUID]
+    read_at: Optional[datetime]
+    created_at: datetime
+
+
+class NotificationListOut(BaseModel):
+    items: List[NotificationOut]

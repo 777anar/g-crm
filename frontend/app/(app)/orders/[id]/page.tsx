@@ -17,7 +17,17 @@ import { createWorkOrder, getWorkOrderForOrder } from "@/lib/api/production";
 import { createInstallationJob, getInstallationJobForOrder } from "@/lib/api/installation";
 import { createInvoice, getInvoiceForOrder } from "@/lib/api/finance";
 import { getQuote } from "@/lib/api/sales";
-import type { Order, OrderItem, OrderMeasurement, OrderSection, WorkOrder, InstallationJob, Invoice } from "@/lib/types";
+import { listReservationsForOrder, releaseSlabReservation } from "@/lib/api/catalog";
+import type {
+  Order,
+  OrderItem,
+  OrderMeasurement,
+  OrderSection,
+  WorkOrder,
+  InstallationJob,
+  Invoice,
+  SlabReservation,
+} from "@/lib/types";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -72,6 +82,8 @@ export default function OrderDetailPage() {
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [installationJob, setInstallationJob] = useState<InstallationJob | null>(null);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [reservations, setReservations] = useState<SlabReservation[]>([]);
+  const [releasingReservationId, setReleasingReservationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [transitioning, setTransitioning] = useState(false);
   const [creatingWorkOrder, setCreatingWorkOrder] = useState(false);
@@ -141,6 +153,12 @@ export default function OrderDetailPage() {
       } else {
         throw err;
       }
+    }
+
+    try {
+      setReservations((await listReservationsForOrder(id)).items);
+    } catch {
+      setReservations([]);
     }
 
     setLoading(false);
@@ -239,6 +257,18 @@ export default function OrderDetailPage() {
       await reload();
     } catch (err) {
       toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
+  }
+
+  async function handleReleaseReservation(reservationId: string) {
+    setReleasingReservationId(reservationId);
+    try {
+      await releaseSlabReservation(reservationId);
+      await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    } finally {
+      setReleasingReservationId(null);
     }
   }
 
@@ -364,6 +394,47 @@ export default function OrderDetailPage() {
         <div><span className="text-text-secondary">{t("vat")} {order.vat_rate}%:</span> <strong className="text-text-primary">{order.currency} {parseFloat(order.vat_amount).toFixed(2)}</strong></div>
         <div className="ml-auto text-base"><span className="text-text-secondary">{t("totalFinal")}:</span> <strong className="text-lg text-primary">{order.currency} {parseFloat(order.total_final).toFixed(2)}</strong></div>
       </Card>
+
+      {/* Reserved slabs (Phase 19) */}
+      {reservations.length > 0 && (
+        <Card>
+          <h2 className="mb-3 text-sm font-semibold text-text-primary">{t("reservedSlabs")}</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-text-secondary">
+                <tr>
+                  <th className="px-2 py-1 font-medium">{t("colOrderItemId")}</th>
+                  <th className="px-2 py-1 font-medium">{t("colSlabId")}</th>
+                  <th className="px-2 py-1 font-medium">{t("tableStatus")}</th>
+                  <th className="px-2 py-1" />
+                </tr>
+              </thead>
+              <tbody>
+                {reservations.map((r) => (
+                  <tr key={r.id} className="border-t border-border">
+                    <td className="px-2 py-1 font-mono text-xs text-text-secondary">{r.order_item_id}</td>
+                    <td className="px-2 py-1 font-mono text-xs text-text-secondary">{r.slab_id}</td>
+                    <td className="px-2 py-1 text-text-secondary">
+                      {t(`reservationStatus_${r.status}` as Parameters<typeof t>[0])}
+                    </td>
+                    <td className="px-2 py-1 text-right">
+                      {canWrite && r.status === "active" && (
+                        <button
+                          className="text-xs text-danger hover:underline"
+                          disabled={releasingReservationId === r.id}
+                          onClick={() => handleReleaseReservation(r.id)}
+                        >
+                          {t("release")}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       {/* Details card */}
       <Card>

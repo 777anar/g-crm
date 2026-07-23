@@ -547,7 +547,10 @@ One row per change to a work order's status/stage/priority/assigned operator —
 | changed_at | TIMESTAMPTZ | nullable |
 
 ### 8.6 Production Planning Dashboard (Version 2.35.0, Phase 2 requirement #5)
-No new table — `GET /reports/production-planning` (Reports module, which gained `"production"` in its `depends_on` this version) is a live read over `work_orders`/`production_stages` plus `orders`/`crm_customers` for enrichment, computing `is_overdue` (`scheduled_completion_date` earlier than today) and per-operator workload counts entirely in the application layer at request time — nothing here is denormalized or cached.
+No new table — `GET /reports/production-planning` (Reports module, which gained `"production"` in its `depends_on` this version) is a live read over `work_orders`/`production_stages` plus `orders`/`crm_customers` for enrichment, computing `is_overdue` (`scheduled_completion_date` earlier than today) and per-operator workload counts entirely in the application layer at request time — nothing here is denormalized or cached. **Version 2.38.0:** the frontend Kanban board built on this endpoint gained native drag-and-drop and a bulk multi-select move, both driving `POST /production/{id}/stage` (§14) — no new read shape, purely a frontend interaction change.
+
+### 8.7 `production_notifications` (Version 2.38.0, Stone Fabrication Workflow Phase 3)
+In-app notification about a work order event, for one user — mirrors `installation_notifications` (§9.4) exactly: `user_id` (FK, indexed), `notification_type TEXT(50)` (`priority_urgent`\|`stage_changed`\|`operator_assigned`), `title TEXT(200)`, `message TEXT`, `work_order_id` (FK, nullable, indexed), `read_at` nullable. Same "no email/SMS, in-app only, created as a direct side effect inside the tracking use cases (§14b)" scope as every other notification table in this codebase.
 
 ## 9. Installation Module Tables
 
@@ -810,7 +813,7 @@ One immutable row per run of the nesting algorithm (`API_SPECIFICATION.md` §23)
 
 ## 17. Row-Level Security Strategy
 
-**Implemented as of Phase 18 (Security & Compliance Hardening, Version 2.37.0)**, closing the gap this section previously documented as open. Migration `55d19b5b6862_phase18_postgres_row_level_security.py` enables RLS on all 75 tenant-owned tables (every table with a `company_id` column, core and module alike) and creates a `company_isolation` policy on each:
+**Implemented as of Phase 18 (Security & Compliance Hardening, Version 2.37.0)**, closing the gap this section previously documented as open. Migration `55d19b5b6862_phase18_postgres_row_level_security.py` enables RLS on all 75 tenant-owned tables that existed at the time (every table with a `company_id` column, core and module alike) and creates a `company_isolation` policy on each; `production_notifications` (§8.7, added Version 2.38.0) makes 76, given its own policy directly inside its own creation migration (`3abcf1e53be8_phase19_production_notifications.py`) rather than waiting for a future RLS pass to notice it's missing one — the same pattern any future tenant-scoped table should follow:
 
 ```sql
 ALTER TABLE crm_customers ENABLE ROW LEVEL SECURITY;
@@ -829,7 +832,7 @@ The whole mechanism no-ops entirely on SQLite (dev/test): the migration checks `
 
 ## 18. Migration Strategy
 
-- Alembic revision history is a single linear chain (currently 25 migrations deep, head `55d19b5b6862` — `phase18_postgres_row_level_security`, Version 2.37.0) — unified at the database level, but each module owns the migration scripts that create/alter its own tables.
+- Alembic revision history is a single linear chain (currently 26 migrations deep, head `3abcf1e53be8` — `phase19_production_notifications`, Version 2.38.0) — unified at the database level, but each module owns the migration scripts that create/alter its own tables.
 - Core platform tables (`companies`, `users`, `user_company_roles`, `documents`, `audit_log`, `event_log`, `ai_jobs`) were created in the earliest migration, before any module's tables.
 - **Correction from the previous revision of this document**: there is no CI step that runs `alembic upgrade head` against a disposable database on every PR — that claim was aspirational, not built. What actually runs today: the test suite (`pytest`, wired into `.github/workflows/ci.yml` as of Version 2.28.0) builds its schema via SQLAlchemy's `Base.metadata.create_all()` directly from the current model definitions, entirely bypassing the Alembic migration chain — so a passing test suite does not, by itself, prove the migration chain is consistent with the models. `alembic check` (run manually, most recently confirmed clean during the Version 2.28.0 audit pass) is the actual verification that the migration chain matches the models; it is not yet part of the CI workflow. A real gap worth closing in a future pass, not claimed as already closed here.
 - Module removal does not auto-drop tables; a deliberate downgrade migration is required if data removal is intended.

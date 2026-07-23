@@ -151,7 +151,7 @@ def update_work_order_priority(
     work_order_id: uuid.UUID,
     payload: WorkOrderPriorityUpdate,
     db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("production:write")),
+    current_user: CurrentUser = Depends(require_permission("production:priority:write")),
 ) -> WorkOrderOut:
     try:
         work_order = UpdateWorkOrderPriorityUseCase(db).execute(
@@ -174,7 +174,7 @@ def assign_work_order_operator(
     work_order_id: uuid.UUID,
     payload: WorkOrderOperatorAssign,
     db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("production:write")),
+    current_user: CurrentUser = Depends(require_permission("production:operator:write")),
 ) -> WorkOrderOut:
     try:
         work_order = AssignWorkOrderOperatorUseCase(db).execute(
@@ -197,7 +197,7 @@ def update_work_order_stage(
     work_order_id: uuid.UUID,
     payload: WorkOrderStageAssign,
     db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("production:write")),
+    current_user: CurrentUser = Depends(require_permission("production:stage:write")),
 ) -> WorkOrderOut:
     try:
         work_order = UpdateWorkOrderStageUseCase(db).execute(

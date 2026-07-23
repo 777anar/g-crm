@@ -44,6 +44,9 @@ export default function ProductionJobDetailPage() {
   const tNav = useTranslations("nav");
   const toast = useToast();
   const canWrite = usePermission("production:write");
+  const canWritePriority = usePermission("production:priority:write");
+  const canWriteOperator = usePermission("production:operator:write");
+  const canWriteStage = usePermission("production:stage:write");
 
   const [job, setJob] = useState<ProductionJob | null>(null);
   const [timeline, setTimeline] = useState<WorkOrderEvent[] | null>(null);
@@ -232,7 +235,7 @@ export default function ProductionJobDetailPage() {
           <SelectField
             label={t("priority")}
             value={job.priority}
-            disabled={savingField === "priority" || isTerminal || !canWrite}
+            disabled={savingField === "priority" || isTerminal || !canWritePriority}
             onChange={(e) => handlePriorityChange(e.target.value)}
           >
             {WORK_ORDER_PRIORITIES.map((p: WorkOrderPriority) => (
@@ -244,7 +247,7 @@ export default function ProductionJobDetailPage() {
           <SelectField
             label={t("assignedOperator")}
             value={job.assigned_operator ?? ""}
-            disabled={savingField === "operator" || isTerminal || !canWrite}
+            disabled={savingField === "operator" || isTerminal || !canWriteOperator}
             onChange={(e) => handleOperatorChange(e.target.value)}
           >
             <option value="">{t("unassigned")}</option>
@@ -257,7 +260,7 @@ export default function ProductionJobDetailPage() {
           <SelectField
             label={t("currentStage")}
             value={job.current_stage?.id ?? ""}
-            disabled={savingField === "stage" || isTerminal || !canWrite}
+            disabled={savingField === "stage" || isTerminal || !canWriteStage}
             onChange={(e) => handleStageChange(e.target.value)}
           >
             <option value="">{t("noStage")}</option>

@@ -55,6 +55,20 @@ TERMINAL_SLAB_STATUSES = {
     SLAB_STATUS_SCRAP,
 }
 
+# Phase 19 (Stone Fabrication Workflow, Phase 3) closes the "sold vs.
+# consumed" ambiguity flagged in MASTER_DEVELOPMENT_ROADMAP.md: `consumed`
+# means "physically used up by a completed Production work order" and must
+# only ever be system-set (Production's own completion cascade, which calls
+# `UpdateSlabStatusUseCase` with `system_triggered=True` -- see
+# work_order_use_cases.py's `_cascade_slabs`); a human can never PATCH a
+# slab straight to `consumed` via the raw status endpoint. `sold` remains a
+# normal user-settable status (a slab can be sold as raw stock, mid-
+# reservation, or mid-production) -- see `UpdateSlabStatusUseCase` for the
+# companion fix: transitioning a reserved/in_production slab to a terminal
+# status the user chose (sold/scrap) now always releases any dangling
+# active reservation instead of leaving it stuck `active` forever.
+SYSTEM_ONLY_SLAB_STATUSES = {SLAB_STATUS_CONSUMED}
+
 # Slab status transitions a single PATCH is allowed to make. Modeled as a
 # directed graph rather than "any status to any status" so the lifecycle
 # means something: a consumed slab can't bounce back to available by

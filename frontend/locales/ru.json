@@ -70,7 +70,8 @@
     "purchaseOrders": "Заказы на закупку",
     "cutOptimization": "Оптимизация раскроя",
     "offcutLibrary": "Библиотека обрезков",
-    "campaigns": "Кампании"
+    "campaigns": "Кампании",
+    "reservations": "Резервирования"
   },
   "language": {
     "switchLanguage": "Язык",
@@ -522,7 +523,29 @@
       "technical_pdf": "Технический PDF",
       "installation_guide": "Инструкция по монтажу",
       "cleaning_guide": "Инструкция по уходу"
-    }
+    },
+    "viewReservations": "Резервирования",
+    "bulkReserveSelected": "Выбрано слэбов: {count}",
+    "orderId": "ID заказа",
+    "orderItemId": "ID позиции заказа",
+    "reserveSelected": "Зарезервировать выбранные",
+    "selectAllAvailable": "Выбрать все доступные слэбы",
+    "selectSlab": "Выбрать слэб {number}",
+    "bulkReservePartialFailure": "Зарезервировано {succeeded} из {count} слэбов — часть не удалась.",
+    "bulkReserveSucceeded": "Зарезервировано слэбов: {count}.",
+    "reservationsTitle": "Резервирования слэбов",
+    "reservationsSubtitle": "Все резервирования слэбов в компании, активные и исторические.",
+    "noReservationsYet": "Пока нет резервирований",
+    "noReservationsDesc": "Резервирования появятся здесь после резервирования слэба под заказ.",
+    "colOrderId": "ID заказа",
+    "colOrderItemId": "ID позиции заказа",
+    "colSlabId": "ID слэба",
+    "colReservedAt": "Зарезервировано",
+    "release": "Освободить",
+    "reservationReleased": "Резервирование освобождено.",
+    "reservationStatus_active": "Активно",
+    "reservationStatus_released": "Освобождено",
+    "reservationStatus_consumed": "Использовано"
   },
   "sales": {
     "projectsTitle": "Проекты",
@@ -778,7 +801,14 @@
     "invoice": "Счёт",
     "viewInvoice": "Смотреть счёт",
     "noInvoiceYet": "Для этого заказа пока нет счёта.",
-    "createInvoice": "Создать счёт"
+    "createInvoice": "Создать счёт",
+    "reservedSlabs": "Зарезервированные слэбы",
+    "colOrderItemId": "ID позиции заказа",
+    "colSlabId": "ID слэба",
+    "release": "Освободить",
+    "reservationStatus_active": "Активно",
+    "reservationStatus_released": "Освобождено",
+    "reservationStatus_consumed": "Использовано"
   },
   "reports": {
     "title": "Отчёты",
@@ -870,7 +900,13 @@
     "operatorWorkload": "Загрузка по операторам",
     "noOperatorsAssigned": "Операторы ещё не назначены на активные задания.",
     "overdueSince": "Просрочено —",
-    "overdueAbbrev": "просрочено"
+    "overdueAbbrev": "просрочено",
+    "jobsSelected": "Выбрано заданий: {count}",
+    "moveSelectedToStage": "Переместить выбранные на этап",
+    "clearSelection": "Снять выбор",
+    "dragDropHint": "Перетащите карточку задания в другую колонку, чтобы переместить его, или выберите несколько заданий, чтобы переместить их вместе.",
+    "stageMovePartialFailure": "Перемещено {succeeded} из {count} заданий — часть не удалась.",
+    "selectJob": "Выбрать задание {number}"
   },
   "production": {
     "title": "Производство",
@@ -935,7 +971,9 @@
     "updateFailed": "Не удалось обновить.",
     "stageOrder": "№",
     "stageActive": "Активен",
-    "stageHidden": "Скрыт"
+    "stageHidden": "Скрыт",
+    "moveStageUp": "Переместить этап вверх",
+    "moveStageDown": "Переместить этап вниз"
   },
   "installation": {
     "title": "Монтаж",
@@ -1473,7 +1511,8 @@
     "groupOffice": "Офис",
     "groupSecurity": "Безопасность",
     "securityDesc": "Двухфакторная аутентификация для вашего входа.",
-    "auditLogDesc": "Экспорт журнала аудита и политика хранения для соответствия требованиям."
+    "auditLogDesc": "Экспорт журнала аудита и политика хранения для соответствия требованиям.",
+    "reservationsDesc": "Просмотр и управление всеми активными резервированиями слэбов в компании."
   },
   "marketing": {
     "title": "Маркетинговые кампании",

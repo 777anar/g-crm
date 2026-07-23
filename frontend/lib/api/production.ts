@@ -1,5 +1,13 @@
 import { apiRequest } from "../api-client";
-import type { Paginated, ProductionJob, ProductionStage, WorkOrder, WorkOrderEvent, WorkOrderItem } from "../types";
+import type {
+  Paginated,
+  ProductionJob,
+  ProductionNotification,
+  ProductionStage,
+  WorkOrder,
+  WorkOrderEvent,
+  WorkOrderItem,
+} from "../types";
 
 const BASE = "/api/v1/production";
 
@@ -90,4 +98,16 @@ export function updateProductionStage(
   input: { name?: string; sort_order?: number; is_active?: boolean }
 ) {
   return apiRequest<ProductionStage>(`${BASE}/stages/${id}`, { method: "PATCH", body: input });
+}
+
+// --- Notifications (Phase 19) ----------------------------------------------
+
+export function listProductionNotifications(params: { unreadOnly?: boolean } = {}) {
+  return apiRequest<{ items: ProductionNotification[] }>(`${BASE}/notifications`, {
+    searchParams: { unread_only: params.unreadOnly },
+  });
+}
+
+export function markProductionNotificationRead(id: string) {
+  return apiRequest<ProductionNotification>(`${BASE}/notifications/${id}/read`, { method: "POST" });
 }

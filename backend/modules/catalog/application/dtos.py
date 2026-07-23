@@ -110,6 +110,11 @@ class CreateSlabInput(ActorContext):
 class UpdateSlabStatusInput(ActorContext):
     slab_id: uuid.UUID
     status: str
+    # True only for Production's own work-order cascade (see
+    # work_order_use_cases.py's `_cascade_slabs`) -- lets that one internal
+    # caller reach `consumed`, which a manual PATCH via the presentation
+    # layer can never target directly (Phase 19's sold/consumed boundary).
+    system_triggered: bool = False
 
 
 @dataclass

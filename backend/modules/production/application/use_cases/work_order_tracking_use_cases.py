@@ -21,9 +21,14 @@ from modules.production.application.dtos import (
     UpdateWorkOrderPriorityInput,
     UpdateWorkOrderStageInput,
 )
+from modules.production.application.notification_helper import notify_user
 from modules.production.domain import events as production_events
 from modules.production.domain.exceptions import InvalidPriorityError, OperatorNotInCompanyError, StageNotFoundError
 from modules.production.domain.value_objects import (
+    NOTIFICATION_TYPE_OPERATOR_ASSIGNED,
+    NOTIFICATION_TYPE_PRIORITY_URGENT,
+    NOTIFICATION_TYPE_STAGE_CHANGED,
+    PRIORITY_URGENT,
     VALID_PRIORITIES,
     WORK_ORDER_EVENT_OPERATOR_ASSIGNED,
     WORK_ORDER_EVENT_PRIORITY_CHANGED,
@@ -103,6 +108,21 @@ class UpdateWorkOrderPriorityUseCase:
         work_order.priority = data.priority
         self.db.flush()
 
+        # Priority/stage-change notifications (Phase 19): only fires when
+        # a job is marked `urgent` and there's actually someone assigned to
+        # tell -- a priority change on an unassigned job has no one to
+        # notify yet (they'll see it once assigned).
+        if data.priority == PRIORITY_URGENT and old_priority != PRIORITY_URGENT and work_order.assigned_to:
+            notify_user(
+                self.db,
+                company_id=data.company_id,
+                user_id=uuid.UUID(str(work_order.assigned_to)),
+                notification_type=NOTIFICATION_TYPE_PRIORITY_URGENT,
+                title="Work order marked urgent",
+                message=f"Work order {work_order.work_order_number} was marked urgent.",
+                work_order_id=work_order.id,
+            )
+
         self.events.add(WorkOrderEvent(
             company_id=data.company_id,
             work_order_id=work_order.id,
@@ -156,6 +176,20 @@ class AssignWorkOrderOperatorUseCase:
         old_operator = str(work_order.assigned_to) if work_order.assigned_to else None
         work_order.assigned_to = data.operator_user_id
         self.db.flush()
+
+        # Notify the newly assigned operator (Phase 19) -- not fired on
+        # unassignment (`operator_user_id=None`) or a no-op reassignment to
+        # the same person, since neither is news to anyone.
+        if data.operator_user_id is not None and str(data.operator_user_id) != old_operator:
+            notify_user(
+                self.db,
+                company_id=data.company_id,
+                user_id=data.operator_user_id,
+                notification_type=NOTIFICATION_TYPE_OPERATOR_ASSIGNED,
+                title="Assigned to a work order",
+                message=f"You were assigned to work order {work_order.work_order_number}.",
+                work_order_id=work_order.id,
+            )
 
         self.events.add(WorkOrderEvent(
             company_id=data.company_id,
@@ -223,6 +257,28 @@ class UpdateWorkOrderStageUseCase:
 
         work_order.current_stage_id = data.stage_id
         self.db.flush()
+
+        # Stage-change notification (Phase 19): fires on any real stage
+        # move for an assigned job -- deliberately not keyed to a specific
+        # stage name like "Quality Control" (the roadmap's example),
+        # since stage names are per-company configurable
+        # (production_stages.name) and a hardcoded match would silently
+        # stop firing the moment a company renames or reorders its pipeline.
+        old_stage_id = str(old_stage.id) if old_stage else None
+        new_stage_id = str(new_stage.id) if new_stage else None
+        if work_order.assigned_to and old_stage_id != new_stage_id:
+            notify_user(
+                self.db,
+                company_id=data.company_id,
+                user_id=uuid.UUID(str(work_order.assigned_to)),
+                notification_type=NOTIFICATION_TYPE_STAGE_CHANGED,
+                title="Work order moved to a new stage",
+                message=(
+                    f"Work order {work_order.work_order_number} moved to "
+                    f"{new_stage.name if new_stage else 'no stage'}."
+                ),
+                work_order_id=work_order.id,
+            )
 
         self.events.add(WorkOrderEvent(
             company_id=data.company_id,
