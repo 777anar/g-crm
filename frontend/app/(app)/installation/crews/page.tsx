@@ -19,10 +19,12 @@ import { CrewStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiRequestError } from "@/lib/api-client";
+import { usePermission } from "@/lib/permissions";
 
 export default function CrewsPage() {
   const t = useTranslations("installation");
   const tCommon = useTranslations("common");
+  const canWrite = usePermission("installation:write");
 
   const [crews, setCrews] = useState<Crew[] | null>(null);
   const [users, setUsers] = useState<CompanyUser[]>([]);
@@ -106,21 +108,23 @@ export default function CrewsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <form onSubmit={handleCreateCrew} className="flex items-end gap-3">
-          <div className="flex-1">
-            <TextField
-              label={t("crewName")}
-              value={newCrewName}
-              onChange={(e) => setNewCrewName(e.target.value)}
-              placeholder={t("crewNamePlaceholder")}
-            />
-          </div>
-          <Button type="submit" disabled={creating || !newCrewName.trim()}>
-            {creating ? t("creating") : t("createCrew")}
-          </Button>
-        </form>
-      </Card>
+      {canWrite && (
+        <Card>
+          <form onSubmit={handleCreateCrew} className="flex items-end gap-3">
+            <div className="flex-1">
+              <TextField
+                label={t("crewName")}
+                value={newCrewName}
+                onChange={(e) => setNewCrewName(e.target.value)}
+                placeholder={t("crewNamePlaceholder")}
+              />
+            </div>
+            <Button type="submit" disabled={creating || !newCrewName.trim()}>
+              {creating ? t("creating") : t("createCrew")}
+            </Button>
+          </form>
+        </Card>
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {crews === null && !error && <TableSkeleton rows={3} columns={2} />}
@@ -134,9 +138,11 @@ export default function CrewsPage() {
                 <span className="font-medium text-text-primary">{crew.name}</span>
                 <CrewStatusBadge status={crew.status} />
               </button>
-              <Button variant="secondary" onClick={() => handleToggleStatus(crew)}>
-                {crew.status === "active" ? t("deactivate") : t("activate")}
-              </Button>
+              {canWrite && (
+                <Button variant="secondary" onClick={() => handleToggleStatus(crew)}>
+                  {crew.status === "active" ? t("deactivate") : t("activate")}
+                </Button>
+              )}
             </div>
 
             {expandedCrewId === crew.id && (
@@ -152,12 +158,14 @@ export default function CrewsPage() {
                           {m.full_name} <span className="text-text-secondary">({m.email})</span>
                           {m.is_lead && <span className="ml-2 text-xs font-medium text-primary">{t("crewLead")}</span>}
                         </span>
-                        <button
-                          onClick={() => handleRemoveMember(crew.id, m.id)}
-                          className="text-xs text-danger hover:underline"
-                        >
-                          {tCommon("remove")}
-                        </button>
+                        {canWrite && (
+                          <button
+                            onClick={() => handleRemoveMember(crew.id, m.id)}
+                            className="text-xs text-danger hover:underline"
+                          >
+                            {tCommon("remove")}
+                          </button>
+                        )}
                       </li>
                     ))}
                     {members.length === 0 && (
@@ -165,23 +173,25 @@ export default function CrewsPage() {
                     )}
                   </ul>
                 )}
-                <div className="flex gap-2">
-                  <select
-                    value={selectedUserId}
-                    onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="flex-1 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
-                  >
-                    <option value="">{tCommon("select")}…</option>
-                    {users
-                      .filter((u) => !members?.some((m) => m.user_id === u.id))
-                      .map((u) => (
-                        <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
-                      ))}
-                  </select>
-                  <Button onClick={() => handleAddMember(crew.id)} disabled={!selectedUserId}>
-                    {t("addMember")}
-                  </Button>
-                </div>
+                {canWrite && (
+                  <div className="flex gap-2">
+                    <select
+                      value={selectedUserId}
+                      onChange={(e) => setSelectedUserId(e.target.value)}
+                      className="flex-1 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
+                    >
+                      <option value="">{tCommon("select")}…</option>
+                      {users
+                        .filter((u) => !members?.some((m) => m.user_id === u.id))
+                        .map((u) => (
+                          <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
+                        ))}
+                    </select>
+                    <Button onClick={() => handleAddMember(crew.id)} disabled={!selectedUserId}>
+                      {t("addMember")}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </Card>

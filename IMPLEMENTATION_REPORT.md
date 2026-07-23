@@ -1,7 +1,7 @@
 # G-STONE ERP — Implementation Report
 
-_Date: 2026-07-22 (original report), addended 2026-07-22 (Version 2.36.0 / Phase 17)_
-_Scope: everything implemented since the last audit (`PROJECT_AUDIT.md`, dated 2026-07-21, frozen at commit `521428e` / Version 2.25.0), through current HEAD commit `797aa57` (Version 2.33.0). Sections 1–8 below are the original report, kept as written — they describe what was true at the time. §9 is a same-day addendum covering Phase 17 (Version 2.36.0), added because it directly resolves several items §8 originally listed as "Still open"; those table rows are annotated below rather than silently rewritten, consistent with this project's practice of recording corrections rather than erasing history. (Versions 2.34.0 and 2.35.0, the two Stone Fabrication Workflow phases, are covered by their own dedicated `STONE_WORKFLOW_REPORT.md`, not repeated here.)_
+_Date: 2026-07-22 (original report), addended 2026-07-22 (Version 2.36.0 / Phase 17), addended again 2026-07-23 (Version 2.37.0 / Phase 18)_
+_Scope: everything implemented since the last audit (`PROJECT_AUDIT.md`, dated 2026-07-21, frozen at commit `521428e` / Version 2.25.0), through current HEAD (Version 2.37.0). Sections 1–8 below are the original report, kept as written — they describe what was true at the time. §9 is a same-day addendum covering Phase 17 (Version 2.36.0); §10 is a later addendum covering Phase 18 (Version 2.37.0), added because it directly resolves several items §8/§9.5 listed as "Still open"; those table rows are annotated below rather than silently rewritten, consistent with this project's practice of recording corrections rather than erasing history. (Versions 2.34.0 and 2.35.0, the two Stone Fabrication Workflow phases, are covered by their own dedicated `STONE_WORKFLOW_REPORT.md`, not repeated here.)_
 _Method: `git log`/`git diff --stat` against the audit baseline commit, cross-checked against `CHANGELOG.md` entries for each release, plus direct re-verification of every "remaining issue" claim against the current source (not assumed from the prior audit text)._
 
 This window covers **9 commits, 179 files changed, +11,409 / −945 lines**, and the backend test suite grew from 553 to 630 passing. Every numbered item in the prior audit's Priority List (§11, items 1–5) was addressed in this window, in order, plus three entirely new modules were shipped beyond what the audit's remaining-work estimate scoped for a single window.
@@ -223,3 +223,49 @@ Full backend suite passing (706/706), `lint-imports` passing (1 contract kept, 0
 | — | Mobile client | Not started — Phase 25 |
 
 Full detail, evidence, and the complete list of files changed is in `PHASE17_COMPLETION_REPORT.md`.
+
+---
+
+## 10. Addendum — Phase 18: Security & Compliance Hardening (Version 2.37.0)
+
+_Added 2026-07-23, after `MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 18 was executed in full. Covers HEAD commit at time of writing (post-`bdb80b6`/Version 2.36.0)._
+
+### 10.1 Theme
+
+Every item in this addendum closes a gap §8/§9.5 above explicitly named as "Still open — Phase 18": S4 (CORS wildcards), S3 (localStorage tokens), S5 (frontend permission gating — this addendum finishes the platform-wide rollout §9.5 left open), and S1 (Postgres RLS). Two items go beyond what §8/§9.5 tracked, both named in `MASTER_DEVELOPMENT_ROADMAP.md` Phase 18 itself: staff MFA, and a compliance audit-log export/retention admin surface.
+
+### 10.2 Features Added / Fixed
+
+- **Postgres Row-Level Security (S1)** — migration `55d19b5b6862` enables RLS + a `company_isolation` policy on all 75 tenant-owned tables. A new `CompanyContextMiddleware` (`core/api/middleware.py`) plus a SQLAlchemy `after_begin` hook (`core/db/session.py`) populate the `app.current_company_id` session variable automatically per request — zero router/repository changes needed. No-ops on SQLite. See `DATABASE_DESIGN.md` §17.
+- **httpOnly cookie auth (S3)** — staff (`core/auth/router.py`) and Customer Portal (`modules/customer_portal/presentation/api/auth.py`) both now set httpOnly/`Secure`/`SameSite=Lax` cookies on login/select-company/refresh, in addition to the unchanged JSON body (kept for Bearer-token clients). `core/rbac/dependencies.py` and `get_current_customer` accept either transport. Frontend (`lib/api-client.ts`, `lib/portal-api-client.ts`, `lib/session.ts`, `lib/portal-session.ts`) rewritten to authenticate via the cookie exclusively and never persist a raw token — only a non-sensitive session-active flag and (staff) the `role`/`module_permissions`/`active_company_id` claims, now also returned as plain response fields since an httpOnly token's claims aren't client-readable.
+- **CORS tightening (S4)** — `core/config.py` gained explicit `cors_allow_methods`/`cors_allow_headers` settings; `core/bootstrap/app_factory.py` no longer passes `["*"]` for either.
+- **Frontend permission gating, platform-wide rollout (S5)** — the `usePermission()` pattern §9.2 demonstrated on Customers only is now applied to 32 more files spanning every module with a write action (Leads, Tasks, Catalog, Sales Projects/Quotes, Orders, Production, Installation, Finance, Purchasing, Marketing, Communication, Cut Optimization, Dashboard) — full list and per-file permission string in `CHANGELOG.md` [2.37.0].
+- **Staff MFA (new)** — TOTP via `pyotp` (`core/auth/mfa.py`), `POST /auth/mfa/{setup,enable,disable,verify}`, a login-time `{mfa_required, mfa_token}` challenge/response flow, and a per-company `mfa_required_roles` policy enforced at `/auth/select-company`. Frontend: a login MFA-code step and a new `/settings/security` page.
+- **Compliance audit-log export/retention (new)** — `core/audit/router.py` (owner-only, `core:audit:export`): filterable/paginated log listing, CSV export, retention-policy get/set, manual purge. New `audit_retention_policies` table. Frontend: a new `/settings/audit-log` page.
+
+### 10.3 Tests Added
+
+**16 new backend tests: 706 → 722 passing** (`tests/test_phase18_security_hardening.py`).
+
+| Area | New tests |
+|---|---|
+| httpOnly cookie auth | 5 — login sets cookies, `/auth/me` authenticates via cookie alone (no header), select-company response carries claims, cookie-only refresh with no body, logout clears cookies + revokes |
+| Staff MFA | 5 — setup→enable→login-challenge→verify round trip, wrong-code rejection, disable requires a valid code, per-company-per-role enforcement (blocked, then unblocked once enabled) |
+| Audit log export/retention | 5 — list/export reflect a real audited write, retention policy defaults to "forever" then can be set, purge without a policy is rejected (`422`), purge deletes only entries older than the window, non-owner gets `403` |
+| CORS | 1 — settings no longer wildcard methods/headers |
+
+No frontend unit-test framework exists in this codebase (consistent with §5/§9.3); frontend changes verified via `tsc --noEmit`, `npm run lint`, and a full production build.
+
+### 10.4 Verification
+
+Full backend suite passing (722/722), migrations round-trip clean (`upgrade head` → `downgrade -2` → `upgrade head` against a scratch SQLite database), frontend `tsc --noEmit` clean, `npm run lint` clean (0 errors, 0 warnings), frontend production build clean (61 routes, +2 new: `/settings/security`, `/settings/audit-log`).
+
+### 10.5 Remaining Issues (re-verified, current as of this addendum)
+
+| # | Issue | Status |
+|---|---|---|
+| — | RLS full efficacy in production | Policy + wiring shipped; requires the app's runtime Postgres role to be a non-owner role (infra step, not yet executed) — see `DATABASE_DESIGN.md` §17 |
+| — | Per-session/device token revocation | `token_denylist.py`'s generation-counter design remains all-or-nothing ("logout everywhere"); a "revoke this one session" feature would need a new per-JTI denylist — not attempted this phase |
+| — | Real AI provider, payments, mobile client | Not started — `MASTER_DEVELOPMENT_ROADMAP.md` Phases 21/22/25 |
+
+Full detail is in `CHANGELOG.md` [2.37.0].

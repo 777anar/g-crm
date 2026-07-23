@@ -11,6 +11,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { SelectField, TextField } from "@/components/ui/field";
 import { ApiRequestError } from "@/lib/api-client";
 import { SlabLayoutSvg } from "@/components/cut-optimization/slab-layout-svg";
+import { usePermission } from "@/lib/permissions";
 
 type SlabMode = "custom" | "existing";
 
@@ -21,6 +22,7 @@ function emptyPiece(label: string): PieceSpec {
 export default function CutOptimizationPage() {
   const t = useTranslations("cutOptimization");
   const tCommon = useTranslations("common");
+  const canWrite = usePermission("cut_optimization:write");
 
   const [slabMode, setSlabMode] = useState<SlabMode>("custom");
   const [slabLengthMm, setSlabLengthMm] = useState("3200");
@@ -169,11 +171,13 @@ export default function CutOptimizationPage() {
             </div>
           ))}
         </div>
-        <div className="mt-4 flex justify-end">
-          <Button onClick={handleRun} disabled={!canRun || running} loading={running}>
-            {t("runOptimization")}
-          </Button>
-        </div>
+        {canWrite && (
+          <div className="mt-4 flex justify-end">
+            <Button onClick={handleRun} disabled={!canRun || running} loading={running}>
+              {t("runOptimization")}
+            </Button>
+          </div>
+        )}
       </Card>
 
       {error && <p className="text-sm text-danger">{error}</p>}

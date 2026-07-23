@@ -17,6 +17,7 @@ import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useListShortcuts } from "@/lib/use-list-shortcuts";
 import { useLeadChannelLabel } from "@/lib/i18n/hooks";
 import { formatDate } from "@/lib/format";
+import { usePermission } from "@/lib/permissions";
 
 const CREATE_FORM_NAME_INPUT_ID = "campaign-create-name";
 
@@ -24,6 +25,7 @@ export default function CampaignsPage() {
   const t = useTranslations("marketing");
   const tCommon = useTranslations("common");
   const channelLabel = useLeadChannelLabel();
+  const canWrite = usePermission("marketing:campaigns:write");
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -97,6 +99,7 @@ export default function CampaignsPage() {
         <p className="text-sm text-text-secondary">{t("subtitle")}</p>
       </div>
 
+      {canWrite && (
       <Card>
         <CardHeader title={t("createCampaign")} />
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5" onSubmit={handleCreate}>
@@ -124,6 +127,7 @@ export default function CampaignsPage() {
           </div>
         </form>
       </Card>
+      )}
 
       <input
         ref={searchInputRef}

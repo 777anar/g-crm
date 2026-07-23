@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { ConfirmProvider } from "@/components/ui/confirm-dialog";
 import { ToastProvider } from "@/components/ui/toast";
-import { getAccessToken } from "@/lib/session";
+import { hasSession } from "@/lib/session";
 
 export default function AppGroupLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!getAccessToken()) {
+    if (!hasSession()) {
       router.replace("/login");
       return;
     }

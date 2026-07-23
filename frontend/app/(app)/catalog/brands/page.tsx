@@ -15,12 +15,14 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useListShortcuts } from "@/lib/use-list-shortcuts";
+import { usePermission } from "@/lib/permissions";
 
 const CREATE_FORM_NAME_INPUT_ID = "brand-create-name";
 
 export default function BrandsPage() {
   const t = useTranslations("catalog");
   const tCommon = useTranslations("common");
+  const canWrite = usePermission("catalog:brands:write");
   const [brands, setBrands] = useState<Brand[] | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -99,6 +101,7 @@ export default function BrandsPage() {
         <p className="text-sm text-text-secondary">{t("brandsSubtitle")}</p>
       </div>
 
+      {canWrite && (
       <Card>
         <CardHeader title={t("createBrand")} />
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleCreate}>
@@ -123,6 +126,7 @@ export default function BrandsPage() {
           </div>
         </form>
       </Card>
+      )}
 
       <input
         ref={searchInputRef}
@@ -160,9 +164,11 @@ export default function BrandsPage() {
                       <EntityStatusBadge status={brand.status} />
                     </td>
                     <td className="px-4 py-2 text-right">
-                      <Button variant="secondary" onClick={() => handleToggleStatus(brand)}>
-                        {brand.status === "active" ? t("entityStatus.hidden") : t("entityStatus.active")}
-                      </Button>
+                      {canWrite && (
+                        <Button variant="secondary" onClick={() => handleToggleStatus(brand)}>
+                          {brand.status === "active" ? t("entityStatus.hidden") : t("entityStatus.active")}
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}

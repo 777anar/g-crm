@@ -21,6 +21,7 @@ import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
 import { useLeadChannelLabel } from "@/lib/i18n/hooks";
 import { formatDate } from "@/lib/format";
+import { usePermission } from "@/lib/permissions";
 
 const MANUAL_NEXT_STATUS: Record<string, string | null> = {
   draft: "active",
@@ -36,6 +37,7 @@ export default function CampaignDetailPage() {
   const tNav = useTranslations("nav");
   const channelLabel = useLeadChannelLabel();
   const toast = useToast();
+  const canWrite = usePermission("marketing:campaigns:write");
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [performance, setPerformance] = useState<CampaignPerformance | null>(null);
@@ -107,7 +109,7 @@ export default function CampaignDetailPage() {
 
   const isTerminal = campaign.status === "completed" || campaign.status === "cancelled";
   const nextStatus = MANUAL_NEXT_STATUS[campaign.status];
-  const isEditable = campaign.status !== "completed" && campaign.status !== "cancelled";
+  const isEditable = campaign.status !== "completed" && campaign.status !== "cancelled" && canWrite;
 
   return (
     <div className="flex flex-col gap-4">
@@ -121,7 +123,7 @@ export default function CampaignDetailPage() {
           </div>
           <p className="mt-1 text-xs text-text-secondary">{channelLabel(campaign.channel)}</p>
         </div>
-        {!isTerminal && (
+        {canWrite && !isTerminal && (
           <div className="flex gap-2">
             {nextStatus && (
               <Button onClick={handleAdvance} disabled={transitioning}>
@@ -137,7 +139,7 @@ export default function CampaignDetailPage() {
         )}
       </div>
 
-      {cancelMode && (
+      {canWrite && cancelMode && (
         <Card className="border-danger/30 bg-danger/5">
           <p className="mb-2 text-sm text-danger">{t("confirmCancel")}</p>
           <div className="flex gap-2">

@@ -23,6 +23,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { usePermission } from "@/lib/permissions";
 
 const MANUAL_NEXT_STATUS: Record<string, string | null> = {
   draft: "sent",
@@ -41,6 +42,7 @@ export default function PurchaseOrderDetailPage() {
   const tCommon = useTranslations("common");
   const tNav = useTranslations("nav");
   const toast = useToast();
+  const canWrite = usePermission("purchasing:purchase_orders:write");
 
   const [order, setOrder] = useState<PurchaseOrder | null>(null);
   const [supplierName, setSupplierName] = useState<string | null>(null);
@@ -178,7 +180,7 @@ export default function PurchaseOrderDetailPage() {
             {t("supplier")}: {supplierName ?? tCommon("loading")}
           </p>
         </div>
-        {!isTerminal && (
+        {canWrite && !isTerminal && (
           <div className="flex gap-2">
             {nextStatus && (
               <Button onClick={handleAdvance} disabled={transitioning}>
@@ -194,7 +196,7 @@ export default function PurchaseOrderDetailPage() {
         )}
       </div>
 
-      {cancelMode && (
+      {canWrite && cancelMode && (
         <Card className="border-danger/30 bg-danger/5">
           <p className="mb-2 text-sm font-medium text-danger">{t("cancelReason")}</p>
           <textarea
@@ -225,13 +227,13 @@ export default function PurchaseOrderDetailPage() {
             type="date"
             value={expectedDeliveryDate}
             onChange={(e) => setExpectedDeliveryDate(e.target.value)}
-            disabled={!isDraft}
+            disabled={!isDraft || !canWrite}
           />
           <div className="sm:col-span-2">
-            <TextField label={t("notes")} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={!isDraft} />
+            <TextField label={t("notes")} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={!isDraft || !canWrite} />
           </div>
         </div>
-        {isDraft && (
+        {isDraft && canWrite && (
           <div className="mt-3 flex justify-end">
             <Button variant="secondary" loading={savingDetails} onClick={handleSaveDetails}>
               {tCommon("save")}
@@ -259,7 +261,7 @@ export default function PurchaseOrderDetailPage() {
             <tbody>
               {lines?.map((line) => {
                 const remaining = parseFloat(line.quantity) - parseFloat(line.quantity_received);
-                const canReceive = isReceivable && remaining > 0;
+                const canReceive = isReceivable && remaining > 0 && canWrite;
                 return (
                   <Fragment key={line.id}>
                     <tr className="border-t border-border">

@@ -9,6 +9,13 @@ from core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# httpOnly cookie names the browser frontend authenticates with (Phase 18).
+# Defined here rather than in core/auth/router.py so core/rbac/dependencies.py
+# can read them too without an import cycle (router.py already depends on
+# core/rbac/dependencies.py for CurrentUser/get_current_user).
+ACCESS_TOKEN_COOKIE_NAME = "g_erp_access_token"
+REFRESH_TOKEN_COOKIE_NAME = "g_erp_refresh_token"
+
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)

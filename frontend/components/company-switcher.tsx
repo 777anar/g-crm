@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { me, selectCompany } from "@/lib/api/auth";
 import { listMyCompanies } from "@/lib/api/companies";
-import { setAccessToken } from "@/lib/session";
+import { setSessionClaims } from "@/lib/session";
 import type { Company } from "@/lib/types";
 import { DropdownItem, DropdownPanel, useDropdown } from "@/components/ui/dropdown";
 
@@ -36,7 +36,11 @@ export function CompanySwitcher() {
     setSwitching(true);
     try {
       const result = await selectCompany(companyId);
-      setAccessToken(result.access_token);
+      setSessionClaims({
+        role: result.role,
+        module_permissions: result.module_permissions,
+        active_company_id: result.active_company_id,
+      });
       // Full reload: every screen's data is scoped to the active company, so
       // the simplest correct way to guarantee nothing stale is shown is to
       // re-fetch the app from scratch under the new company context.

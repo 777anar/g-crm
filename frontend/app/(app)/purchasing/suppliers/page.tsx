@@ -15,12 +15,14 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useListShortcuts } from "@/lib/use-list-shortcuts";
+import { usePermission } from "@/lib/permissions";
 
 const CREATE_FORM_NAME_INPUT_ID = "supplier-create-name";
 
 export default function SuppliersPage() {
   const t = useTranslations("purchasing");
   const tCommon = useTranslations("common");
+  const canWrite = usePermission("purchasing:suppliers:write");
   const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -110,6 +112,7 @@ export default function SuppliersPage() {
         <p className="text-sm text-text-secondary">{t("suppliersSubtitle")}</p>
       </div>
 
+      {canWrite && (
       <Card>
         <CardHeader title={t("createSupplier")} />
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" onSubmit={handleCreate}>
@@ -130,6 +133,7 @@ export default function SuppliersPage() {
           </div>
         </form>
       </Card>
+      )}
 
       <input
         ref={searchInputRef}
@@ -173,9 +177,11 @@ export default function SuppliersPage() {
                       <EntityStatusBadge status={supplier.status} />
                     </td>
                     <td className="px-4 py-2 text-right">
-                      <Button variant="secondary" onClick={() => handleToggleStatus(supplier)}>
-                        {supplier.status === "active" ? t("entityStatus.hidden") : t("entityStatus.active")}
-                      </Button>
+                      {canWrite && (
+                        <Button variant="secondary" onClick={() => handleToggleStatus(supplier)}>
+                          {supplier.status === "active" ? t("entityStatus.hidden") : t("entityStatus.active")}
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}

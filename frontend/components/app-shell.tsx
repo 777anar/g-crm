@@ -15,7 +15,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { clearAccessToken, getRefreshToken } from "@/lib/session";
+import { clearSession } from "@/lib/session";
 import { logout as logoutRequest } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { CompanySwitcher } from "@/components/company-switcher";
@@ -164,13 +164,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useFocusTrap(mobileNavRef, mobileNavOpen);
 
   function handleLogout() {
-    const refreshToken = getRefreshToken();
-    if (refreshToken) {
-      // Best-effort: revoke server-side even though the client already
-      // discards its own tokens and redirects regardless of the outcome.
-      logoutRequest(refreshToken).catch(() => {});
-    }
-    clearAccessToken();
+    // Best-effort: revoke server-side (the refresh token rides along as an
+    // httpOnly cookie -- see lib/api/auth.ts) even though the client already
+    // discards its own session state and redirects regardless of the outcome.
+    logoutRequest().catch(() => {});
+    clearSession();
     router.push("/login");
   }
 

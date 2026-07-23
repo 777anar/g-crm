@@ -11,12 +11,14 @@ import { ChannelTypeBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiRequestError } from "@/lib/api-client";
+import { usePermission } from "@/lib/permissions";
 
 const emptyForm = { channel_type: "whatsapp", display_name: "", identifier: "" };
 
 export default function ChannelsPage() {
   const t = useTranslations("communication");
   const tCommon = useTranslations("common");
+  const canWrite = usePermission("communication:channels:write");
 
   const [channels, setChannels] = useState<Channel[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export default function ChannelsPage() {
         <p className="text-sm text-text-secondary">{t("channelsSubtitle")}</p>
       </div>
 
+      {canWrite && (
       <Card>
         <form onSubmit={handleCreate} className="grid grid-cols-1 gap-3 md:grid-cols-4 md:items-end">
           <SelectField
@@ -93,6 +96,7 @@ export default function ChannelsPage() {
         </form>
         {createError && <p className="mt-2 text-sm text-danger">{createError}</p>}
       </Card>
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {channels === null && !error && <TableSkeleton rows={3} columns={4} />}
@@ -114,9 +118,11 @@ export default function ChannelsPage() {
               <span className={`text-xs font-medium ${channel.is_active ? "text-success" : "text-text-secondary"}`}>
                 {channel.is_active ? t("active") : t("inactive")}
               </span>
-              <Button variant="secondary" onClick={() => handleToggleActive(channel)}>
-                {channel.is_active ? tCommon("deactivate") : tCommon("activate")}
-              </Button>
+              {canWrite && (
+                <Button variant="secondary" onClick={() => handleToggleActive(channel)}>
+                  {channel.is_active ? tCommon("deactivate") : tCommon("activate")}
+                </Button>
+              )}
             </div>
           </Card>
         ))}

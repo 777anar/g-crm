@@ -36,12 +36,14 @@ import { RecommendationCard } from "@/components/recommendation-card";
 import { formatDateTime } from "@/lib/format";
 import { ApiRequestError } from "@/lib/api-client";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { usePermission } from "@/lib/permissions";
 
 type MobilePane = "list" | "chat" | "profile";
 
 export default function InboxPage() {
   const t = useTranslations("communication");
   const tCommon = useTranslations("common");
+  const canWrite = usePermission("communication:conversations:write");
 
   const [conversations, setConversations] = useState<Conversation[] | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -198,12 +200,14 @@ export default function InboxPage() {
       <div className={`flex w-full flex-col gap-3 lg:w-80 lg:shrink-0 ${mobilePane === "list" ? "flex" : "hidden lg:flex"}`}>
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold text-text-primary">{t("inboxTitle")}</h1>
-          <Button variant="secondary" onClick={() => setShowNewConversation((v) => !v)}>
-            {t("newConversation")}
-          </Button>
+          {canWrite && (
+            <Button variant="secondary" onClick={() => setShowNewConversation((v) => !v)}>
+              {t("newConversation")}
+            </Button>
+          )}
         </div>
 
-        {showNewConversation && (
+        {canWrite && showNewConversation && (
           <form onSubmit={handleStartConversation} className="flex flex-col gap-2 rounded-md border border-border p-2">
             <select
               value={newConvForm.channel_id}
@@ -400,9 +404,11 @@ export default function InboxPage() {
                   <Button variant="secondary" onClick={() => setShowTemplates((v) => !v)}>
                     {t("templates")}
                   </Button>
-                  <Button onClick={handleSend} disabled={sending || !composerText.trim()}>
-                    {sending ? t("sending") : t("send")}
-                  </Button>
+                  {canWrite && (
+                    <Button onClick={handleSend} disabled={sending || !composerText.trim()}>
+                      {sending ? t("sending") : t("send")}
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -440,6 +446,7 @@ export default function InboxPage() {
               <select
                 value={selected.status}
                 onChange={(e) => handleUpdate({ status: e.target.value })}
+                disabled={!canWrite}
                 className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary"
               >
                 {CONVERSATION_STATUSES.map((s) => (
@@ -453,6 +460,7 @@ export default function InboxPage() {
               <select
                 value={selected.assigned_to ?? ""}
                 onChange={(e) => handleUpdate({ assigned_to: e.target.value || undefined })}
+                disabled={!canWrite}
                 className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary"
               >
                 <option value="">{t("unassigned")}</option>
@@ -469,6 +477,7 @@ export default function InboxPage() {
                 onBlur={(e) =>
                   handleUpdate({ tags: e.target.value.split(",").map((tag) => tag.trim()).filter(Boolean) })
                 }
+                disabled={!canWrite}
                 className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary"
               />
             </div>
@@ -484,17 +493,19 @@ export default function InboxPage() {
                   </li>
                 ))}
               </ul>
-              <div className="mt-2 flex gap-2">
-                <input
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  placeholder={t("addNote")}
-                  className="flex-1 rounded-md border border-border bg-surface px-2 py-1 text-xs text-text-primary"
-                />
-                <Button variant="secondary" onClick={handleAddNote} disabled={!noteText.trim()}>
-                  {tCommon("save")}
-                </Button>
-              </div>
+              {canWrite && (
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    placeholder={t("addNote")}
+                    className="flex-1 rounded-md border border-border bg-surface px-2 py-1 text-xs text-text-primary"
+                  />
+                  <Button variant="secondary" onClick={handleAddNote} disabled={!noteText.trim()}>
+                    {tCommon("save")}
+                  </Button>
+                </div>
+              )}
             </div>
           </>
         )}

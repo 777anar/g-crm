@@ -26,6 +26,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { usePermission } from "@/lib/permissions";
 
 const NEXT_STATUS: Record<string, string | null> = {
   queued: "cutting",
@@ -42,6 +43,7 @@ export default function ProductionJobDetailPage() {
   const tCommon = useTranslations("common");
   const tNav = useTranslations("nav");
   const toast = useToast();
+  const canWrite = usePermission("production:write");
 
   const [job, setJob] = useState<ProductionJob | null>(null);
   const [timeline, setTimeline] = useState<WorkOrderEvent[] | null>(null);
@@ -169,7 +171,7 @@ export default function ProductionJobDetailPage() {
             </Link>
           </p>
         </div>
-        {!isTerminal && (
+        {canWrite && !isTerminal && (
           <div className="flex gap-2">
             {nextStatus && (
               <Button onClick={handleAdvance} disabled={transitioning}>
@@ -185,7 +187,7 @@ export default function ProductionJobDetailPage() {
         )}
       </div>
 
-      {cancelMode && (
+      {canWrite && cancelMode && (
         <Card className="border-danger/30 bg-danger/5">
           <p className="mb-2 text-sm font-medium text-danger">{t("cancelReason")}</p>
           <textarea
@@ -230,7 +232,7 @@ export default function ProductionJobDetailPage() {
           <SelectField
             label={t("priority")}
             value={job.priority}
-            disabled={savingField === "priority" || isTerminal}
+            disabled={savingField === "priority" || isTerminal || !canWrite}
             onChange={(e) => handlePriorityChange(e.target.value)}
           >
             {WORK_ORDER_PRIORITIES.map((p: WorkOrderPriority) => (
@@ -242,7 +244,7 @@ export default function ProductionJobDetailPage() {
           <SelectField
             label={t("assignedOperator")}
             value={job.assigned_operator ?? ""}
-            disabled={savingField === "operator" || isTerminal}
+            disabled={savingField === "operator" || isTerminal || !canWrite}
             onChange={(e) => handleOperatorChange(e.target.value)}
           >
             <option value="">{t("unassigned")}</option>
@@ -255,7 +257,7 @@ export default function ProductionJobDetailPage() {
           <SelectField
             label={t("currentStage")}
             value={job.current_stage?.id ?? ""}
-            disabled={savingField === "stage" || isTerminal}
+            disabled={savingField === "stage" || isTerminal || !canWrite}
             onChange={(e) => handleStageChange(e.target.value)}
           >
             <option value="">{t("noStage")}</option>
@@ -269,7 +271,7 @@ export default function ProductionJobDetailPage() {
             label={t("dueDate")}
             type="date"
             value={dueDate}
-            disabled={isTerminal}
+            disabled={isTerminal || !canWrite}
             onChange={(e) => setDueDate(e.target.value)}
           />
         </div>
@@ -277,11 +279,11 @@ export default function ProductionJobDetailPage() {
           <TextField
             label={t("notes")}
             value={notes}
-            disabled={isTerminal}
+            disabled={isTerminal || !canWrite}
             onChange={(e) => setNotes(e.target.value)}
           />
         </div>
-        {!isTerminal && (
+        {canWrite && !isTerminal && (
           <div className="mt-3 flex justify-end">
             <Button variant="secondary" loading={savingField === "details"} onClick={handleSaveDueDateAndNotes}>
               {tCommon("save")}

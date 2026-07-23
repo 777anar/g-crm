@@ -17,6 +17,11 @@ class Company(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     locale: Mapped[str] = mapped_column(String, nullable=False, default="en")
     logo_url: Mapped[str] = mapped_column(String, nullable=True)
     enabled_modules: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    # Roles for which staff MFA is mandatory on this company (Phase 18's
+    # "optional-then-mandatory-per-role" MFA control). Empty by default (MFA
+    # stays opt-in); enforced at /auth/select-company, not at /auth/login,
+    # since role is a per-company membership attribute.
+    mfa_required_roles: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
 
     def __repr__(self) -> str:
         return f"<Company {self.slug}>"

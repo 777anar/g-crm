@@ -24,6 +24,7 @@ import { SignaturePad } from "@/components/signature-pad";
 import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
+import { usePermission } from "@/lib/permissions";
 
 const NEXT_STATUS: Record<string, string | null> = {
   scheduled: "en_route",
@@ -41,6 +42,7 @@ export default function InstallationJobDetailPage() {
   const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
   const toast = useToast();
+  const canWrite = usePermission("installation:write");
 
   const [job, setJob] = useState<InstallationJob | null>(null);
   const [crews, setCrews] = useState<Crew[]>([]);
@@ -200,7 +202,7 @@ export default function InstallationJobDetailPage() {
             {t("forOrder")}: <Link href={`/orders/${job.order_id}`} className="text-primary hover:underline">{job.order_id}</Link>
           </p>
         </div>
-        {!isTerminal && (
+        {canWrite && !isTerminal && (
           <div className="flex gap-2">
             {nextStatus && (
               <Button onClick={handleAdvance} disabled={transitioning}>
@@ -217,7 +219,7 @@ export default function InstallationJobDetailPage() {
         )}
       </div>
 
-      {completeMode && (
+      {canWrite && completeMode && (
         <Card className="border-success/30 bg-success/5">
           <p className="mb-2 text-sm font-medium text-text-primary">{t("completionNotes")}</p>
           <textarea
@@ -244,7 +246,7 @@ export default function InstallationJobDetailPage() {
         </Card>
       )}
 
-      {cancelMode && (
+      {canWrite && cancelMode && (
         <Card className="border-danger/30 bg-danger/5">
           <p className="mb-2 text-sm font-medium text-danger">{t("cancelReason")}</p>
           <textarea
@@ -283,7 +285,7 @@ export default function InstallationJobDetailPage() {
             <select
               value={form.crew_id}
               onChange={(e) => setForm({ ...form, crew_id: e.target.value })}
-              disabled={isTerminal}
+              disabled={isTerminal || !canWrite}
               className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
             >
               <option value="">{t("unassigned")}</option>
@@ -298,7 +300,7 @@ export default function InstallationJobDetailPage() {
               type="date"
               value={form.scheduled_date}
               onChange={(e) => setForm({ ...form, scheduled_date: e.target.value })}
-              disabled={isTerminal}
+              disabled={isTerminal || !canWrite}
               className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
             />
           </div>
@@ -307,7 +309,7 @@ export default function InstallationJobDetailPage() {
             <input
               value={form.scheduled_time_slot}
               onChange={(e) => setForm({ ...form, scheduled_time_slot: e.target.value })}
-              disabled={isTerminal}
+              disabled={isTerminal || !canWrite}
               placeholder="09:00-12:00"
               className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
             />
@@ -318,7 +320,7 @@ export default function InstallationJobDetailPage() {
               type="number"
               value={form.route_sequence}
               onChange={(e) => setForm({ ...form, route_sequence: e.target.value })}
-              disabled={isTerminal}
+              disabled={isTerminal || !canWrite}
               className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary"
             />
           </div>
@@ -333,7 +335,7 @@ export default function InstallationJobDetailPage() {
             disabled={isTerminal}
           />
         </div>
-        {!isTerminal && (
+        {canWrite && !isTerminal && (
           <div className="mt-3">
             <Button onClick={handleSaveSchedule}>{tCommon("save")}</Button>
           </div>
@@ -369,7 +371,7 @@ export default function InstallationJobDetailPage() {
             ))}
           </div>
         )}
-        {!isTerminal && (
+        {canWrite && !isTerminal && (
           <div className="flex flex-wrap items-center gap-2">
             {PHOTO_TYPES.map((type) => (
               <label key={type} className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs text-text-primary hover:bg-bg">

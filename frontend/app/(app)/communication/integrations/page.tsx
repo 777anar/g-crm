@@ -31,6 +31,7 @@ import { tableScrollShellClass, stickyTheadClass } from "@/components/ui/data-ta
 import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
+import { usePermission } from "@/lib/permissions";
 
 type FieldDef = { key: string; labelKey: string; secret?: boolean; type?: string };
 
@@ -87,6 +88,7 @@ export default function IntegrationsPage() {
   const t = useTranslations("integrations");
   const tCommon = useTranslations("common");
   const toast = useToast();
+  const canWrite = usePermission("communication:integrations:write");
 
   const [channels, setChannels] = useState<Channel[] | null>(null);
   const [credentials, setCredentials] = useState<Record<string, ChannelCredential | null>>({});
@@ -252,21 +254,23 @@ export default function IntegrationsPage() {
                     {!credential && <p className="mt-1 text-xs text-text-secondary">{t("noProviderConfigured")}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {providers.length > 0 && (
+                    {canWrite && providers.length > 0 && (
                       <Button variant="secondary" onClick={() => startConfiguring(channel)}>
                         {credential ? t("reconfigure") : t("configure")}
                       </Button>
                     )}
                     {credential && (
                       <>
-                        <Button
-                          variant="secondary"
-                          loading={busyId === channel.id}
-                          onClick={() => handleTestConnection(channel.id)}
-                        >
-                          {t("testConnection")}
-                        </Button>
-                        {isImapCapable && (
+                        {canWrite && (
+                          <Button
+                            variant="secondary"
+                            loading={busyId === channel.id}
+                            onClick={() => handleTestConnection(channel.id)}
+                          >
+                            {t("testConnection")}
+                          </Button>
+                        )}
+                        {canWrite && isImapCapable && (
                           <Button
                             variant="secondary"
                             loading={busyId === channel.id}
@@ -275,9 +279,11 @@ export default function IntegrationsPage() {
                             {t("syncNow")}
                           </Button>
                         )}
-                        <Button variant="destructive" loading={busyId === channel.id} onClick={() => handleRemove(channel.id)}>
-                          {t("removeCredential")}
-                        </Button>
+                        {canWrite && (
+                          <Button variant="destructive" loading={busyId === channel.id} onClick={() => handleRemove(channel.id)}>
+                            {t("removeCredential")}
+                          </Button>
+                        )}
                       </>
                     )}
                   </div>
@@ -329,9 +335,11 @@ export default function IntegrationsPage() {
         <CardHeader
           title={t("queueSection")}
           action={
-            <Button variant="secondary" loading={processingQueue} onClick={handleProcessQueue}>
-              {t("processQueue")}
-            </Button>
+            canWrite ? (
+              <Button variant="secondary" loading={processingQueue} onClick={handleProcessQueue}>
+                {t("processQueue")}
+              </Button>
+            ) : undefined
           }
         />
         {queue === null && <TableSkeleton rows={3} columns={4} />}

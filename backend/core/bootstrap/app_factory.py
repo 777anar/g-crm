@@ -7,7 +7,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.api.errors import register_error_handlers
-from core.api.middleware import RequestIDMiddleware
+from core.api.middleware import CompanyContextMiddleware, RequestIDMiddleware
+from core.audit.router import router as audit_router
 from core.auth.router import router as auth_router
 from core.companies.router import router as companies_router
 from core.config import settings
@@ -60,14 +61,16 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_allow_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=settings.cors_allow_methods,
+        allow_headers=settings.cors_allow_headers,
     )
+    app.add_middleware(CompanyContextMiddleware)
 
     register_error_handlers(app)
 
     # Core routers -- always present, regardless of which modules are installed.
     app.include_router(auth_router)
+    app.include_router(audit_router)
     app.include_router(companies_router)
     app.include_router(documents_router)
     app.include_router(events_router)

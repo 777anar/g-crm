@@ -29,6 +29,7 @@ import { QuoteStatusBadge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { ApiRequestError } from "@/lib/api-client";
+import { usePermission } from "@/lib/permissions";
 
 type SectionData = {
   section: QuoteSection;
@@ -54,6 +55,7 @@ export default function QuoteBuilderPage() {
   const tNav = useTranslations("nav");
   const router = useRouter();
   const confirm = useConfirm();
+  const canWrite = usePermission("sales:quotes:write");
 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [project, setProject] = useState<Project | null>(null);
@@ -83,7 +85,7 @@ export default function QuoteBuilderPage() {
   useEffect(() => { reload(); }, [reload]);
   useEffect(() => { getProject(id).then(setProject).catch(() => {}); }, [id]);
 
-  const isEditable = quote?.status === "draft";
+  const isEditable = quote?.status === "draft" && canWrite;
 
   async function handleCreateOrder() {
     try {
@@ -221,16 +223,16 @@ export default function QuoteBuilderPage() {
           <p className="text-sm text-text-secondary">v{quote.version}</p>
         </div>
         <div className="flex gap-2">
-          {quote.status === "draft" && (
+          {canWrite && quote.status === "draft" && (
             <Button variant="secondary" onClick={() => handleStatusChange("sent")}>{t("markSent")}</Button>
           )}
-          {(quote.status === "sent" || quote.status === "negotiation") && (
+          {canWrite && (quote.status === "sent" || quote.status === "negotiation") && (
             <>
               <Button variant="secondary" onClick={() => handleStatusChange("accepted")}>{t("markAccepted")}</Button>
               <Button variant="secondary" onClick={() => handleStatusChange("rejected")}>{t("markRejected")}</Button>
             </>
           )}
-          {quote.status === "accepted" && (
+          {canWrite && quote.status === "accepted" && (
             <Button onClick={handleCreateOrder}>{tOrders("createOrder")}</Button>
           )}
           <Button variant="secondary" onClick={handleDownloadPdf} disabled={downloading}>

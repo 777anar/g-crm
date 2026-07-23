@@ -18,11 +18,11 @@ export function portalLogin(email: string, password: string) {
   });
 }
 
-export function portalLogout(refreshToken: string) {
-  return portalApiRequest<{ status: string }>(`${BASE}/auth/logout`, {
-    method: "POST",
-    body: { refresh_token: refreshToken },
-  });
+/** Best-effort revoke; the refresh token itself is never passed here
+ * (Phase 18) -- it lives only in the httpOnly cookie, which the backend
+ * reads directly. */
+export function portalLogout() {
+  return portalApiRequest<{ status: string }>(`${BASE}/auth/logout`, { method: "POST" });
 }
 
 export function getPortalMe() {

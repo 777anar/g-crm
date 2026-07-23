@@ -1,9 +1,4 @@
-import {
-  clearPortalTokens,
-  getPortalAccessToken,
-  getPortalRefreshToken,
-  setPortalAccessToken,
-} from "./portal-session";
+import { clearPortalSession, hasPortalSession } from "./portal-session";
 import type { ApiError } from "./types";
 import { ApiRequestError } from "./api-client";
 
@@ -17,28 +12,27 @@ type RequestOptions = {
   searchParams?: Record<string, string | number | boolean | undefined>;
 };
 
-let refreshInFlight: Promise<string | null> | null = null;
+let refreshInFlight: Promise<boolean> | null = null;
 
-async function refreshPortalSession(): Promise<string | null> {
-  const refreshToken = getPortalRefreshToken();
-  if (!refreshToken) return null;
+/** Renews the portal access-token cookie. The refresh token itself is an
+ * httpOnly cookie the browser sends automatically (Phase 18) -- this call
+ * carries no body. */
+async function refreshPortalSession(): Promise<boolean> {
+  if (!hasPortalSession()) return false;
 
   const res = await fetch(`${API_BASE_URL}/api/v1/customer_portal/auth/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: refreshToken }),
+    credentials: "include",
   });
-  if (!res.ok) return null;
-  try {
-    const { access_token: freshToken } = (await res.json()) as { access_token: string };
-    setPortalAccessToken(freshToken);
-    return freshToken;
-  } catch {
-    return null;
+  if (!res.ok) {
+    clearPortalSession();
+    return false;
   }
+  return true;
 }
 
-function getOrRefreshPortalSession(): Promise<string | null> {
+function getOrRefreshPortalSession(): Promise<boolean> {
   if (!refreshInFlight) {
     refreshInFlight = refreshPortalSession().finally(() => {
       refreshInFlight = null;
@@ -48,25 +42,24 @@ function getOrRefreshPortalSession(): Promise<string | null> {
 }
 
 function redirectToPortalLogin(): void {
-  clearPortalTokens();
+  clearPortalSession();
   if (typeof window !== "undefined" && window.location.pathname !== "/portal/login") {
     window.location.href = "/portal/login";
   }
 }
 
+/** Authentication is carried by the httpOnly session cookie the browser
+ * attaches automatically (`credentials: "include"`) -- no Authorization
+ * header is set here (Phase 18). */
 async function portalAuthFetch(url: string, init: { method?: string; headers?: Record<string, string>; body?: BodyInit }, path: string): Promise<Response> {
   const isAuthEndpoint = PORTAL_AUTH_ENDPOINTS.some((p) => path.startsWith(p));
-  const token = getPortalAccessToken();
-  const headers: Record<string, string> = { ...init.headers };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  let response = await fetch(url, { ...init, headers });
+  let response = await fetch(url, { ...init, credentials: "include" });
 
   if (response.status === 401 && !isAuthEndpoint) {
-    const newToken = await getOrRefreshPortalSession();
-    if (newToken) {
-      const retryHeaders: Record<string, string> = { ...init.headers, Authorization: `Bearer ${newToken}` };
-      response = await fetch(url, { ...init, headers: retryHeaders });
+    const refreshed = await getOrRefreshPortalSession();
+    if (refreshed) {
+      response = await fetch(url, { ...init, credentials: "include" });
     }
   }
 

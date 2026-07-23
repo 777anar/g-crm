@@ -810,23 +810,26 @@ One immutable row per run of the nesting algorithm (`API_SPECIFICATION.md` §23)
 
 ## 17. Row-Level Security Strategy
 
-**Correction from the previous revision of this document: Postgres Row-Level Security is not implemented anywhere in this codebase today.** A grep across all of `backend/` for `ROW LEVEL SECURITY`/`CREATE POLICY`/`row_level_security` returns zero hits — no migration, no raw SQL, nothing (`PROJECT_AUDIT.md` S1). The previous revision described RLS as already-in-place defense-in-depth; that was the Phase-1 design intention, never actually built.
-
-What **is** real and was verified thoroughly during the `PROJECT_AUDIT.md` review: every `get`/`get_by_id`/`list` repository method across every module consistently filters by `company_id` in its `WHERE` clause at the application layer — this is the entire tenant-isolation mechanism running in production today, not a defense-in-depth second layer behind RLS.
-
-The originally-intended design remains a reasonable future hardening step:
+**Implemented as of Phase 18 (Security & Compliance Hardening, Version 2.37.0)**, closing the gap this section previously documented as open. Migration `55d19b5b6862_phase18_postgres_row_level_security.py` enables RLS on all 75 tenant-owned tables (every table with a `company_id` column, core and module alike) and creates a `company_isolation` policy on each:
 
 ```sql
 ALTER TABLE crm_customers ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON crm_customers
-  USING (company_id = current_setting('app.current_company_id')::uuid);
+CREATE POLICY company_isolation ON crm_customers
+  USING (company_id = current_setting('app.current_company_id', true)::uuid)
+  WITH CHECK (company_id = current_setting('app.current_company_id', true)::uuid);
 ```
 
-— the backend would need to `SET LOCAL app.current_company_id` at the start of each request's DB transaction (derived from the authenticated user's active company, never client-supplied) for this to function. Not built; recorded here as a real, open gap rather than implied-complete.
+(`communication_integration_logs`, whose `company_id` is nullable for system-level integration logs, gets a slightly different `USING` clause that also allows `company_id IS NULL`.)
+
+The session variable is populated automatically, per request, with no change required to any repository or router: `core/api/middleware.py`'s `CompanyContextMiddleware` best-effort-decodes the caller's access token (staff or customer-portal, header or cookie) at the very start of the request and publishes its company claim into a `contextvar` (`core/db/session.py`'s `current_company_id_var`); a SQLAlchemy `after_begin` event listener on the app's `SessionLocal` then issues `SET LOCAL app.current_company_id = ...` the moment any transaction actually opens a connection — before any query runs, regardless of which router or dependency triggered it. `core/db/session.py` also keeps an explicit `set_company_context(db, company_id)` helper for non-HTTP callers (scripts, future background jobs) that never pass through the middleware.
+
+This is deliberately `ENABLE`, not `FORCE`, ROW LEVEL SECURITY: Postgres exempts a table's owning role from RLS unless `FORCE` is also applied, so migrations and `scripts/seed.py` (run as that owning role) are unaffected without needing to set the session variable themselves. **Operational caveat, not silently assumed**: full RLS efficacy in production requires the application's runtime Postgres connection to use a *non-owner* role — an infrastructure/deployment step tracked alongside this migration, not yet executed. Until that role separation exists, application-layer `company_id` filtering (present in every repository, verified thoroughly during the original `PROJECT_AUDIT.md` review) remains the primary tenant-isolation guarantee; RLS is the second layer on top of it, per the original Phase-1 design intention, not a replacement for it.
+
+The whole mechanism no-ops entirely on SQLite (dev/test): the migration checks `op.get_bind().dialect.name == "postgresql"` before touching anything, and the `after_begin` hook checks the connection's dialect the same way, matching the existing dialect-gating precedent in `core/db/mixins.py`'s `GUID` type.
 
 ## 18. Migration Strategy
 
-- Alembic revision history is a single linear chain (currently 23 migrations deep, head `98b251470b25` — `cut_optimization_phase2`, Version 2.35.0) — unified at the database level, but each module owns the migration scripts that create/alter its own tables.
+- Alembic revision history is a single linear chain (currently 25 migrations deep, head `55d19b5b6862` — `phase18_postgres_row_level_security`, Version 2.37.0) — unified at the database level, but each module owns the migration scripts that create/alter its own tables.
 - Core platform tables (`companies`, `users`, `user_company_roles`, `documents`, `audit_log`, `event_log`, `ai_jobs`) were created in the earliest migration, before any module's tables.
 - **Correction from the previous revision of this document**: there is no CI step that runs `alembic upgrade head` against a disposable database on every PR — that claim was aspirational, not built. What actually runs today: the test suite (`pytest`, wired into `.github/workflows/ci.yml` as of Version 2.28.0) builds its schema via SQLAlchemy's `Base.metadata.create_all()` directly from the current model definitions, entirely bypassing the Alembic migration chain — so a passing test suite does not, by itself, prove the migration chain is consistent with the models. `alembic check` (run manually, most recently confirmed clean during the Version 2.28.0 audit pass) is the actual verification that the migration chain matches the models; it is not yet part of the CI workflow. A real gap worth closing in a future pass, not claimed as already closed here.
 - Module removal does not auto-drop tables; a deliberate downgrade migration is required if data removal is intended.

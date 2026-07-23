@@ -24,6 +24,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDateTime, fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/format";
+import { usePermission } from "@/lib/permissions";
 
 const inputClasses =
   "rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary";
@@ -36,6 +37,7 @@ export default function TaskDetailPage() {
   const tNav = useTranslations("nav");
   const confirm = useConfirm();
   const toast = useToast();
+  const canWrite = usePermission("crm:tasks:write");
 
   const [task, setTask] = useState<Task | null>(null);
   const [series, setSeries] = useState<Task[] | null>(null);
@@ -161,7 +163,7 @@ export default function TaskDetailPage() {
             </p>
           )}
         </div>
-        {!isTerminal && (
+        {canWrite && !isTerminal && (
           <div className="flex flex-wrap justify-end gap-2">
             {task.status === "pending" && (
               <Button variant="secondary" onClick={() => handleStatus("in_progress")} disabled={busy}>
@@ -183,7 +185,7 @@ export default function TaskDetailPage() {
         )}
       </div>
 
-      {cancelMode && (
+      {canWrite && cancelMode && (
         <Card className="border-danger/30 bg-danger/5">
           <p className="mb-2 text-sm font-medium text-danger">{t("cancelReason")}</p>
           <textarea
@@ -205,14 +207,16 @@ export default function TaskDetailPage() {
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-text-primary">{t("details")}</h2>
           <div className="flex gap-3">
-            {!isTerminal && (
+            {canWrite && !isTerminal && (
               <button className="text-xs text-primary hover:underline" onClick={() => (editMode ? handleSave() : setEditMode(true))}>
                 {editMode ? tCommon("save") : tCommon("edit")}
               </button>
             )}
-            <button className="text-xs text-danger hover:underline" onClick={handleDelete}>
-              {tCommon("delete")}
-            </button>
+            {canWrite && (
+              <button className="text-xs text-danger hover:underline" onClick={handleDelete}>
+                {tCommon("delete")}
+              </button>
+            )}
           </div>
         </div>
 

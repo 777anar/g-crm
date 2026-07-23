@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { portalLogin } from "@/lib/api/portal";
-import { setPortalAccessToken, setPortalRefreshToken } from "@/lib/portal-session";
+import { markPortalSessionActive } from "@/lib/portal-session";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
@@ -24,9 +24,8 @@ export default function PortalLoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const result = await portalLogin(email, password);
-      setPortalAccessToken(result.access_token);
-      setPortalRefreshToken(result.refresh_token);
+      await portalLogin(email, password);
+      markPortalSessionActive();
       router.push("/portal/dashboard");
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("loginFailed"));

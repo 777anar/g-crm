@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from sqlalchemy import Boolean, ForeignKey, JSON, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
@@ -14,6 +14,13 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     full_name: Mapped[str] = mapped_column(String, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    # TOTP-based MFA (Phase 18). `mfa_secret` is written once at /auth/mfa/setup
+    # and only takes effect (mfa_enabled=True) once the user proves possession
+    # of it via /auth/mfa/enable -- never enabled from the setup call alone,
+    # so a setup request that's never completed leaves login unaffected.
+    mfa_secret: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     def __repr__(self) -> str:
         return f"<User {self.email}>"

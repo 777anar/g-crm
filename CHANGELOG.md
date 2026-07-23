@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.37.0] — 2026-07-23 — Phase 18: Security & Compliance Hardening
+
+Closes every item in `MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 18 — the six documented, previously-open gaps between what the architecture docs promised (RLS, httpOnly cookies, tight CORS, real permission gating) and what actually ran, plus two genuinely new controls (staff MFA, an audit-log compliance surface) named as still-missing in Part 1's "world-class" pillars. No business-logic changes to any existing module.
+
+### Added
+- **Postgres Row-Level Security** — migration `55d19b5b6862` enables RLS + a `company_isolation` policy on all 75 tenant-owned tables (core and module alike); a new `CompanyContextMiddleware` (`core/api/middleware.py`) decodes the caller's token per request and publishes the company claim into a contextvar that a SQLAlchemy `after_begin` hook (`core/db/session.py`) turns into `SET LOCAL app.current_company_id` — no router or repository changes required anywhere. No-ops entirely on SQLite (dev/test). See `DATABASE_DESIGN.md` §17 for the full mechanism and the one open operational item (a non-owner runtime DB role for full efficacy in production).
+- **httpOnly cookie auth** — `core/auth/router.py` and `modules/customer_portal/presentation/api/auth.py` now set the access/refresh JWTs as httpOnly, `Secure` (outside dev), `SameSite=Lax` cookies on login/select-company/refresh, alongside the unchanged response body (kept for Bearer-token API clients and `/api/v1/docs`). `core/rbac/dependencies.py` and the Customer Portal's `get_current_customer` accept either the header or the cookie. The frontend (`lib/api-client.ts`, `lib/portal-api-client.ts`) now authenticates via the cookie exclusively (`credentials: "include"`) and no longer stores a raw token anywhere in `localStorage` — `lib/session.ts`/`lib/portal-session.ts` persist only a non-sensitive "session active" flag plus (staff only) the `role`/`module_permissions`/`active_company_id` claims the backend now also returns as plain JSON fields, since an httpOnly token's claims can't be decoded client-side. Closes the XSS-token-exfiltration gap `PROJECT_AUDIT.md` had accepted as tech debt.
+- **Staff MFA (TOTP)** — `core/auth/mfa.py` (via `pyotp`) plus `POST /auth/mfa/{setup,enable,disable,verify}`. A user with `mfa_enabled=true` gets an `{mfa_required, mfa_token}` challenge from `/auth/login` instead of tokens, redeemed at `/auth/mfa/verify`. `Company.mfa_required_roles` (new JSON column) makes MFA mandatory for specific roles on a given company, enforced at `/auth/select-company` (`403` if required and not enabled) — the "optional-then-mandatory-per-role" control the roadmap named. Frontend: a login-flow MFA challenge step and a new Settings → Security page (enroll/confirm/disable) at `/settings/security`.
+- **Compliance audit-log export/retention** — new `core/audit/router.py`, owner-only (`core:audit:export`): `GET /audit/logs` (cursor-paginated, filterable), `GET /audit/logs/export` (CSV), `GET`/`PUT /audit/retention-policy`, `POST /audit/retention-policy/purge` (manual — no background job queue exists yet, see Phase 24). New `audit_retention_policies` table. Frontend: a new Settings → Audit Log page at `/settings/audit-log`.
+- **Frontend permission gating app-wide** — Phase 17 delivered `usePermission()` but only wired it into the Customers pages; this phase applies the same `{canWrite && (...)}` pattern to every remaining Create/Edit/Archive/status-transition control across 32 files (CRM Leads/Tasks, Catalog, Sales Projects/Quotes, Orders, Production, Installation, Finance, Purchasing, Marketing, Communication, Cut Optimization, Dashboard) — a viewer-role user no longer sees a control they'd get a 403 from on submit. Backend RBAC remains the sole real authorization boundary, unchanged.
+- 16 new backend tests (`tests/test_phase18_security_hardening.py`): cookie issuance/auth, MFA setup/enable/disable/login-challenge/per-role-enforcement, audit export/retention/purge, CORS settings.
+
+### Changed
+- **CORS** — `allow_methods`/`allow_headers` are no longer `["*"]`; `core/config.py` gained explicit `cors_allow_methods`/`cors_allow_headers` settings (`GET/POST/PATCH/PUT/DELETE/OPTIONS`, `Authorization/Content-Type/X-Request-ID`), `allow_origins` unaffected (was already restricted).
+- `POST /auth/refresh` and `POST /auth/logout` (staff and portal) now accept an optional body — omit `refresh_token` entirely and the backend reads it from the httpOnly cookie instead.
+
+### Verification
+Full backend suite passing (722/722 — 706 prior + 16 new), migrations round-trip clean (`upgrade head` → `downgrade -2` → `upgrade head`, SQLite), frontend `tsc --noEmit` clean, `npm run lint` clean, frontend production build clean (61 routes, +2: `/settings/security`, `/settings/audit-log`).
+
+---
+
 ## [2.36.0] — 2026-07-22 — Phase 17: Stabilization & Technical Debt Closeout
 
 Closes every item in `MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 17 — eight findings independently re-identified across two or more prior audit passes (`RELEASE_CHECKLIST.md`, `PROJECT_AUDIT.md`, `IMPLEMENTATION_REPORT.md`) without ever being picked up. No new modules, no schema redesign, no business-logic changes — every item was already named and scoped; this release closes all eight in one pass so none of them resurface in a future audit.

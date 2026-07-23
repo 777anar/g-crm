@@ -25,6 +25,7 @@ import { OrderStatusBadge, WorkOrderStatusBadge, InstallationJobStatusBadge, Inv
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
+import { usePermission } from "@/lib/permissions";
 
 type SectionData = {
   section: OrderSection;
@@ -63,6 +64,7 @@ export default function OrderDetailPage() {
   const tCommon = useTranslations("common");
   const tNav = useTranslations("nav");
   const toast = useToast();
+  const canWrite = usePermission("orders:write");
 
   const [order, setOrder] = useState<Order | null>(null);
   const [quoteNumber, setQuoteNumber] = useState<string | null>(null);
@@ -257,7 +259,7 @@ export default function OrderDetailPage() {
           </div>
           <p className="mt-1 text-xs text-text-secondary">{t("fromQuote")}: {quoteNumber ?? tCommon("loading")}</p>
         </div>
-        {!isTerminal && (
+        {canWrite && !isTerminal && (
           <div className="flex gap-2">
             {nextStatus && (
               <Button onClick={handleAdvance} disabled={transitioning}>
@@ -273,7 +275,7 @@ export default function OrderDetailPage() {
         )}
       </div>
 
-      {cancelMode && (
+      {canWrite && cancelMode && (
         <Card className="border-danger/30 bg-danger/5">
           <p className="mb-2 text-sm font-medium text-danger">{t("cancelReason")}</p>
           <textarea
@@ -302,7 +304,7 @@ export default function OrderDetailPage() {
             {t("viewWorkOrder")} →
           </Link>
         </Card>
-      ) : order.status === "approved_for_production" ? (
+      ) : order.status === "approved_for_production" && canWrite ? (
         <Card className="flex items-center justify-between">
           <p className="text-sm text-text-secondary">{t("noWorkOrderYet")}</p>
           <Button onClick={handleCreateWorkOrder} disabled={creatingWorkOrder}>
@@ -323,7 +325,7 @@ export default function OrderDetailPage() {
             {t("viewInstallationJob")} →
           </Link>
         </Card>
-      ) : order.status === "ready" || order.status === "delivered" ? (
+      ) : (order.status === "ready" || order.status === "delivered") && canWrite ? (
         <Card className="flex items-center justify-between">
           <p className="text-sm text-text-secondary">{t("noInstallationJobYet")}</p>
           <Button onClick={handleCreateInstallationJob} disabled={creatingInstallationJob}>
@@ -344,7 +346,7 @@ export default function OrderDetailPage() {
             {t("viewInvoice")} →
           </Link>
         </Card>
-      ) : ["ready", "delivered", "installed", "completed"].includes(order.status) ? (
+      ) : ["ready", "delivered", "installed", "completed"].includes(order.status) && canWrite ? (
         <Card className="flex items-center justify-between">
           <p className="text-sm text-text-secondary">{t("noInvoiceYet")}</p>
           <Button onClick={handleCreateInvoice} disabled={creatingInvoice}>
@@ -367,7 +369,7 @@ export default function OrderDetailPage() {
       <Card>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-text-primary">{t("notes")}</h2>
-          {!isTerminal && (
+          {canWrite && !isTerminal && (
             <button
               className="text-xs text-primary hover:underline"
               onClick={() => (editMode ? handleSaveDetails() : setEditMode(true))}
@@ -481,7 +483,7 @@ export default function OrderDetailPage() {
                           className={inputClasses}
                           value={item.production_status ?? ""}
                           onChange={(e) => handleItemStatusChange(item.id, "production_status", e.target.value)}
-                          disabled={isTerminal || workOrder !== null}
+                          disabled={isTerminal || workOrder !== null || !canWrite}
                         >
                           <option value="">—</option>
                           {PROD_STATUSES.map((s) => (
@@ -494,7 +496,7 @@ export default function OrderDetailPage() {
                           className={inputClasses}
                           value={item.installation_status ?? ""}
                           onChange={(e) => handleItemStatusChange(item.id, "installation_status", e.target.value)}
-                          disabled={isTerminal || installationJob !== null}
+                          disabled={isTerminal || installationJob !== null || !canWrite}
                         >
                           <option value="">—</option>
                           {INST_STATUSES.map((s) => (

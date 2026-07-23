@@ -20,6 +20,14 @@ from core.config import settings
 CUSTOMER_ACCESS_TOKEN_TYPE = "customer_access"
 CUSTOMER_REFRESH_TOKEN_TYPE = "customer_refresh"
 
+# httpOnly cookie names the Customer Portal frontend authenticates with
+# (Phase 18) -- a separate namespace from core/auth/security.py's staff
+# cookies, matching the separate localStorage keys the frontend already used
+# (lib/portal-session.ts) so a customer and a staff member can be signed in
+# on the same browser at once without collision.
+CUSTOMER_ACCESS_TOKEN_COOKIE_NAME = "g_erp_portal_access_token"
+CUSTOMER_REFRESH_TOKEN_COOKIE_NAME = "g_erp_portal_refresh_token"
+
 
 def _create_token(data: Dict[str, Any], expires_delta: timedelta, token_type: str) -> str:
     to_encode = data.copy()

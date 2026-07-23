@@ -18,6 +18,7 @@ import { SortableHeader } from "@/components/ui/sortable-header";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { usePermission } from "@/lib/permissions";
 
 const PROJECT_TYPES = ["kitchen", "bathroom", "commercial", "stairs", "fireplace", "other"];
 
@@ -25,6 +26,7 @@ export default function ProjectsPage() {
   const t = useTranslations("sales");
   const tCommon = useTranslations("common");
   const router = useRouter();
+  const canWrite = usePermission("sales:projects:write");
 
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -83,10 +85,10 @@ export default function ProjectsPage() {
           <h1 className="text-xl font-semibold text-text-primary">{t("projectsTitle")}</h1>
           <p className="text-sm text-text-secondary">{t("projectsSubtitle")}</p>
         </div>
-        <Button onClick={() => setShowNewForm(!showNewForm)}>{t("createProject")}</Button>
+        {canWrite && <Button onClick={() => setShowNewForm(!showNewForm)}>{t("createProject")}</Button>}
       </div>
 
-      {showNewForm && (
+      {canWrite && showNewForm && (
         <Card>
           <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectField

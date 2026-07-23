@@ -11,10 +11,26 @@ export type ApiError = {
 
 export type CompanyMembership = { id: string; name: string; role: string };
 
-export type LoginResponse = {
-  access_token: string;
-  refresh_token: string;
+// `access_token`/`refresh_token` are present for backward compatibility with
+// Bearer-token API clients, but the frontend itself never reads or stores
+// them: the browser authenticates via the httpOnly cookies the backend sets
+// alongside this response (Phase 18). `role`/`module_permissions`/
+// `active_company_id` are what the frontend actually persists (see
+// lib/session.ts's `setSessionClaims`), since an httpOnly token's claims
+// can't be decoded client-side anymore.
+export type TokenResponse = {
+  access_token?: string | null;
+  refresh_token?: string | null;
+  token_type?: string;
+  active_company_id: string | null;
+  role: string | null;
+  module_permissions: Record<string, string[]>;
+};
+
+export type LoginResponse = TokenResponse & {
   companies: CompanyMembership[];
+  mfa_required: boolean;
+  mfa_token?: string | null;
 };
 
 export type Company = {
@@ -124,6 +140,25 @@ export type Lead = {
 };
 
 export type Paginated<T> = { items: T[]; next_cursor: string | null };
+
+// ── Compliance audit-log export/retention (Phase 18) ─────────────────────────
+
+export type AuditLogEntry = {
+  id: string;
+  company_id: string;
+  module: string;
+  actor_user_id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  diff_json: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type RetentionPolicy = {
+  retention_days: number | null;
+  updated_at: string | null;
+};
 
 // ── Tasks & Reminders (Version 1.2) ──────────────────────────────────────────
 

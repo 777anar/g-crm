@@ -59,6 +59,7 @@ import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { ApiRequestError } from "@/lib/api-client";
+import { usePermission } from "@/lib/permissions";
 
 const PROD_STATUSES = ["pending", "queued", "cutting", "polishing", "quality_check", "done"];
 const INST_STATUSES = ["pending", "scheduled", "en_route", "in_progress", "done"];
@@ -89,6 +90,7 @@ export default function ProjectDetailPage() {
   const router = useRouter();
   const confirm = useConfirm();
   const toast = useToast();
+  const canWrite = usePermission("sales:projects:write");
 
   const [tab, setTab] = useState<Tab>("overview");
 
@@ -447,11 +449,13 @@ export default function ProjectDetailPage() {
 
       {tab === "overview" && (
         <div className="flex flex-col gap-4">
-          <div className="flex justify-end">
-            <Button onClick={handleNewQuote} disabled={creatingQuote}>
-              {creatingQuote ? t("creating") : t("createQuote")}
-            </Button>
-          </div>
+          {canWrite && (
+            <div className="flex justify-end">
+              <Button onClick={handleNewQuote} disabled={creatingQuote}>
+                {creatingQuote ? t("creating") : t("createQuote")}
+              </Button>
+            </div>
+          )}
 
           <h2 className="text-lg font-semibold text-text-primary">{t("quotesTitle")}</h2>
           {quotes === null && <TableSkeleton rows={4} columns={5} />}
@@ -499,11 +503,13 @@ export default function ProjectDetailPage() {
 
       {tab === "rooms" && (
         <div className="flex flex-col gap-3">
-          <div className="flex justify-end">
-            <Button onClick={() => setAddingRoom((v) => !v)}>{t("addRoom")}</Button>
-          </div>
+          {canWrite && (
+            <div className="flex justify-end">
+              <Button onClick={() => setAddingRoom((v) => !v)}>{t("addRoom")}</Button>
+            </div>
+          )}
 
-          {addingRoom && (
+          {canWrite && addingRoom && (
             <Card>
               <form className="grid grid-cols-1 gap-3 sm:grid-cols-3" onSubmit={handleCreateRoom}>
                 <SelectField label={t("roomType")} value={newRoomType} onChange={(e) => setNewRoomType(e.target.value)}>
@@ -530,18 +536,20 @@ export default function ProjectDetailPage() {
                 <CardHeader
                   title={roomLabel(room)}
                   action={
-                    <div className="flex gap-2">
-                      <Button variant="secondary" onClick={() => setAddingItemToRoom(addingItemToRoom === room.id ? null : room.id)}>
-                        {t("addProjectItem")}
-                      </Button>
-                      <button onClick={() => handleDeleteRoom(room.id)} className="text-sm text-danger hover:underline">
-                        {tCommon("delete")}
-                      </button>
-                    </div>
+                    canWrite && (
+                      <div className="flex gap-2">
+                        <Button variant="secondary" onClick={() => setAddingItemToRoom(addingItemToRoom === room.id ? null : room.id)}>
+                          {t("addProjectItem")}
+                        </Button>
+                        <button onClick={() => handleDeleteRoom(room.id)} className="text-sm text-danger hover:underline">
+                          {tCommon("delete")}
+                        </button>
+                      </div>
+                    )
                   }
                 />
 
-                {addingItemToRoom === room.id && (
+                {canWrite && addingItemToRoom === room.id && (
                   <form
                     className="mb-3 grid grid-cols-1 gap-3 rounded-md border border-border bg-bg p-3 sm:grid-cols-3"
                     onSubmit={(e) => handleCreateItem(e, room.id)}
@@ -642,6 +650,7 @@ export default function ProjectDetailPage() {
                     {(itemsByRoom[room.id] || []).map((item) => (
                       <ProjectItemRow
                         key={item.id}
+                        canWrite={canWrite}
                         item={item}
                         label={itemLabel(item)}
                         materialLabel={materialLabel(item)}
@@ -847,6 +856,7 @@ export default function ProjectDetailPage() {
                       className={inputClasses}
                       value={item.production_status ?? ""}
                       onChange={(e) => handleItemStatusChange(item.id, "production_status", e.target.value)}
+                      disabled={!canWrite}
                     >
                       <option value="">—</option>
                       {PROD_STATUSES.map((s) => (
@@ -882,6 +892,7 @@ export default function ProjectDetailPage() {
                       className={inputClasses}
                       value={item.installation_status ?? ""}
                       onChange={(e) => handleItemStatusChange(item.id, "installation_status", e.target.value)}
+                      disabled={!canWrite}
                     >
                       <option value="">—</option>
                       {INST_STATUSES.map((s) => (
@@ -929,6 +940,7 @@ export default function ProjectDetailPage() {
                         className={inputClasses}
                         value={item.completion_status ?? ""}
                         onChange={(e) => handleItemStatusChange(item.id, "completion_status", e.target.value)}
+                        disabled={!canWrite}
                       >
                         <option value="">—</option>
                         {COMPLETION_STATUSES.map((s) => (
@@ -1033,6 +1045,7 @@ function MaterialsRollup({
 }
 
 function ProjectItemRow({
+  canWrite,
   item,
   label,
   materialLabel,
@@ -1052,6 +1065,7 @@ function ProjectItemRow({
   onAddPhoto,
   onDeletePhoto,
 }: {
+  canWrite: boolean;
   item: ProjectItem;
   label: string;
   materialLabel: string;
@@ -1093,7 +1107,9 @@ function ProjectItemRow({
           {label} {item.material_id && <span className="font-normal text-text-secondary">— {materialLabel}</span>}
         </button>
         <span className="mr-2 text-xs text-text-secondary">{item.quantity} {item.unit}</span>
-        <button onClick={onDelete} className="text-xs text-danger hover:underline">✕</button>
+        {canWrite && (
+          <button onClick={onDelete} className="text-xs text-danger hover:underline">✕</button>
+        )}
       </div>
 
       {expanded && (
@@ -1108,7 +1124,7 @@ function ProjectItemRow({
                   {m.customer_signature_document_id ? ` · ${t("signatureAttached")}` : ""}
                 </span>
                 <span className="flex items-center gap-2">
-                  {!m.customer_signature_document_id && (
+                  {canWrite && !m.customer_signature_document_id && (
                     <label className="cursor-pointer text-primary hover:underline">
                       {t("attachSignature")}
                       <input
@@ -1123,33 +1139,37 @@ function ProjectItemRow({
                       />
                     </label>
                   )}
-                  <button onClick={() => onDeleteMeasurement(m.id)} className="text-danger hover:underline">✕</button>
+                  {canWrite && (
+                    <button onClick={() => onDeleteMeasurement(m.id)} className="text-danger hover:underline">✕</button>
+                  )}
                 </span>
               </div>
             ))}
-            <form
-              className="mt-2 flex flex-wrap items-end gap-2"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                await onAddMeasurement({
-                  length_mm: length || undefined,
-                  width_mm: width || undefined,
-                  thickness_mm: thickness || undefined,
-                  measurer_name: measurer || undefined,
-                  measured_at: measuredAt || undefined,
-                });
-                setLength("");
-                setWidth("");
-                setThickness("");
-              }}
-            >
-              <input className={inputClasses} placeholder={t("measurementLength")} value={length} onChange={(e) => setLength(e.target.value)} />
-              <input className={inputClasses} placeholder={t("measurementWidth")} value={width} onChange={(e) => setWidth(e.target.value)} />
-              <input className={inputClasses} placeholder={t("measurementThickness")} value={thickness} onChange={(e) => setThickness(e.target.value)} />
-              <input className={inputClasses} placeholder={t("measurer")} value={measurer} onChange={(e) => setMeasurer(e.target.value)} />
-              <input className={inputClasses} type="date" value={measuredAt} onChange={(e) => setMeasuredAt(e.target.value)} />
-              <Button type="submit">{t("recordMeasurement")}</Button>
-            </form>
+            {canWrite && (
+              <form
+                className="mt-2 flex flex-wrap items-end gap-2"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  await onAddMeasurement({
+                    length_mm: length || undefined,
+                    width_mm: width || undefined,
+                    thickness_mm: thickness || undefined,
+                    measurer_name: measurer || undefined,
+                    measured_at: measuredAt || undefined,
+                  });
+                  setLength("");
+                  setWidth("");
+                  setThickness("");
+                }}
+              >
+                <input className={inputClasses} placeholder={t("measurementLength")} value={length} onChange={(e) => setLength(e.target.value)} />
+                <input className={inputClasses} placeholder={t("measurementWidth")} value={width} onChange={(e) => setWidth(e.target.value)} />
+                <input className={inputClasses} placeholder={t("measurementThickness")} value={thickness} onChange={(e) => setThickness(e.target.value)} />
+                <input className={inputClasses} placeholder={t("measurer")} value={measurer} onChange={(e) => setMeasurer(e.target.value)} />
+                <input className={inputClasses} type="date" value={measuredAt} onChange={(e) => setMeasuredAt(e.target.value)} />
+                <Button type="submit">{t("recordMeasurement")}</Button>
+              </form>
+            )}
           </div>
 
           <div>
@@ -1157,25 +1177,29 @@ function ProjectItemRow({
             {(drawings || []).map((d) => (
               <div key={d.id} className="mb-1 flex items-center justify-between rounded border border-border bg-bg px-2 py-1 text-xs">
                 <span>{t(`drawingType_${d.drawing_type}` as Parameters<typeof t>[0])} · {d.label || "—"}</span>
-                <button onClick={() => onDeleteDrawing(d.id)} className="text-danger hover:underline">✕</button>
+                {canWrite && (
+                  <button onClick={() => onDeleteDrawing(d.id)} className="text-danger hover:underline">✕</button>
+                )}
               </div>
             ))}
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <select className={inputClasses} value={drawingType} onChange={(e) => setDrawingType(e.target.value)}>
-                {["dwg", "dxf", "sketch", "pdf"].map((dt) => (
-                  <option key={dt} value={dt}>{t(`drawingType_${dt}` as Parameters<typeof t>[0])}</option>
-                ))}
-              </select>
-              <input
-                type="file"
-                className="text-xs"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) onAddDrawing(file, drawingType);
-                  e.target.value = "";
-                }}
-              />
-            </div>
+            {canWrite && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <select className={inputClasses} value={drawingType} onChange={(e) => setDrawingType(e.target.value)}>
+                  {["dwg", "dxf", "sketch", "pdf"].map((dt) => (
+                    <option key={dt} value={dt}>{t(`drawingType_${dt}` as Parameters<typeof t>[0])}</option>
+                  ))}
+                </select>
+                <input
+                  type="file"
+                  className="text-xs"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) onAddDrawing(file, drawingType);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <div>
@@ -1183,28 +1207,32 @@ function ProjectItemRow({
             {(photos || []).map((p) => (
               <div key={p.id} className="mb-1 flex items-center justify-between rounded border border-border bg-bg px-2 py-1 text-xs">
                 <span>{p.caption || "—"}</span>
-                <button onClick={() => onDeletePhoto(p.id)} className="text-danger hover:underline">✕</button>
+                {canWrite && (
+                  <button onClick={() => onDeletePhoto(p.id)} className="text-danger hover:underline">✕</button>
+                )}
               </div>
             ))}
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <input
-                className={inputClasses}
-                placeholder={t("photoCaption")}
-                value={photoCaption}
-                onChange={(e) => setPhotoCaption(e.target.value)}
-              />
-              <input
-                type="file"
-                accept="image/*"
-                className="text-xs"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) onAddPhoto(file, photoCaption);
-                  e.target.value = "";
-                  setPhotoCaption("");
-                }}
-              />
-            </div>
+            {canWrite && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <input
+                  className={inputClasses}
+                  placeholder={t("photoCaption")}
+                  value={photoCaption}
+                  onChange={(e) => setPhotoCaption(e.target.value)}
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="text-xs"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) onAddPhoto(file, photoCaption);
+                    e.target.value = "";
+                    setPhotoCaption("");
+                  }}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

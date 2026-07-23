@@ -27,6 +27,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useListShortcuts } from "@/lib/use-list-shortcuts";
+import { usePermission } from "@/lib/permissions";
 
 const TABLE_ID = "crm-tasks";
 
@@ -44,6 +45,7 @@ export default function TasksPage() {
   const t = useTranslations("tasks");
   const tCommon = useTranslations("common");
   const router = useRouter();
+  const canWrite = usePermission("crm:tasks:write");
 
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [users, setUsers] = useState<CompanyUser[]>([]);
@@ -131,9 +133,11 @@ export default function TasksPage() {
           <h1 className="text-xl font-semibold text-text-primary">{t("title")}</h1>
           <p className="text-sm text-text-secondary">{t("subtitle")}</p>
         </div>
-        <Link href="/crm/tasks/new">
-          <Button>{t("newTask")}</Button>
-        </Link>
+        {canWrite && (
+          <Link href="/crm/tasks/new">
+            <Button>{t("newTask")}</Button>
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

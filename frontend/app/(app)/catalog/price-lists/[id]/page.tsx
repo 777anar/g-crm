@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SelectField, TextField } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePermission } from "@/lib/permissions";
 
 export default function PriceListDetailPage() {
   const params = useParams<{ id: string }>();
@@ -18,6 +19,7 @@ export default function PriceListDetailPage() {
   const t = useTranslations("catalog");
   const tDetail = useTranslations("catalog.materialDetail");
   const tCommon = useTranslations("common");
+  const canWrite = usePermission("catalog:price_lists:write");
 
   const [entries, setEntries] = useState<PriceListEntry[] | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -83,6 +85,7 @@ export default function PriceListDetailPage() {
         ]}
       />
 
+      {canWrite && (
       <Card>
         <CardHeader title={t("addUpdatePriceTitle")} />
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-4" onSubmit={handleUpsert}>
@@ -102,6 +105,7 @@ export default function PriceListDetailPage() {
           </div>
         </form>
       </Card>
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
 

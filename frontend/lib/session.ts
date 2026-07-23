@@ -1,45 +1,54 @@
 "use client";
 
-const ACCESS_TOKEN_KEY = "g_erp_access_token";
-const REFRESH_TOKEN_KEY = "g_erp_refresh_token";
+// Phase 18 (Security & Compliance Hardening): the staff access/refresh JWTs
+// themselves are no longer stored here -- the backend now issues them as
+// httpOnly cookies (core/auth/router.py), unreadable by JS and therefore
+// safe from XSS-based exfiltration. This module now only holds two kinds
+// of non-sensitive, JS-readable state:
+//   - a boolean "a session might be active" flag, used for optimistic
+//     route-guard/redirect decisions (the backend remains the sole real
+//     authority: every API call is still enforced server-side via the
+//     cookie, regardless of what this flag says);
+//   - the session's claims (role, module_permissions, active_company_id) --
+//     metadata, not a bearer credential, returned in the login/select-company/
+//     refresh response bodies specifically so lib/permissions.ts can still
+//     gate UI without being able to decode an httpOnly token.
+const SESSION_ACTIVE_KEY = "g_erp_session_active";
+const CLAIMS_KEY = "g_erp_session_claims";
 
-// Client-side token storage. Phase 2 scope: simple localStorage persistence.
-// A future hardening pass can move the refresh token to an httpOnly cookie
-// set by a Next.js route handler; the access token must stay readable by
-// client code regardless, since it is attached to every fetch() call here.
-export function getAccessToken(): string | null {
+export type SessionClaims = {
+  role: string | null;
+  module_permissions: Record<string, string[]>;
+  active_company_id: string | null;
+};
+
+export function hasSession(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(SESSION_ACTIVE_KEY) === "1";
+}
+
+export function markSessionActive(): void {
+  window.localStorage.setItem(SESSION_ACTIVE_KEY, "1");
+}
+
+export function getSessionClaims(): SessionClaims | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
-}
-
-export function setAccessToken(token: string): void {
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
-}
-
-export function getRefreshToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(REFRESH_TOKEN_KEY);
-}
-
-export function setRefreshToken(token: string): void {
-  window.localStorage.setItem(REFRESH_TOKEN_KEY, token);
-}
-
-export function clearAccessToken(): void {
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
-  window.localStorage.removeItem(REFRESH_TOKEN_KEY);
-}
-
-/** Reads the `active_company_id` claim out of a JWT's payload without
- * verifying its signature -- used only to carry the previously active
- * company across a silent token refresh, never for authorization. */
-export function decodeActiveCompanyId(token: string): string | null {
+  const raw = window.localStorage.getItem(CLAIMS_KEY);
+  if (!raw) return null;
   try {
-    const payload = token.split(".")[1];
-    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    const claims = JSON.parse(json) as { active_company_id?: string | null };
-    return claims.active_company_id ?? null;
+    return JSON.parse(raw) as SessionClaims;
   } catch {
     return null;
   }
+}
+
+export function setSessionClaims(claims: Partial<SessionClaims>): void {
+  const current = getSessionClaims() ?? { role: null, module_permissions: {}, active_company_id: null };
+  const next: SessionClaims = { ...current, ...claims };
+  window.localStorage.setItem(CLAIMS_KEY, JSON.stringify(next));
+}
+
+export function clearSession(): void {
+  window.localStorage.removeItem(SESSION_ACTIVE_KEY);
+  window.localStorage.removeItem(CLAIMS_KEY);
 }

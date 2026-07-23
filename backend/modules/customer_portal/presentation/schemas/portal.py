@@ -40,12 +40,18 @@ class PortalLoginRequest(BaseModel):
 
 
 class PortalTokenResponse(BaseModel):
+    # Kept in the body for Bearer-token API clients and backward
+    # compatibility; the portal frontend now authenticates via the httpOnly
+    # cookies set alongside this response instead (Phase 18, mirrors
+    # core/auth/schemas.py's TokenResponse).
     access_token: str
     refresh_token: str
 
 
 class PortalRefreshRequest(BaseModel):
-    refresh_token: str
+    # Optional: the portal frontend relies on the httpOnly refresh cookie
+    # instead of holding this in JS-readable storage (Phase 18).
+    refresh_token: Optional[str] = None
 
 
 class PortalAccessTokenOut(BaseModel):

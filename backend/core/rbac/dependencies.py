@@ -2,13 +2,17 @@ import uuid
 from dataclasses import dataclass
 from typing import List, Optional
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 
 from core.api.errors import ForbiddenError, UnauthenticatedError
-from core.auth.security import decode_token
+from core.auth.security import ACCESS_TOKEN_COOKIE_NAME, decode_token
 from core.rbac.permissions import role_has_permission
 
+# `auto_error=False` + the cookie fallback below is what lets a plain browser
+# fetch() (no Authorization header, see Phase 18's httpOnly-cookie migration
+# in lib/api-client.ts) authenticate the same way a Bearer-token API client
+# does -- this dependency is the one place that reconciles the two transports.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
@@ -20,11 +24,12 @@ class CurrentUser:
     module_permissions: dict
 
 
-def get_current_user(token: Optional[str] = Depends(oauth2_scheme)) -> CurrentUser:
-    if not token:
+def get_current_user(request: Request, token: Optional[str] = Depends(oauth2_scheme)) -> CurrentUser:
+    raw_token = token or request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)
+    if not raw_token:
         raise UnauthenticatedError("Missing or invalid access token")
     try:
-        payload = decode_token(token)
+        payload = decode_token(raw_token)
     except ValueError as exc:
         raise UnauthenticatedError(str(exc)) from exc
     if payload.get("type") != "access":

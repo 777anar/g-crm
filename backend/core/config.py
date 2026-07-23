@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     local_storage_dir: str = "./storage_data"
 
     cors_allow_origins: list[str] = ["http://localhost:3000"]
+    cors_allow_methods: list[str] = ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"]
+    cors_allow_headers: list[str] = ["Authorization", "Content-Type", "X-Request-ID"]
 
     # Symmetric key protecting third-party integration credentials at rest
     # (modules/communication/infrastructure/security/encryption.py). Any

@@ -1,7 +1,8 @@
 # G-STONE ERP — Master Development Roadmap
 
-_Date: 2026-07-22_
-_Current state: Version **2.36.0**. 14 installed modules, 706/706 backend tests passing, CI-enforced core/module architecture boundary (now including a CI-enforced ESLint gate — see Phase 17), live in daily use by G-STONE GALLERY._
+_Date: 2026-07-23_
+_Current state: Version **2.37.0**. 14 installed modules, 722/722 backend tests passing, CI-enforced core/module architecture boundary (including a CI-enforced ESLint gate — see Phase 17), Postgres Row-Level Security + httpOnly-cookie auth + staff MFA + a compliance audit-log surface (see Phase 18), live in daily use by G-STONE GALLERY._
+_Updated 2026-07-23: Phase 18 (Security & Compliance Hardening) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.37.0] and `IMPLEMENTATION_REPORT.md` §10 for the complete record._
 _Updated 2026-07-22: Phase 17 (Stabilization & Technical Debt Closeout) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.36.0] and `PHASE17_COMPLETION_REPORT.md` for the complete record._
 _Built from: the codebase as it stands (`backend/modules/`, `frontend/app/(app)/`), `PROJECT_AUDIT.md` (2026-07-21, commit `521428e`/v2.25.0), `IMPLEMENTATION_REPORT.md` (2026-07-22, v2.25.0→v2.33.0), `STONE_WORKFLOW_REPORT.md` (Phase 1, v2.34.0), the v2.35.0 `CHANGELOG.md` entry (Phase 2), `ROADMAP.md`'s full version history, and `PROJECT_ANALYSIS.md`'s original 11-phase plan._
 _Scope: this document does not implement anything. It records what is done (so it isn't re-litigated) and sequences what remains, in execution order, to take the platform from "a real, tested, in-production ERP" to a **world-class Stone Fabrication ERP**._
@@ -11,8 +12,8 @@ _Scope: this document does not implement anything. It records what is done (so i
 ## How to read this document
 
 - **Part 1** defines what "world-class" means for this specific product, so later phases have a target instead of being an arbitrary backlog.
-- **Part 2** is the delivery history, compressed from 60+ point releases into 18 coherent phases, each marked ✅ **Completed** with its real version numbers and dates. Nothing here needs to be redone.
-- **Part 3** is everything not yet built, sequenced into phases in the order they should be executed, with the reasoning for that order. Phase numbering continues from Part 2 (Phase 18 onward) so the whole platform history reads as one continuous list.
+- **Part 2** is the delivery history, compressed from 60+ point releases into 19 coherent phases, each marked ✅ **Completed** with its real version numbers and dates. Nothing here needs to be redone.
+- **Part 3** is everything not yet built, sequenced into phases in the order they should be executed, with the reasoning for that order. Phase numbering continues from Part 2 (Phase 19 onward) so the whole platform history reads as one continuous list.
 - Every remaining phase cites the source finding it comes from (`PROJECT_AUDIT.md` §, `IMPLEMENTATION_REPORT.md` §, `STONE_WORKFLOW_REPORT.md` §12, or `PROJECT_ANALYSIS.md`'s original Phase 9/10) rather than being invented fresh — this roadmap extends the project's own audit trail, it doesn't restart it.
 
 ---
@@ -108,25 +109,15 @@ Cut Optimization engine (pure shelf/guillotine nesting algorithm, kerf-aware, ro
 **v2.36 · 2026-07-22**
 Eight findings independently re-identified across two or more prior audit passes without being picked up, closed in one pass: customer archive restore (B6), Finance invoice/Production work-order list `sort` parameters (B1), a committed and CI-enforced ESLint configuration (surfacing and genuinely fixing 93 pre-existing violations, not suppressing them), `module_permissions` wired into a real `hasPermission()`/`usePermission()` frontend utility instead of staying dead data (B7), the `crm_customers`↔`crm_contacts` circular FK warning resolved via `use_alter` (B5, no migration needed), a tablet-width (768–1023px) icon-only collapsed sidebar, a keyboard focus trap on the mobile nav drawer, and Lucide adopted as the single icon library replacing 9 hand-rolled inline SVGs across 6 components. Full detail in `PHASE17_COMPLETION_REPORT.md`.
 
+### ✅ Phase 18 — Security & Compliance Hardening
+**v2.37 · 2026-07-23**
+Closed every gap Part 1's pillar #2 named: Postgres Row-Level Security (RLS enabled + a `company_isolation` policy on all 75 tenant-owned tables, wired automatically per-request via a new `CompanyContextMiddleware` + a SQLAlchemy `after_begin` hook — zero router/repository changes needed, no-ops on SQLite); staff and Customer Portal auth tokens moved from `localStorage` to httpOnly/`Secure`/`SameSite=Lax` cookies (both auth flows now accept either the cookie or a Bearer header, so existing API clients/tests were unaffected while the browser frontend now never touches a raw token); CORS `allow_methods`/`allow_headers` no longer wildcarded; and the `usePermission()` frontend-gating utility Phase 17 introduced on the Customers pages only rolled out to all 32 remaining files with a write action across every module. Two items beyond that pillar's original list, both explicitly named in this phase's own scope: staff TOTP MFA (self-service enroll/enable/disable, a login-time challenge/response step, and a per-company-per-role mandatory-MFA policy — the "optional-then-mandatory-per-role" control), and a compliance audit-log export/retention admin surface (filterable CSV export, a configurable retention window, and a manual, owner-triggered purge — deliberately manual since no background job queue exists yet). 16 new backend tests (706→722). Full detail in `CHANGELOG.md` [2.37.0] and `IMPLEMENTATION_REPORT.md` §10.
+
 ---
 
 ## Part 3 — Remaining Phases (Execution Order)
 
 _Sequencing logic: close known debt and security gaps first (cheap, and every later phase inherits a cleaner/safer base) → finish the stone-fabrication domain the last two phases started (the platform's actual competitive differentiator) → extend that domain further (advanced optimization, real supply-chain automation) → replace the one remaining major mock (AI) → close the money/paperwork loop (payments, accounting export) → make analytics scale-ready → prove the system at real scale → extend to mobile → formal hardening and launch, exactly as `PROJECT_ANALYSIS.md`'s own Phase 9/10 always intended to come last._
-
----
-
-### 🔲 Phase 18 — Security & Compliance Hardening
-**Priority: Highest · Size: M · Sequenced before Phase 22 (Payments) touches money and before Phase 25 (Mobile) adds a third client**
-
-Closes the gap between what `PROJECT_ANALYSIS.md`'s architecture doc promises and what actually runs — every item here is a documented, still-open finding, not a new risk being invented.
-
-- **Postgres Row-Level Security** — the architecture's documented "defense-in-depth" second tenancy layer; confirmed absent from every migration (`PROJECT_AUDIT.md` S1, `DATABASE_DESIGN.md` §7). Application-layer `company_id` scoping is thorough and verified, but the promised second layer should exist before this is called world-class multi-tenant.
-- **Auth tokens: `localStorage` → httpOnly cookies** — both staff (`lib/session.ts`) and Customer Portal (`lib/portal-session.ts`) tokens are XSS-exfiltration-exposed, acknowledged in code as accepted Phase-2 tech debt (`PROJECT_AUDIT.md` S3, `IMPLEMENTATION_REPORT.md` §8). Migrate both identities together, not staff now and portal later.
-- **CORS tightening** — `allow_methods`/`allow_headers` still wildcarded (`["*"]`) in `core/bootstrap/app_factory.py`; origins are correctly restricted so exposure is low, but this is cheap, low-risk hardening (`PROJECT_AUDIT.md` S4).
-- **Frontend permission gating (`usePermission()`)** — a viewer-role user currently sees the same Create/Edit/Archive buttons as an owner and only discovers the 403 on submit. Not a real security hole (backend RBAC is authoritative and independently verified thorough), but a real, repeatedly-flagged UX gap (`PROJECT_AUDIT.md` S5).
-- **Staff MFA/2FA** — no multi-factor authentication exists for staff login today; add as an optional-then-mandatory-per-role control before payments (Phase 22) or a mobile client (Phase 25) widen the attack surface.
-- **Compliance/audit export** — the append-only `core.audit_log` is complete and consistent (verified 100% coverage across every module), but there is no admin-facing export/retention-policy surface for it yet; add one so the existing data becomes usable for a real compliance review, not just forensic grep.
 
 ---
 
@@ -229,13 +220,12 @@ The closing phase, not because there's nothing left after it, but because it's w
 
 | # | Phase | Status | Size | Depends on |
 |---|---|---|---|---|
-| 0–17 | Foundation through Stabilization & Technical Debt Closeout | ✅ Completed (v1.0–v2.36.0) | — | — |
-| 18 | Security & Compliance Hardening | 🔲 Next | M | None |
-| 19 | Stone Fabrication Workflow, Phase 3 | 🔲 | M | Phases 15–16 |
+| 0–18 | Foundation through Security & Compliance Hardening | ✅ Completed (v1.0–v2.37.0) | — | — |
+| 19 | Stone Fabrication Workflow, Phase 3 | 🔲 Next | M | Phases 15–16 |
 | 20 | Advanced Cut Optimization & Supply Chain Intelligence | 🔲 | L | Phase 19 |
-| 21 | Real AI Provider Integration | 🔲 | L | Phase 18 |
-| 22 | Payments & Financial Ecosystem Integration | 🔲 | L | Phase 18 |
+| 21 | Real AI Provider Integration | 🔲 | L | Phase 18 ✅ |
+| 22 | Payments & Financial Ecosystem Integration | 🔲 | L | Phase 18 ✅ |
 | 23 | Reporting & Business Intelligence Maturity | 🔲 | M | None |
 | 24 | Performance, Scale & Reliability Engineering | 🔲 | M | Phase 23 (partial) |
-| 25 | Mobile Client & Offline Field Operations | 🔲 | XL | Phases 18, 22 |
+| 25 | Mobile Client & Offline Field Operations | 🔲 | XL | Phases 18 ✅, 22 |
 | 26 | World-Class Launch Readiness | 🔲 | M | All of the above |

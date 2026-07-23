@@ -40,6 +40,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatCardSkeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
 import { useLeadChannelLabel } from "@/lib/i18n/hooks";
+import { usePermission } from "@/lib/permissions";
 
 const ORDER_TERMINAL_STATUSES = new Set(["installed", "completed", "cancelled"]);
 const ORDER_PRODUCTION_STAGE_STATUSES = new Set(["waiting", "measuring", "approved_for_production", "in_production"]);
@@ -84,6 +85,8 @@ export default function DashboardPage() {
   const tReports = useTranslations("reports");
   const tOrders = useTranslations("orders");
   const channelLabel = useLeadChannelLabel();
+  const canWriteCustomers = usePermission("crm:customers:write");
+  const canWriteLeads = usePermission("crm:leads:write");
 
   const [fullName, setFullName] = useState<string | null>(null);
   const [customerNames, setCustomerNames] = useState<Record<string, string>>({});
@@ -344,12 +347,16 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/crm/leads">
-            <Button variant="secondary">{t("captureLead")}</Button>
-          </Link>
-          <Link href="/crm/customers/new">
-            <Button>{t("createCustomer")}</Button>
-          </Link>
+          {canWriteLeads && (
+            <Link href="/crm/leads">
+              <Button variant="secondary">{t("captureLead")}</Button>
+            </Link>
+          )}
+          {canWriteCustomers && (
+            <Link href="/crm/customers/new">
+              <Button>{t("createCustomer")}</Button>
+            </Link>
+          )}
         </div>
       </div>
 

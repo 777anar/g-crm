@@ -11,12 +11,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
+import { usePermission } from "@/lib/permissions";
 
 const emptyForm = { category: "other", amount: "", expense_date: "", description: "" };
 
 export default function ExpensesPage() {
   const t = useTranslations("finance");
   const tCommon = useTranslations("common");
+  const canWrite = usePermission("finance:expenses:write");
 
   const [expenses, setExpenses] = useState<Expense[] | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -76,6 +78,7 @@ export default function ExpensesPage() {
         <p className="text-sm text-text-secondary">{t("expensesSubtitle")}</p>
       </div>
 
+      {canWrite && (
       <Card>
         <form onSubmit={handleCreate} className="grid grid-cols-1 gap-3 md:grid-cols-5 md:items-end">
           <SelectField
@@ -110,6 +113,7 @@ export default function ExpensesPage() {
         </form>
         {createError && <p className="mt-2 text-sm text-danger">{createError}</p>}
       </Card>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <select

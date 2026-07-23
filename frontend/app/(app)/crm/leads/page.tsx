@@ -33,6 +33,7 @@ import { useLeadChannelLabel } from "@/lib/i18n/hooks";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useListShortcuts } from "@/lib/use-list-shortcuts";
 import { useUrlFilters } from "@/lib/use-url-filters";
+import { usePermission } from "@/lib/permissions";
 
 const CAPTURE_FORM_NAME_INPUT_ID = "lead-capture-full-name";
 const TABLE_ID = "crm-leads";
@@ -61,6 +62,7 @@ function LeadsPageInner() {
   const tCommon = useTranslations("common");
   const channelLabel = useLeadChannelLabel();
   const toast = useToast();
+  const canWrite = usePermission("crm:leads:write");
   const [leads, setLeads] = useState<Lead[] | null>(null);
   const [channelFilter, setChannelFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -234,6 +236,7 @@ function LeadsPageInner() {
         <p className="text-sm text-text-secondary">{t("subtitle")}</p>
       </div>
 
+      {canWrite && (
       <Card>
         <CardHeader title={t("captureLead")} />
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleCreate}>
@@ -269,6 +272,7 @@ function LeadsPageInner() {
           </div>
         </form>
       </Card>
+      )}
 
       <input
         ref={searchInputRef}
@@ -411,7 +415,7 @@ function LeadsPageInner() {
                             {tAi("analyzeLead")}
                           </Button>
                         )}
-                        {lead.status !== "converted" && (
+                        {canWrite && lead.status !== "converted" && (
                           <Button
                             variant="secondary"
                             loading={convertingId === lead.id}

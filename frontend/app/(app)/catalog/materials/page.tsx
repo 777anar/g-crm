@@ -17,12 +17,14 @@ import { ApiRequestError } from "@/lib/api-client";
 import { useEntityStatusLabel } from "@/lib/i18n/hooks";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useListShortcuts } from "@/lib/use-list-shortcuts";
+import { usePermission } from "@/lib/permissions";
 
 export default function MaterialsListPage() {
   const t = useTranslations("catalog");
   const tCommon = useTranslations("common");
   const statusLabel = useEntityStatusLabel();
   const router = useRouter();
+  const canWrite = usePermission("catalog:materials:write");
 
   const [materials, setMaterials] = useState<Material[] | null>(null);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -94,9 +96,11 @@ export default function MaterialsListPage() {
           <h1 className="text-xl font-semibold text-text-primary">{t("materialsTitle")}</h1>
           <p className="text-sm text-text-secondary">{t("materialsSubtitle")}</p>
         </div>
-        <Link href="/catalog/materials/new">
-          <Button>{t("createMaterial")}</Button>
-        </Link>
+        {canWrite && (
+          <Link href="/catalog/materials/new">
+            <Button>{t("createMaterial")}</Button>
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -179,9 +183,11 @@ export default function MaterialsListPage() {
           title={t("noMaterialsYet")}
           description={t("noMaterialsDesc")}
           action={
-            <Link href="/catalog/materials/new">
-              <Button>{t("createMaterial")}</Button>
-            </Link>
+            canWrite ? (
+              <Link href="/catalog/materials/new">
+                <Button>{t("createMaterial")}</Button>
+              </Link>
+            ) : undefined
           }
         />
       )}

@@ -67,6 +67,13 @@ export default function SettingsPage() {
         { title: tNav("aiAssistant"), description: t("aiAssistantDesc"), href: "/ai/dashboard" },
       ],
     },
+    {
+      heading: t("groupSecurity"),
+      items: [
+        { title: tNav("security"), description: t("securityDesc"), href: "/settings/security" },
+        { title: tNav("auditLog"), description: t("auditLogDesc"), href: "/settings/audit-log" },
+      ],
+    },
   ];
 
   return (

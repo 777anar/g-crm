@@ -2,13 +2,13 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken } from "@/lib/session";
+import { hasSession } from "@/lib/session";
 
 export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace(getAccessToken() ? "/dashboard" : "/login");
+    router.replace(hasSession() ? "/dashboard" : "/login");
   }, [router]);
 
   return null;

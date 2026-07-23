@@ -16,11 +16,13 @@ import { SortableHeader } from "@/components/ui/sortable-header";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { usePermission } from "@/lib/permissions";
 
 export default function PurchaseOrdersPage() {
   const t = useTranslations("purchasing");
   const tCommon = useTranslations("common");
   const router = useRouter();
+  const canWrite = usePermission("purchasing:purchase_orders:write");
 
   const [orders, setOrders] = useState<PurchaseOrder[] | null>(null);
   const [supplierNames, setSupplierNames] = useState<Record<string, string>>({});
@@ -78,9 +80,11 @@ export default function PurchaseOrdersPage() {
           <h1 className="text-xl font-semibold text-text-primary">{t("ordersTitle")}</h1>
           <p className="text-sm text-text-secondary">{t("ordersSubtitle")}</p>
         </div>
-        <Link href="/purchasing/orders/new">
-          <Button>{t("createOrder")}</Button>
-        </Link>
+        {canWrite && (
+          <Link href="/purchasing/orders/new">
+            <Button>{t("createOrder")}</Button>
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -114,9 +118,11 @@ export default function PurchaseOrdersPage() {
           title={t("noOrdersYet")}
           description={t("noOrdersDesc")}
           action={
-            <Link href="/purchasing/orders/new">
-              <Button>{t("createOrder")}</Button>
-            </Link>
+            canWrite ? (
+              <Link href="/purchasing/orders/new">
+                <Button>{t("createOrder")}</Button>
+              </Link>
+            ) : undefined
           }
         />
       )}

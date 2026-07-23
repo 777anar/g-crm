@@ -12,10 +12,12 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { TextField } from "@/components/ui/field";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
+import { usePermission } from "@/lib/permissions";
 
 export default function ProductionStagesPage() {
   const t = useTranslations("production");
   const tNav = useTranslations("nav");
+  const canWrite = usePermission("production:write");
   const [stages, setStages] = useState<ProductionStage[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,6 +88,7 @@ export default function ProductionStagesPage() {
         <p className="text-sm text-text-secondary">{t("stagesSubtitle")}</p>
       </div>
 
+      {canWrite && (
       <Card>
         <CardHeader title={t("createStage")} />
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleCreate}>
@@ -97,6 +100,7 @@ export default function ProductionStagesPage() {
           </div>
         </form>
       </Card>
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
@@ -127,7 +131,7 @@ export default function ProductionStagesPage() {
                         onBlur={() => handleRename(stage)}
                         onKeyDown={(e) => e.key === "Enter" && handleRename(stage)}
                       />
-                    ) : (
+                    ) : canWrite ? (
                       <button
                         className="text-left hover:underline"
                         onClick={() => {
@@ -137,6 +141,8 @@ export default function ProductionStagesPage() {
                       >
                         {stage.name}
                       </button>
+                    ) : (
+                      stage.name
                     )}
                   </td>
                   <td className="px-4 py-2">
@@ -145,9 +151,11 @@ export default function ProductionStagesPage() {
                     </Badge>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <Button variant="secondary" onClick={() => handleToggleActive(stage)}>
-                      {stage.is_active ? t("stageHidden") : t("stageActive")}
-                    </Button>
+                    {canWrite && (
+                      <Button variant="secondary" onClick={() => handleToggleActive(stage)}>
+                        {stage.is_active ? t("stageHidden") : t("stageActive")}
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}

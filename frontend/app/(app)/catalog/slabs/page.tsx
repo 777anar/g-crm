@@ -15,11 +15,13 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
 import { useSlabStatusLabel } from "@/lib/i18n/hooks";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { usePermission } from "@/lib/permissions";
 
 export default function SlabsPage() {
   const t = useTranslations("catalog");
   const tCommon = useTranslations("common");
   const statusLabel = useSlabStatusLabel();
+  const canWrite = usePermission("catalog:slabs:write");
 
   const [slabs, setSlabs] = useState<Slab[] | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -126,6 +128,7 @@ export default function SlabsPage() {
         <p className="text-sm text-text-secondary">{t("slabsSubtitle")}</p>
       </div>
 
+      {canWrite && (
       <Card>
         <CardHeader title={t("createSlab")} />
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-3" onSubmit={handleCreate}>
@@ -159,6 +162,7 @@ export default function SlabsPage() {
           </div>
         </form>
       </Card>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <input
@@ -257,7 +261,7 @@ export default function SlabsPage() {
                       <SlabStatusBadge status={slab.status} />
                       <select
                         value={slab.status}
-                        disabled={changingId === slab.id}
+                        disabled={changingId === slab.id || !canWrite}
                         onChange={(e) => handleStatusChange(slab.id, e.target.value as SlabStatus)}
                         className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary disabled:opacity-50"
                       >

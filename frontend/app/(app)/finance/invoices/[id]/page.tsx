@@ -22,6 +22,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { usePermission } from "@/lib/permissions";
 
 const inputClasses =
   "rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-primary";
@@ -32,6 +33,8 @@ export default function InvoiceDetailPage() {
   const tCommon = useTranslations("common");
   const tNav = useTranslations("nav");
   const toast = useToast();
+  const canWrite = usePermission("finance:invoices:write");
+  const canRecordPaymentPerm = usePermission("finance:payments:write");
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
@@ -127,7 +130,9 @@ export default function InvoiceDetailPage() {
   if (loading || !invoice) return <TableSkeleton rows={5} columns={5} />;
 
   const isTerminal = invoice.status === "paid" || invoice.status === "cancelled";
-  const canRecordPayment = invoice.status === "sent" || invoice.status === "partially_paid" || invoice.status === "overdue";
+  const canRecordPayment =
+    canRecordPaymentPerm &&
+    (invoice.status === "sent" || invoice.status === "partially_paid" || invoice.status === "overdue");
 
   return (
     <div className="flex flex-col gap-4">
@@ -148,7 +153,7 @@ export default function InvoiceDetailPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => window.print()}>{t("printInvoice")}</Button>
-          {!isTerminal && (
+          {canWrite && !isTerminal && (
             <>
               {invoice.status === "draft" && (
                 <Button onClick={handleSend} disabled={busy}>{busy ? t("saving") : t("sendInvoice")}</Button>
@@ -164,7 +169,7 @@ export default function InvoiceDetailPage() {
         </div>
       </div>
 
-      {cancelMode && (
+      {canWrite && cancelMode && (
         <Card className="border-danger/30 bg-danger/5">
           <p className="mb-2 text-sm font-medium text-danger">{t("cancelReason")}</p>
           <textarea
@@ -191,7 +196,7 @@ export default function InvoiceDetailPage() {
       <Card>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-text-primary">{t("details")}</h2>
-          {!isTerminal && (
+          {canWrite && !isTerminal && (
             <button
               className="text-xs text-primary hover:underline"
               onClick={() => (editMode ? handleSaveDetails() : setEditMode(true))}

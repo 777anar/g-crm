@@ -13,6 +13,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { SelectField, TextField } from "@/components/ui/field";
 import { ApiRequestError } from "@/lib/api-client";
 import { SlabLayoutSvg } from "@/components/cut-optimization/slab-layout-svg";
+import { usePermission } from "@/lib/permissions";
 
 function emptyPiece(label: string): PieceSpec {
   return { label, length_mm: "", width_mm: "", quantity: 1, allow_rotation: true };
@@ -22,6 +23,7 @@ export default function OffcutRecommendationsPage() {
   const t = useTranslations("cutOptimization");
   const tCommon = useTranslations("common");
   const tNav = useTranslations("nav");
+  const canWrite = usePermission("cut_optimization:write");
 
   const [materials, setMaterials] = useState<Material[]>([]);
   const [materialId, setMaterialId] = useState("");
@@ -118,11 +120,13 @@ export default function OffcutRecommendationsPage() {
             </div>
           ))}
         </div>
-        <div className="mt-4 flex justify-end">
-          <Button onClick={handleSearch} disabled={!canSearch || searching} loading={searching}>
-            {t("findBestOffcut")}
-          </Button>
-        </div>
+        {canWrite && (
+          <div className="mt-4 flex justify-end">
+            <Button onClick={handleSearch} disabled={!canSearch || searching} loading={searching}>
+              {t("findBestOffcut")}
+            </Button>
+          </div>
+        )}
       </Card>
 
       {error && <p className="text-sm text-danger">{error}</p>}

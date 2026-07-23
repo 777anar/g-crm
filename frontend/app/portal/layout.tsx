@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { getPortalAccessToken, getPortalRefreshToken, clearPortalTokens } from "@/lib/portal-session";
+import { hasPortalSession, clearPortalSession } from "@/lib/portal-session";
 import { portalLogout } from "@/lib/api/portal";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -29,7 +29,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       setReady(true);
       return;
     }
-    if (!getPortalAccessToken()) {
+    if (!hasPortalSession()) {
       router.replace("/portal/login");
       return;
     }
@@ -37,11 +37,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   }, [router, pathname]);
 
   async function handleLogout() {
-    const refreshToken = getPortalRefreshToken();
-    if (refreshToken) {
-      await portalLogout(refreshToken).catch(() => {});
-    }
-    clearPortalTokens();
+    await portalLogout().catch(() => {});
+    clearPortalSession();
     router.push("/portal/login");
   }
 

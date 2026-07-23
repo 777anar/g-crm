@@ -12,10 +12,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TextField } from "@/components/ui/field";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
+import { usePermission } from "@/lib/permissions";
 
 export default function WarehousesPage() {
   const t = useTranslations("catalog");
   const tCommon = useTranslations("common");
+  const canWrite = usePermission("catalog:warehouses:write");
   const [warehouses, setWarehouses] = useState<Warehouse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +71,7 @@ export default function WarehousesPage() {
         <p className="text-sm text-text-secondary">{t("warehousesSubtitle")}</p>
       </div>
 
+      {canWrite && (
       <Card>
         <CardHeader title={t("createWarehouse")} />
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleCreate}>
@@ -81,6 +84,7 @@ export default function WarehousesPage() {
           </div>
         </form>
       </Card>
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
@@ -110,9 +114,11 @@ export default function WarehousesPage() {
                     <EntityStatusBadge status={warehouse.status} />
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <Button variant="secondary" onClick={() => handleToggleStatus(warehouse)}>
-                      {warehouse.status === "active" ? t("entityStatus.hidden") : t("entityStatus.active")}
-                    </Button>
+                    {canWrite && (
+                      <Button variant="secondary" onClick={() => handleToggleStatus(warehouse)}>
+                        {warehouse.status === "active" ? t("entityStatus.hidden") : t("entityStatus.active")}
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}

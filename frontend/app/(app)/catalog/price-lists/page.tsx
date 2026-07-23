@@ -13,10 +13,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TextField } from "@/components/ui/field";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
+import { usePermission } from "@/lib/permissions";
 
 export default function PriceListsPage() {
   const t = useTranslations("catalog");
   const tCommon = useTranslations("common");
+  const canWrite = usePermission("catalog:price_lists:write");
   const [priceLists, setPriceLists] = useState<PriceList[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +62,7 @@ export default function PriceListsPage() {
         <p className="text-sm text-text-secondary">{t("priceListsSubtitle")}</p>
       </div>
 
+      {canWrite && (
       <Card>
         <CardHeader title={t("createPriceList")} />
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-3" onSubmit={handleCreate}>
@@ -72,6 +75,7 @@ export default function PriceListsPage() {
           </div>
         </form>
       </Card>
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
 

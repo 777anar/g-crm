@@ -15,22 +15,39 @@ This specification defines the conventions every module's API follows, plus the 
 
 ## 2. Authentication
 
-- **Mechanism**: JWT bearer tokens. `Authorization: Bearer <access_token>` header on every authenticated request. No server-side session/cookie-only auth path — mobile clients would work identically to web.
+- **Mechanism (Phase 18, Version 2.37.0+)**: JWT bearer tokens, transported two ways simultaneously — the response body (`access_token`/`refresh_token` fields, unchanged shape, for Bearer-token API clients, `/api/v1/docs`'s "Try it out," and future non-browser clients such as the Phase 25 mobile app) **and** as httpOnly, `Secure` (outside `ENVIRONMENT=development`), `SameSite=Lax` cookies set by the same response (`core/auth/router.py`). `core/rbac/dependencies.py`'s `get_current_user` accepts either an `Authorization: Bearer <token>` header or the `g_erp_access_token` cookie, header taking precedence when both are present. The browser frontend (`frontend/lib/api-client.ts`) authenticates via the cookie exclusively (`credentials: "include"` on every request) and never reads or stores the raw token — this is what closes the XSS-token-exfiltration gap `PROJECT_AUDIT.md` §3/§9 previously flagged as accepted tech debt.
 - **Token types**:
-  - **Access token**: short-lived (15 minutes), carries `user_id`, `active_company_id`, `role`, `module_permissions` claims.
-  - **Refresh token**: long-lived (30 days), stamped with a `gen` (generation) claim used for revocation (see `/auth/logout` below). Stored client-side (web: `localStorage`, per `frontend/lib/session.ts` — see `PROJECT_AUDIT.md` §7/§9 for the accepted-tech-debt XSS exposure this implies).
+  - **Access token**: short-lived (15 minutes), carries `user_id`, `active_company_id`, `role`, `module_permissions` claims. Cookie name `g_erp_access_token`, path `/`.
+  - **Refresh token**: long-lived (30 days), stamped with a `gen` (generation) claim used for revocation (see `/auth/logout` below). Cookie name `g_erp_refresh_token`, path `/api/v1/auth` (never sent to ordinary module endpoints).
+- **Session claims for the frontend**: since the browser can no longer decode an httpOnly token's claims client-side, `/auth/login` (post-company-select), `/auth/select-company`, and `/auth/refresh` all also return `active_company_id`/`role`/`module_permissions` as plain JSON fields (`core/auth/schemas.py`'s `TokenResponse`) — non-sensitive UI metadata, not a bearer credential, safe for `frontend/lib/session.ts` to persist for `usePermission()` (§3) to read.
 - **Company context**: a user authenticated across multiple companies selects an active company via `/api/v1/auth/select-company`; `active_company_id` is embedded in the resulting access token. Every backend query derives `company_id` scoping from this claim — never from a client-supplied query/body parameter.
 - **Password handling**: bcrypt hashing (`passlib`); never returned in any response.
+- **Staff MFA (TOTP, Phase 18)**: optional per-user, enforceable per-company-per-role. A user with `mfa_enabled=true` gets `{mfa_required: true, mfa_token}` from `/auth/login` instead of real tokens; `mfa_token` (a 5-minute-lived, single-purpose JWT, `type: "mfa_challenge"`) is then redeemed at `/auth/mfa/verify` for real tokens. `Company.mfa_required_roles` (JSON list of role strings) makes MFA mandatory for specific roles on that company — `/auth/select-company` returns `403` if the role requires MFA and the user hasn't enabled it.
 
 ### 2.1 Auth Endpoints (`core/auth/router.py`)
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/api/v1/auth/login` | Body: `{email, password}` → `{access_token, refresh_token, companies: [{id, name, role}]}`. Rate-limited to 10 requests/minute per IP (§21). |
-| POST | `/api/v1/auth/select-company` | Body: `{company_id}` (with a valid access token) → a new `{access_token}` scoped to that company |
-| POST | `/api/v1/auth/refresh` | Body: `{refresh_token}` → `{access_token}` — rejected (401) if the token's `gen` claim is older than the user's current generation counter (see logout below) |
-| POST | `/api/v1/auth/logout` | Body: `{refresh_token}` → bumps the user's generation counter, revoking **every** refresh token ever issued to them ("logout everywhere"), not just this one. Backed by `core/auth/token_denylist.py`: a per-user counter in Redis when reachable, with an automatic in-process fallback if Redis is down — not a database table. The caller's still-valid access token keeps working until its own 15-minute expiry; only future `/refresh` calls are affected. |
-| GET | `/api/v1/auth/me` | Returns current user profile + active company + role + permissions |
+| POST | `/api/v1/auth/login` | Body: `{email, password}` → `{access_token, refresh_token, companies: [{id, name, role}]}` + sets auth cookies, **or** `{mfa_required: true, mfa_token}` with no tokens if the user has MFA enabled. Rate-limited to 10 requests/minute per IP (§21). |
+| POST | `/api/v1/auth/mfa/verify` | Body: `{mfa_token, code}` → same shape as a successful `/auth/login`. `401` on an invalid/expired challenge or wrong TOTP code. |
+| POST | `/api/v1/auth/mfa/setup` | Authenticated. Generates and persists a new TOTP secret (replacing any pending one) → `{secret, otpauth_uri}`. Does not enable MFA yet. |
+| POST | `/api/v1/auth/mfa/enable` | Authenticated. Body: `{code}` — verifies the code against the pending secret from `/mfa/setup`, then sets `mfa_enabled=true`. |
+| POST | `/api/v1/auth/mfa/disable` | Authenticated. Body: `{code}` — requires a valid current TOTP code to turn MFA back off. |
+| POST | `/api/v1/auth/select-company` | Body: `{company_id}` (with a valid access token) → a new `{access_token, active_company_id, role, module_permissions}`, sets the access cookie. `403` if the company requires MFA for this role and the user hasn't enabled it. |
+| POST | `/api/v1/auth/refresh` | Body optional: `{refresh_token}`, or omit it entirely and rely on the `g_erp_refresh_token` cookie → `{access_token, active_company_id, role, module_permissions}` (always company-unscoped — the client re-selects) — rejected (401) if the token's `gen` claim is older than the user's current generation counter (see logout below) |
+| POST | `/api/v1/auth/logout` | Body optional: `{refresh_token}`, or omit it and rely on the cookie → bumps the user's generation counter, revoking **every** refresh token ever issued to them ("logout everywhere"), not just this one, and clears both auth cookies. Backed by `core/auth/token_denylist.py`: a per-user counter in Redis when reachable, with an automatic in-process fallback if Redis is down — not a database table. The caller's still-valid access token keeps working until its own 15-minute expiry; only future `/refresh` calls are affected. |
+| GET | `/api/v1/auth/me` | Returns current user profile + active company + role + permissions + `mfa_enabled` |
+
+### 2.2 Compliance Audit Export (`core/audit/router.py`, Phase 18)
+
+Company-wide, owner-only (`core:audit:export` permission) admin surface over the append-only `audit_log` every write action already populates (§ "Cross-cutting concerns" in `CLAUDE.md`) — closes the previously-missing "admin-facing export/retention-policy surface" gap.
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/v1/audit/logs` | Cursor-paginated, filterable by `module`, `entity_type`, `action`, `actor_user_id`, `date_from`, `date_to` → `{items, next_cursor}` |
+| GET | `/api/v1/audit/logs/export` | Same filters, streams a CSV (up to 50,000 rows) |
+| GET / PUT | `/api/v1/audit/retention-policy` | Get/set `{retention_days}` (`null` = keep forever, the default) for the active company |
+| POST | `/api/v1/audit/retention-policy/purge` | Manually deletes `audit_log` rows older than the configured retention window → `{deleted_count}`. `422` if no policy is configured. Deliberately manual, not an automatic background job — no job queue exists yet (see `MASTER_DEVELOPMENT_ROADMAP.md` Phase 24). |
 
 ## 3. Authorization (RBAC)
 
@@ -525,11 +542,14 @@ A second, entirely separate authentication identity from everything above: a cus
 | POST | `/customer_portal/admin/customers/{customer_id}/access/status` | `customer_portal:access:write` | Enable/disable login without discarding the account. Body: `{is_active}` — `404` if access was never enabled |
 
 ### Customer-facing auth (no staff bearer token accepted)
+
+Phase 18: mirrors staff auth's dual token transport (§2) with its own cookie namespace — `g_erp_portal_access_token` (path `/`) and `g_erp_portal_refresh_token` (path `/api/v1/customer_portal/auth`), set by `modules/customer_portal/presentation/api/auth.py`, read by `get_current_customer` (header or cookie, header first). The Customer Portal frontend (`frontend/lib/portal-api-client.ts`) authenticates via the cookie exclusively, same as the staff frontend.
+
 | Method | Path | Description |
 |---|---|---|
-| POST | `/customer_portal/auth/login` | Body: `{email, password}` → `{access_token, refresh_token}`. Rate-limited to 10 requests/minute per IP — a separate bucket from staff login (§23) so the two never throttle each other |
-| POST | `/customer_portal/auth/refresh` | Body: `{refresh_token}` → `{access_token}` — same generation-counter revocation scheme as staff refresh (§2), reusing `core.auth.token_denylist` keyed by the customer login's own id |
-| POST | `/customer_portal/auth/logout` | Body: `{refresh_token}` → revokes every refresh token issued to this login ("logout everywhere"), same semantics as staff logout |
+| POST | `/customer_portal/auth/login` | Body: `{email, password}` → `{access_token, refresh_token}` + sets portal auth cookies. Rate-limited to 10 requests/minute per IP — a separate bucket from staff login (§23) so the two never throttle each other |
+| POST | `/customer_portal/auth/refresh` | Body optional: `{refresh_token}`, or omit it and rely on the cookie → `{access_token}` — same generation-counter revocation scheme as staff refresh (§2), reusing `core.auth.token_denylist` keyed by the customer login's own id |
+| POST | `/customer_portal/auth/logout` | Body optional: `{refresh_token}`, or omit it and rely on the cookie → revokes every refresh token issued to this login ("logout everywhere"), same semantics as staff logout, and clears both portal cookies |
 
 ### Customer-facing data (`get_current_customer` — every query hard-scoped to the caller's own `customer_id`/`company_id` from the token, never a client-supplied filter)
 | Method | Path | Description |

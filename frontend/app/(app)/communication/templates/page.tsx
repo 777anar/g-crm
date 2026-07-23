@@ -11,12 +11,14 @@ import { ChannelTypeBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiRequestError } from "@/lib/api-client";
+import { usePermission } from "@/lib/permissions";
 
 const emptyForm = { name: "", body: "", channel_type: "", shortcut: "" };
 
 export default function TemplatesPage() {
   const t = useTranslations("communication");
   const tCommon = useTranslations("common");
+  const canWrite = usePermission("communication:templates:write");
 
   const [templates, setTemplates] = useState<MessageTemplate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +67,7 @@ export default function TemplatesPage() {
         <p className="text-sm text-text-secondary">{t("templatesSubtitle")}</p>
       </div>
 
+      {canWrite && (
       <Card>
         <form onSubmit={handleCreate} className="flex flex-col gap-3">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -103,6 +106,7 @@ export default function TemplatesPage() {
         </form>
         {createError && <p className="mt-2 text-sm text-danger">{createError}</p>}
       </Card>
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {templates === null && !error && <TableSkeleton rows={3} columns={3} />}
@@ -130,9 +134,11 @@ export default function TemplatesPage() {
                 <span className={`text-xs font-medium ${template.is_active ? "text-success" : "text-text-secondary"}`}>
                   {template.is_active ? t("active") : t("inactive")}
                 </span>
-                <Button variant="secondary" onClick={() => handleToggleActive(template)}>
-                  {template.is_active ? tCommon("deactivate") : tCommon("activate")}
-                </Button>
+                {canWrite && (
+                  <Button variant="secondary" onClick={() => handleToggleActive(template)}>
+                    {template.is_active ? tCommon("deactivate") : tCommon("activate")}
+                  </Button>
+                )}
               </div>
             </div>
           </Card>

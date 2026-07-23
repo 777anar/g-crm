@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { login, selectCompany } from "@/lib/api/auth";
-import { setAccessToken, setRefreshToken } from "@/lib/session";
+import { login, selectCompany, verifyMfa } from "@/lib/api/auth";
+import { markSessionActive, setSessionClaims } from "@/lib/session";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
@@ -18,6 +18,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [companies, setCompanies] = useState<CompanyMembership[] | null>(null);
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -27,11 +29,31 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const result = await login(email, password);
-      setAccessToken(result.access_token);
-      setRefreshToken(result.refresh_token);
+      if (result.mfa_required && result.mfa_token) {
+        setMfaToken(result.mfa_token);
+        return;
+      }
+      markSessionActive();
       setCompanies(result.companies);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("loginFailed"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleVerifyMfa(e: React.FormEvent) {
+    e.preventDefault();
+    if (!mfaToken) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const result = await verifyMfa(mfaToken, mfaCode);
+      markSessionActive();
+      setMfaToken(null);
+      setCompanies(result.companies);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("mfaVerifyFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -42,7 +64,11 @@ export default function LoginPage() {
     setError(null);
     try {
       const result = await selectCompany(companyId);
-      setAccessToken(result.access_token);
+      setSessionClaims({
+        role: result.role,
+        module_permissions: result.module_permissions,
+        active_company_id: result.active_company_id,
+      });
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("selectCompanyFailed"));
@@ -69,7 +95,7 @@ export default function LoginPage() {
           <p className="text-sm text-text-secondary">{t("subtitle")}</p>
         </div>
 
-        {!companies && (
+        {!companies && !mfaToken && (
           <form className="flex flex-col gap-4" onSubmit={handleLogin}>
             <TextField
               label={t("email")}
@@ -89,6 +115,25 @@ export default function LoginPage() {
             {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="submit" disabled={submitting}>
               {submitting ? t("signingIn") : t("signIn")}
+            </Button>
+          </form>
+        )}
+
+        {mfaToken && (
+          <form className="flex flex-col gap-4" onSubmit={handleVerifyMfa}>
+            <p className="text-sm text-text-secondary">{t("mfaPrompt")}</p>
+            <TextField
+              label={t("mfaCode")}
+              type="text"
+              inputMode="numeric"
+              value={mfaCode}
+              onChange={(e) => setMfaCode(e.target.value)}
+              required
+              autoFocus
+            />
+            {error && <p className="text-sm text-danger">{error}</p>}
+            <Button type="submit" disabled={submitting}>
+              {submitting ? t("verifying") : t("verify")}
             </Button>
           </form>
         )}
