@@ -17,7 +17,7 @@ import {
   updateConversation,
 } from "@/lib/api/communication";
 import { listCompanyUsers } from "@/lib/api/companies";
-import { analyzeConversation } from "@/lib/api/ai";
+import { analyzeConversation, draftConversationReply } from "@/lib/api/ai";
 import {
   CONVERSATION_STATUSES,
   type AIRecommendation,
@@ -27,6 +27,7 @@ import {
   type ConversationNote,
   type Message,
   type MessageTemplate,
+  type SuggestedReplyResponse,
 } from "@/lib/types";
 import { ChannelTypeBadge, ConversationStatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,7 @@ export default function InboxPage() {
   const [startingConversation, setStartingConversation] = useState(false);
   const tAi = useTranslations("ai");
   const [analyzingConversation, setAnalyzingConversation] = useState(false);
+  const [draftingReply, setDraftingReply] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [conversationRecs, setConversationRecs] = useState<Record<string, AIRecommendation[]>>({});
 
@@ -162,12 +164,31 @@ export default function InboxPage() {
     }
   }
 
+  async function handleDraftReply() {
+    if (!selectedId) return;
+    setDraftingReply(true);
+    try {
+      const result = await draftConversationReply(selectedId);
+      setConversationRecs((prev) => ({ ...prev, [selectedId]: [...(prev[selectedId] ?? []), ...result.items] }));
+      setShowAiPanel(true);
+    } finally {
+      setDraftingReply(false);
+    }
+  }
+
   function handleConversationRecommendationReviewed(updated: AIRecommendation) {
     if (!selectedId) return;
     setConversationRecs((prev) => ({
       ...prev,
       [selectedId]: (prev[selectedId] ?? []).map((r) => (r.id === updated.id ? updated : r)),
     }));
+    // Accepting a suggested_reply never sends anything itself -- it just
+    // loads the draft into the compose box so the human can edit and send
+    // it through the existing Send action, same as picking a template.
+    if (updated.recommendation_type === "suggested_reply" && updated.status === "accepted") {
+      const draft = (updated.response as SuggestedReplyResponse).draft_reply;
+      if (draft) setComposerText(draft);
+    }
   }
 
   async function handleAddNote() {
@@ -326,6 +347,9 @@ export default function InboxPage() {
                 <ConversationStatusBadge status={selected.status} />
               </div>
               <div className="flex items-center gap-2">
+                <Button variant="secondary" onClick={handleDraftReply} disabled={draftingReply}>
+                  {tAi("draftReply")}
+                </Button>
                 {conversationRecs[selected.id] ? (
                   <Button variant="secondary" onClick={() => setShowAiPanel((v) => !v)}>
                     {showAiPanel ? tAi("hideDetails") : tAi("showDetails")}

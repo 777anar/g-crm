@@ -10,12 +10,16 @@ from modules.ai.application.dtos import (
     AnalyzeConversationInput,
     AnalyzeLeadInput,
     AnalyzeQuoteInput,
+    DraftConversationReplyInput,
+    DraftQuoteLineItemsInput,
     SuggestTasksInput,
 )
 from modules.ai.application.use_cases import (
     AnalyzeConversationUseCase,
     AnalyzeLeadUseCase,
     AnalyzeQuoteUseCase,
+    DraftConversationReplyUseCase,
+    DraftQuoteLineItemsUseCase,
     SuggestTasksUseCase,
 )
 from modules.ai.domain.exceptions import (
@@ -127,6 +131,56 @@ def suggest_tasks(
         SuggestTasksInput(
             company_id=current_user.active_company_id,
             actor_user_id=current_user.user_id,
+            provider_name=payload.provider,
+        )
+    ))
+    db.commit()
+    for rec in created:
+        db.refresh(rec)
+    return AIRecommendationListOut(items=[AIRecommendationOut.model_validate(r) for r in created])
+
+
+# ── AI draft generation (Phase 21 follow-through) ─────────────────────────────
+
+
+@router.post("/conversations/{conversation_id}/draft-reply", response_model=AIRecommendationListOut)
+def draft_conversation_reply(
+    conversation_id: uuid.UUID,
+    payload: AnalyzeRequest,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("ai:recommendations:write")),
+) -> AIRecommendationListOut:
+    """Drafts a reply for a human to review, edit, and send themselves --
+    never sent automatically. See `DraftConversationReplyUseCase`."""
+    created = _run(lambda: DraftConversationReplyUseCase(db).execute(
+        DraftConversationReplyInput(
+            company_id=current_user.active_company_id,
+            actor_user_id=current_user.user_id,
+            conversation_id=conversation_id,
+            provider_name=payload.provider,
+        )
+    ))
+    db.commit()
+    for rec in created:
+        db.refresh(rec)
+    return AIRecommendationListOut(items=[AIRecommendationOut.model_validate(r) for r in created])
+
+
+@router.post("/projects/{project_id}/draft-quote-items", response_model=AIRecommendationListOut)
+def draft_quote_line_items(
+    project_id: uuid.UUID,
+    payload: AnalyzeRequest,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("ai:recommendations:write")),
+) -> AIRecommendationListOut:
+    """Drafts suggested Quote line items from a Project's Rooms/Items for a
+    human to use when building the actual Quote -- never creates a Quote or
+    QuoteSectionItem itself. See `DraftQuoteLineItemsUseCase`."""
+    created = _run(lambda: DraftQuoteLineItemsUseCase(db).execute(
+        DraftQuoteLineItemsInput(
+            company_id=current_user.active_company_id,
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
             provider_name=payload.provider,
         )
     ))

@@ -49,3 +49,15 @@ class GetAIDashboardInput(ActorContext):
 class GetAIUsageInput(ActorContext):
     limit: int = 25
     offset: int = 0
+
+
+@dataclass
+class DraftConversationReplyInput(ActorContext):
+    conversation_id: uuid.UUID
+    provider_name: Optional[str] = None
+
+
+@dataclass
+class DraftQuoteLineItemsInput(ActorContext):
+    project_id: uuid.UUID
+    provider_name: Optional[str] = None

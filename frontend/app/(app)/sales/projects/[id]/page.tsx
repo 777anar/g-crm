@@ -33,7 +33,9 @@ import {
   listMaterialSizes,
   listMaterialThicknesses,
 } from "@/lib/api/catalog";
+import { draftQuoteLineItems } from "@/lib/api/ai";
 import type {
+  AIRecommendation,
   Brand,
   Material,
   MaterialSize,
@@ -44,6 +46,7 @@ import type {
   ProjectItemMeasurement,
   ProjectItemPhoto,
   Quote,
+  QuoteDraftLineItemsResponse,
   Room,
 } from "@/lib/types";
 import { COMPLETION_STATUSES, PROJECT_ITEM_TYPES, PROJECT_ROOM_TYPES } from "@/lib/types";
@@ -56,6 +59,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { RecommendationCard } from "@/components/recommendation-card";
 import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { ApiRequestError } from "@/lib/api-client";
@@ -87,6 +91,7 @@ export default function ProjectDetailPage() {
   const tCatalog = useTranslations("catalog");
   const tCommon = useTranslations("common");
   const tNav = useTranslations("nav");
+  const tAi = useTranslations("ai");
   const router = useRouter();
   const confirm = useConfirm();
   const toast = useToast();
@@ -98,6 +103,8 @@ export default function ProjectDetailPage() {
   const [quotes, setQuotes] = useState<Quote[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [creatingQuote, setCreatingQuote] = useState(false);
+  const [projectDraftRecs, setProjectDraftRecs] = useState<AIRecommendation[]>([]);
+  const [draftingQuote, setDraftingQuote] = useState(false);
 
   const [rooms, setRooms] = useState<Room[] | null>(null);
   const [itemsByRoom, setItemsByRoom] = useState<Record<string, ProjectItem[]>>({});
@@ -281,6 +288,22 @@ export default function ProjectDetailPage() {
     }
   }
 
+  async function handleDraftQuoteItems() {
+    setDraftingQuote(true);
+    try {
+      const result = await draftQuoteLineItems(id);
+      setProjectDraftRecs(result.items);
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    } finally {
+      setDraftingQuote(false);
+    }
+  }
+
+  function handleProjectDraftReviewed(updated: AIRecommendation) {
+    setProjectDraftRecs((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+  }
+
   async function handleCreateRoom(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -449,6 +472,64 @@ export default function ProjectDetailPage() {
 
       {tab === "overview" && (
         <div className="flex flex-col gap-4">
+          {canWrite && (
+            <Card>
+              <CardHeader
+                title={tAi("draftQuoteItemsTitle")}
+                action={
+                  <Button variant="secondary" onClick={handleDraftQuoteItems} disabled={draftingQuote}>
+                    {draftingQuote ? tAi("drafting") : tAi("draftQuoteItems")}
+                  </Button>
+                }
+              />
+              {projectDraftRecs.length === 0 ? (
+                <p className="text-sm text-text-secondary">{tAi("draftQuoteItemsDesc")}</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {projectDraftRecs.map((rec) => (
+                    <div key={rec.id} className="flex flex-col gap-2">
+                      <RecommendationCard recommendation={rec} onReviewed={handleProjectDraftReviewed} />
+                      {rec.recommendation_type === "quote_draft_line_items" && (
+                        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+                          <table className="w-full text-left text-sm">
+                            <thead className="border-b border-border bg-bg text-text-secondary">
+                              <tr>
+                                <th className="px-4 py-2 font-medium">{tAi("draftRoom")}</th>
+                                <th className="px-4 py-2 font-medium">{tAi("draftItem")}</th>
+                                <th className="px-4 py-2 font-medium">{tAi("draftDescription")}</th>
+                                <th className="px-4 py-2 font-medium">{tAi("draftQuantity")}</th>
+                                <th className="px-4 py-2 font-medium">{tAi("draftUnitPrice")}</th>
+                                <th className="px-4 py-2 font-medium">{tAi("draftEstimatedTotal")}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(rec.response as QuoteDraftLineItemsResponse).items.map((line) => (
+                                <tr key={line.project_item_id} className="border-b border-border last:border-0">
+                                  <td className="px-4 py-2 text-text-secondary">{line.room_name ?? tCommon("dash")}</td>
+                                  <td className="px-4 py-2 text-text-primary">{line.item_name ?? tCommon("dash")}</td>
+                                  <td className="px-4 py-2 text-text-secondary">{line.description}</td>
+                                  <td className="px-4 py-2 text-text-secondary">
+                                    {line.suggested_quantity} {line.unit}
+                                  </td>
+                                  <td className="px-4 py-2 text-text-secondary">
+                                    {line.unit_sale_price ?? tCommon("dash")}
+                                  </td>
+                                  <td className="px-4 py-2 text-text-primary">
+                                    {line.estimated_total ?? tCommon("dash")}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
+
           {canWrite && (
             <div className="flex justify-end">
               <Button onClick={handleNewQuote} disabled={creatingQuote}>

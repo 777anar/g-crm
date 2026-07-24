@@ -365,6 +365,79 @@ class MockAIProvider(AIProvider):
             confidence=0.6,
         )
 
+    # ── AI draft generation (Phase 21 follow-through) ────────────────────
+
+    def draft_conversation_reply(self, *, prompt: str, context: dict) -> AIAnalysisResult:
+        # Reuses analyze_conversation's own language/intent/extraction
+        # heuristics (a pure computation over the same context, no side
+        # effects) rather than re-deriving them, so the two stay consistent
+        # by construction instead of by convention.
+        analysis = self.analyze_conversation(prompt=prompt, context=context)
+        d = analysis.data
+        language = d["language"] if d["language"] in _REPLY_TEMPLATES else "en"
+        intent = d["intent"] if d["intent"] in _REPLY_TEMPLATES[language] else "general_inquiry"
+        contact_name = (context.get("conversation") or {}).get("external_contact_name")
+        name = contact_name or _REPLY_GREETING_NAME_FALLBACK[language]
+        product_names = d["extracted"]["product_names"]
+        product_phrase = f"{product_names[0]} " if product_names else ""
+        draft_reply = _REPLY_TEMPLATES[language][intent].format(name=name, product_phrase=product_phrase)
+        return AIAnalysisResult(
+            data={"draft_reply": draft_reply, "reply_language": language},
+            confidence=analysis.confidence,
+        )
+
+    def draft_quote_line_items(self, *, prompt: str, context: dict) -> AIAnalysisResult:
+        items: List[dict] = context.get("items", [])
+        drafted = []
+        for item in items:
+            label = item.get("item_name") or item.get("material_name") or "Item"
+            room = item.get("room_name")
+            description = f"{label} — {room}" if room else label
+            # Area-based stone pieces (m2) routinely need a cutting/offcut
+            # waste allowance; simple per-unit accessories don't -- a real,
+            # inspectable rule over the item's own recorded unit, not a
+            # guess.
+            waste_factor_pct = 10 if item.get("unit") == "m2" else 0
+            drafted.append({
+                "project_item_id": item["project_item_id"],
+                "description": description,
+                "waste_factor_pct": waste_factor_pct,
+            })
+        return AIAnalysisResult(
+            data={"items": drafted},
+            confidence=0.6 if items else 0.3,
+        )
+
+
+_REPLY_GREETING_NAME_FALLBACK = {"en": "there", "az": "hörmətli müştəri", "ru": "уважаемый клиент"}
+
+_REPLY_TEMPLATES = {
+    "en": {
+        "pricing_inquiry": "Hi {name}, thanks for reaching out about {product_phrase}pricing. Could you share the room dimensions (or send your measurements) so we can prepare an accurate quote?",
+        "availability_inquiry": "Hi {name}, thanks for checking in. Let us confirm current stock on {product_phrase}and get back to you with availability shortly.",
+        "complaint": "Hi {name}, I'm sorry to hear about this. We want to make it right -- could you share a few more details (and photos if possible) so we can resolve it as quickly as possible?",
+        "order_status": "Hi {name}, thanks for your patience. Let us check the current status of your order and update you shortly.",
+        "scheduling": "Hi {name}, happy to help schedule that. What days/times work best for you this week?",
+        "general_inquiry": "Hi {name}, thanks for your message! How can we help you today?",
+    },
+    "az": {
+        "pricing_inquiry": "Salam {name}, {product_phrase}üçün qiymət sorğunuza görə təşəkkürlər. Dəqiq təklif hazırlaya bilməyimiz üçün ölçüləri bizimlə paylaşa bilərsinizmi?",
+        "availability_inquiry": "Salam {name}, sorğunuza görə təşəkkürlər. {product_phrase}üçün anbar mövcudluğunu yoxlayıb qısa zamanda sizə məlumat verəcəyik.",
+        "complaint": "Salam {name}, narahatlığınız üçün üzr istəyirik. Məsələni həll etmək üçün daha ətraflı məlumat (mümkünsə şəkillər) paylaşa bilərsinizmi?",
+        "order_status": "Salam {name}, gözlədiyiniz üçün təşəkkürlər. Sifarişinizin statusunu yoxlayıb tezliklə sizə məlumat verəcəyik.",
+        "scheduling": "Salam {name}, təyinat üçün məmnuniyyətlə kömək edərik. Bu həftə hansı gün/saat sizə uyğundur?",
+        "general_inquiry": "Salam {name}, mesajınız üçün təşəkkürlər! Sizə necə kömək edə bilərik?",
+    },
+    "ru": {
+        "pricing_inquiry": "Здравствуйте, {name}! Спасибо за интерес к цене на {product_phrase}. Не могли бы вы прислать размеры, чтобы мы подготовили точное предложение?",
+        "availability_inquiry": "Здравствуйте, {name}! Спасибо за обращение. Уточним наличие {product_phrase}и скоро вернёмся с ответом.",
+        "complaint": "Здравствуйте, {name}! Приносим извинения за неудобства. Не могли бы вы прислать подробности (и фото, если возможно), чтобы мы могли быстрее решить вопрос?",
+        "order_status": "Здравствуйте, {name}! Спасибо за терпение. Уточним статус вашего заказа и скоро сообщим вам.",
+        "scheduling": "Здравствуйте, {name}! С радостью поможем с записью. Какие дни/время вам удобны на этой неделе?",
+        "general_inquiry": "Здравствуйте, {name}! Спасибо за сообщение. Чем можем помочь?",
+    },
+}
+
 
 def _shares_a_word(a: str, b: str) -> bool:
     a_words = {w.lower() for w in a.split() if len(w) > 2}

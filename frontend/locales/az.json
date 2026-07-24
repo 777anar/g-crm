@@ -1453,7 +1453,20 @@
     "usageTableStatus": "Status",
     "usageTableWhen": "Nə vaxt",
     "usageStatusSuccess": "Uğurlu",
-    "usageStatusFailed": "Uğursuz"
+    "usageStatusFailed": "Uğursuz",
+    "draftReply": "Cavab Layihəsi",
+    "drafting": "Hazırlanır...",
+    "type_suggested_reply": "Təklif Olunan Cavab",
+    "type_quote_draft_line_items": "Təklif Sətir Layihəsi",
+    "draftQuoteItemsTitle": "AI ilə Təklif Sətirləri Layihəsi",
+    "draftQuoteItems": "Sətirləri Hazırla",
+    "draftQuoteItemsDesc": "Hər otaq elementi üçün təsvir, itki faizi və təxmini məbləğ layihəsi yaradın -- təklif yaratmadan əvvəl nəzərdən keçirin.",
+    "draftRoom": "Otaq",
+    "draftItem": "Element",
+    "draftDescription": "Təsvir",
+    "draftQuantity": "Təklif olunan miqdar",
+    "draftUnitPrice": "Vahid qiyməti",
+    "draftEstimatedTotal": "Təxmini məbləğ"
   },
   "integrations": {
     "title": "İnteqrasiyalar",

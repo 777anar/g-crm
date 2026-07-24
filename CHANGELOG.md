@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.42.0] — 2026-07-24 — Phase 21 Follow-Through: AI Draft Generation for Quotes & Communication
+
+Closes the two items `MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 21 entry named "deliberately out of scope this phase" — AI-drafted Quote line items and AI-drafted Communication Center reply drafts — behind the exact same `AIProvider` abstraction Phase 21 (v2.40.0) introduced. Not Phase 22: this is the same phase's own previously-deferred scope, completed on explicit request.
+
+### Added
+- **`draft_conversation_reply` / `draft_quote_line_items`** added to the `AIProvider` interface (`modules/ai/infrastructure/providers/base.py`) and implemented in both `MockAIProvider` and `AnthropicProvider` — the same "no use case/DTO/schema change to swap providers" discipline every other analysis method already holds.
+- **`POST /ai/conversations/{id}/draft-reply`** — drafts a `suggested_reply` recommendation (`{draft_reply, reply_language}`) from a Conversation's recent messages, in whatever language the customer has been writing in. The Communication inbox (`/communication/inbox`) gained a "Draft Reply" button; accepting the recommendation loads `draft_reply` straight into the existing compose box — the same convenience as picking a message template, never an automatic send.
+- **`POST /ai/projects/{id}/draft-quote-items`** — drafts a `quote_draft_line_items` recommendation for a Project's Rooms/Items not yet quoted. The model supplies only a `description` and a bounded `waste_factor_pct` (0–20); `suggested_quantity` and `estimated_total` (against the company's default Price List, when one exists) are always computed deterministically in `DraftQuoteLineItemsUseCase`, never trusted from the model — a hallucinated `project_item_id` is filtered out, an out-of-range waste factor is clamped, both under dedicated test. The Sales Project page (`/sales/projects/{id}`) gained a "Draft Quote Items" card rendering the results as a review table. Draft-only in both directions: neither endpoint ever creates a Message, Quote, or `QuoteSectionItem` — verified by tests that assert row counts are unchanged after the call.
+- Both new recommendation types reuse the existing `ai_recommendations` table and the existing `conversation`/`quote` analysis kinds — no new migration — and both new endpoints reuse the existing rate-limit/daily-budget/audit-log path (`run_provider()`) and the existing `ai:recommendations:write` permission, unchanged.
+- 13 new backend tests (`tests/ai/test_conversation_reply_draft.py`, `tests/ai/test_quote_draft.py`, plus 3 new cases appended to `tests/ai/test_anthropic_provider.py` — hallucinated-id filtering, waste-factor clamping, reply language/text shape).
+
+### Verification
+Full backend suite passing (793/793 — 780 prior + 13 new), `lint-imports` clean, frontend `tsc --noEmit` clean, `npm run lint` clean, frontend production build clean (66 routes, no new routes this phase — both features extend existing pages in place).
+
+---
+
 ## [2.41.0] — 2026-07-24 — Purchasing Production Completion
 
 ### Added

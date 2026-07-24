@@ -68,6 +68,14 @@ RECOMMENDATION_TYPE_ASSIGNEE_SUGGESTION = "assignee_suggestion"
 RECOMMENDATION_TYPE_TASK_PRIORITY_SUGGESTION = "task_priority_suggestion"
 RECOMMENDATION_TYPE_OVERDUE_RISK = "overdue_risk"
 
+# AI draft generation (Phase 21 follow-through): the model drafts content a
+# human still explicitly sends/applies elsewhere -- a suggested reply text
+# for Communication, or suggested Quote line items for Sales -- never a
+# business action performed automatically, the same invariant every other
+# recommendation type already respects via ReviewRecommendationUseCase.
+RECOMMENDATION_TYPE_SUGGESTED_REPLY = "suggested_reply"
+RECOMMENDATION_TYPE_QUOTE_DRAFT_LINE_ITEMS = "quote_draft_line_items"
+
 VALID_RECOMMENDATION_TYPES = {
     RECOMMENDATION_TYPE_LEAD_SCORE,
     RECOMMENDATION_TYPE_WIN_PROBABILITY,
@@ -97,6 +105,8 @@ VALID_RECOMMENDATION_TYPES = {
     RECOMMENDATION_TYPE_ASSIGNEE_SUGGESTION,
     RECOMMENDATION_TYPE_TASK_PRIORITY_SUGGESTION,
     RECOMMENDATION_TYPE_OVERDUE_RISK,
+    RECOMMENDATION_TYPE_SUGGESTED_REPLY,
+    RECOMMENDATION_TYPE_QUOTE_DRAFT_LINE_ITEMS,
 }
 
 # The four analysis entry points a recommendation type is produced by --

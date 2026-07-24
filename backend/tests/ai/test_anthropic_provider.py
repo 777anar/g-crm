@@ -191,3 +191,63 @@ def test_refusal_stop_reason_raises_upstream_error():
     provider = _provider_with_fake_client(response=response)
     with pytest.raises(AIProviderUpstreamError):
         provider.analyze_lead(prompt="x", context={"lead": {"id": "1", "full_name": "A"}, "other_leads": [], "customers": []})
+
+
+def test_draft_conversation_reply_returns_text_and_language():
+    context = {
+        "conversation": {"external_contact_name": "Aysel"},
+        "messages": [{"direction": "inbound", "body": "Neçəyədir Calacatta Gold?", "sender_type": "customer"}],
+        "catalog_material_names": ["Calacatta Gold"],
+    }
+    response = _FakeMessage({
+        "draft_reply": "Salam Aysel, Calacatta Gold qiyməti üçün ölçüləri paylaşa bilərsinizmi?",
+        "reply_language": "az",
+        "confidence": 0.7,
+    })
+    provider = _provider_with_fake_client(response=response)
+
+    result = provider.draft_conversation_reply(prompt="draft", context=context)
+
+    assert result.data["reply_language"] == "az"
+    assert "Aysel" in result.data["draft_reply"]
+    assert result.confidence == 0.7
+    assert result.cost_usd is not None
+
+
+def test_draft_quote_line_items_drops_hallucinated_project_item_id():
+    items = [
+        {"project_item_id": "item-1", "room_name": "Kitchen", "item_name": "Countertop", "material_id": "mat-1",
+         "material_name": "Calacatta Gold", "quantity": "5.000", "unit": "m2", "notes": None, "unit_sale_price": "150.00"},
+    ]
+    context = {"project": {"id": "proj-1", "name": "Test Project", "project_type": "kitchen"}, "items": items}
+    response = _FakeMessage({
+        "items": [
+            {"project_item_id": "item-1", "description": "Kitchen countertop in Calacatta Gold", "waste_factor_pct": 10},
+            {"project_item_id": "item-does-not-exist", "description": "Bogus", "waste_factor_pct": 5},
+        ],
+        "confidence": 0.6,
+    })
+    provider = _provider_with_fake_client(response=response)
+
+    result = provider.draft_quote_line_items(prompt="draft", context=context)
+
+    assert len(result.data["items"]) == 1
+    assert result.data["items"][0]["project_item_id"] == "item-1"
+    assert result.data["items"][0]["waste_factor_pct"] == 10
+
+
+def test_draft_quote_line_items_clamps_out_of_range_waste_factor():
+    items = [
+        {"project_item_id": "item-1", "room_name": "Kitchen", "item_name": "Countertop", "material_id": "mat-1",
+         "material_name": "Calacatta Gold", "quantity": "5.000", "unit": "m2", "notes": None, "unit_sale_price": None},
+    ]
+    context = {"project": {"id": "proj-1", "name": "Test Project", "project_type": "kitchen"}, "items": items}
+    response = _FakeMessage({
+        "items": [{"project_item_id": "item-1", "description": "Countertop", "waste_factor_pct": 999}],
+        "confidence": 0.5,
+    })
+    provider = _provider_with_fake_client(response=response)
+
+    result = provider.draft_quote_line_items(prompt="draft", context=context)
+
+    assert result.data["items"][0]["waste_factor_pct"] == 20

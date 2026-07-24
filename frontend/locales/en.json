@@ -1455,7 +1455,20 @@
     "usageTableStatus": "Status",
     "usageTableWhen": "When",
     "usageStatusSuccess": "Success",
-    "usageStatusFailed": "Failed"
+    "usageStatusFailed": "Failed",
+    "draftReply": "Draft Reply",
+    "drafting": "Drafting...",
+    "type_suggested_reply": "Suggested Reply",
+    "type_quote_draft_line_items": "Draft Quote Items",
+    "draftQuoteItemsTitle": "AI Draft Quote Items",
+    "draftQuoteItems": "Draft Quote Items",
+    "draftQuoteItemsDesc": "Generate a draft description, waste factor, and estimated total for each room item -- review before creating a quote.",
+    "draftRoom": "Room",
+    "draftItem": "Item",
+    "draftDescription": "Description",
+    "draftQuantity": "Suggested Qty",
+    "draftUnitPrice": "Unit Price",
+    "draftEstimatedTotal": "Estimated Total"
   },
   "integrations": {
     "title": "Integrations",

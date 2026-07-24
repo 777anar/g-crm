@@ -33,6 +33,22 @@ export function suggestTasks(provider?: string) {
   });
 }
 
+// ── AI draft generation (Phase 21 follow-through) ─────────────────────────────
+
+export function draftConversationReply(conversationId: string, provider?: string) {
+  return apiRequest<{ items: AIRecommendation[] }>(`${BASE}/conversations/${conversationId}/draft-reply`, {
+    method: "POST",
+    body: { provider },
+  });
+}
+
+export function draftQuoteLineItems(projectId: string, provider?: string) {
+  return apiRequest<{ items: AIRecommendation[] }>(`${BASE}/projects/${projectId}/draft-quote-items`, {
+    method: "POST",
+    body: { provider },
+  });
+}
+
 // ── Recommendations ───────────────────────────────────────────────────────────
 
 export function listRecommendations(

@@ -1,7 +1,7 @@
 # G-STONE ERP — Implementation Report
 
-_Date: 2026-07-22 (original report), addended 2026-07-22 (Version 2.36.0 / Phase 17), addended again 2026-07-23 (Version 2.37.0 / Phase 18), addended again 2026-07-23 (Version 2.38.0 / Phase 19), addended again 2026-07-24 (Version 2.39.0 / Phase 20), addended again 2026-07-24 (Version 2.40.0 / Phase 21)_
-_Scope: everything implemented since the last audit (`PROJECT_AUDIT.md`, dated 2026-07-21, frozen at commit `521428e` / Version 2.25.0), through current HEAD (Version 2.40.0). Sections 1–8 below are the original report, kept as written — they describe what was true at the time. §9 is a same-day addendum covering Phase 17 (Version 2.36.0); §10 covers Phase 18 (Version 2.37.0); §11 covers Phase 19 (Version 2.38.0), closing the eight gaps `STONE_WORKFLOW_REPORT.md` §12 deliberately deferred from Phases 1–2; §12 covers Phase 20 (Version 2.39.0), extending the Cut Optimization engine and closing Sprint 2's deferred supplier-catalog-import gap; §13 covers Phase 21 (Version 2.40.0), giving the AI Sales Assistant its first real model behind the existing provider abstraction. Corrections are recorded as annotations on prior sections rather than silent rewrites, consistent with this project's practice. (Versions 2.34.0 and 2.35.0, the two Stone Fabrication Workflow phases, are covered by their own dedicated `STONE_WORKFLOW_REPORT.md`, not repeated here.)_
+_Date: 2026-07-22 (original report), addended 2026-07-22 (Version 2.36.0 / Phase 17), addended again 2026-07-23 (Version 2.37.0 / Phase 18), addended again 2026-07-23 (Version 2.38.0 / Phase 19), addended again 2026-07-24 (Version 2.39.0 / Phase 20), addended again 2026-07-24 (Version 2.40.0 / Phase 21), addended again 2026-07-24 (Version 2.42.0 / Phase 21 follow-through)_
+_Scope: everything implemented since the last audit (`PROJECT_AUDIT.md`, dated 2026-07-21, frozen at commit `521428e` / Version 2.25.0), through current HEAD (Version 2.42.0). Sections 1–8 below are the original report, kept as written — they describe what was true at the time. §9 is a same-day addendum covering Phase 17 (Version 2.36.0); §10 covers Phase 18 (Version 2.37.0); §11 covers Phase 19 (Version 2.38.0), closing the eight gaps `STONE_WORKFLOW_REPORT.md` §12 deliberately deferred from Phases 1–2; §12 covers Phase 20 (Version 2.39.0), extending the Cut Optimization engine and closing Sprint 2's deferred supplier-catalog-import gap; §13 covers Phase 21 (Version 2.40.0), giving the AI Sales Assistant its first real model behind the existing provider abstraction; §14 covers Phase 21's own follow-through (Version 2.42.0), closing the two product surfaces §13 deliberately deferred. Corrections are recorded as annotations on prior sections rather than silent rewrites, consistent with this project's practice. (Versions 2.34.0 and 2.35.0, the two Stone Fabrication Workflow phases, are covered by their own dedicated `STONE_WORKFLOW_REPORT.md`, not repeated here.)_
 _Method: `git log`/`git diff --stat` against the audit baseline commit, cross-checked against `CHANGELOG.md` entries for each release, plus direct re-verification of every "remaining issue" claim against the current source (not assumed from the prior audit text)._
 
 This window covers **9 commits, 179 files changed, +11,409 / −945 lines**, and the backend test suite grew from 553 to 630 passing. Every numbered item in the prior audit's Priority List (§11, items 1–5) was addressed in this window, in order, plus three entirely new modules were shipped beyond what the audit's remaining-work estimate scoped for a single window.
@@ -383,7 +383,7 @@ The AI Sales Assistant (Phase 5, Version 2.8) was deliberately built provider-ag
 - **Prompt/response audit logging** — new `AIProviderCallLog` model/table (`ai_provider_call_logs`, migration `e12a7189e238`) records every call attempt — success, rejection, or upstream failure — with the exact prompt sent, the real provider's raw response text (`null` for mock, which makes no real API call), token counts, computed cost, latency, and any error message. `run_provider()` writes this row for every outcome, committing it immediately on failure (rather than leaving it to the caller's own `db.commit()`, since the use case is about to raise and the request's session would otherwise roll it back along with everything else). `AIRecommendation` gained a nullable `provider_call_id` FK so every recommendation traces back to the exact call that produced it. A new `GET /ai/usage` endpoint (`ai:dashboard:read`, same viewer-tier permission as the existing AI Dashboard) surfaces today's spend/budget/call count and a recent-call-log page; the AI Dashboard UI (`/ai/dashboard`) gained a corresponding "AI Provider Usage & Cost" card, and `RecommendationCard` now shows the recommendation's own `prompt` alongside its `response` in the existing details toggle.
 - **Clean error surface** — a new `ServiceUnavailableError` (503) in `core/api/errors.py` covers an unconfigured real provider (no `ANTHROPIC_API_KEY` — `AIProviderNotConfiguredError`) and upstream API failures (`AIProviderUpstreamError` — network failure, authentication rejected upstream, rate-limited upstream, or a response that didn't parse as the expected JSON, including a `stop_reason: "refusal"` response). The four analysis endpoints (`modules/ai/presentation/api/analysis.py`) now share one exception-to-HTTP mapping covering these plus the pre-existing `UnknownAIProviderError` (→ `400`) — previously an unknown provider name fell through to a generic `500` with no translation at all; that gap is closed as a side effect of adding the mapping this phase needed anyway.
 - **Preserved invariant, zero new code required** — "AI never performs a business action automatically" needed no change to stay true: `ReviewRecommendationUseCase` was already recommendation-type-agnostic (it only ever updates the recommendation row's own `status`/`edited_response`), so real-provider-generated recommendations flow through the exact same human Accept/Reject/Edit gate with no special-casing.
-- **Deliberately deferred**: the roadmap's own "natural scope expansion once a real model exists" examples (AI-drafted quote line-item suggestions, AI-drafted Communication Center reply drafts) are new product surfaces — new recommendation types, new use cases, new UI — rather than the provider-integration/cost-control/audit-trail infrastructure this phase's other four bullets named. Left for a dedicated future pass.
+- **Deliberately deferred at the time, closed in §14**: the roadmap's own "natural scope expansion once a real model exists" examples (AI-drafted quote line-item suggestions, AI-drafted Communication Center reply drafts) were new product surfaces — new recommendation types, new use cases, new UI — rather than the provider-integration/cost-control/audit-trail infrastructure this phase's other four bullets named. See §14 (Version 2.42.0) for the completed follow-through.
 
 ### 13.3 Tests Added
 
@@ -409,7 +409,51 @@ Full backend suite passing (774/774), `lint-imports` clean, migrations round-tri
 | — | Per-session/device token revocation | Still open — tracked since Phase 18 (§10.5) |
 | — | Batch optimization runs synchronously in the request/response cycle | Still open — tracked since Phase 20 (§12.5), part of Phase 24's background job queue |
 | — | Rate limiting is in-process only (mirrors the login rate limiter's own documented caveat) | A multi-instance deployment would need the AI analysis rate limit's counter store (and the login rate limiter's) in Redis instead of an in-process dict; tracked as part of Phase 24 |
-| — | AI-drafted quote line items / Communication reply drafts | Not started — deliberately deferred, see §13.2 |
+| — | AI-drafted quote line items / Communication reply drafts | **Closed** — see §14 (Version 2.42.0) |
+| — | Payments, mobile client | Not started — Phases 22/25 |
+
+---
+
+## 14. Addendum — Phase 21 Follow-Through: AI Draft Generation (Version 2.42.0)
+
+_Added 2026-07-24, same day as §13. Covers HEAD commit at time of writing (post-Version 2.40.0's Phase 21 core delivery)._
+
+### 14.1 Theme
+
+§13.2 named two "natural scope expansion" examples as deliberately out of scope for Phase 21's core delivery: AI-drafted Quote line items and AI-drafted Communication Center reply drafts. Requested explicitly as a continuation of Phase 21 (not Phase 22), this addendum closes both, behind the exact same `AIProvider` interface Phase 21 established — no new abstraction, no change to how a provider is selected or billed.
+
+### 14.2 Features Added
+
+- **Two new `AIProvider` methods** — `draft_conversation_reply` and `draft_quote_line_items` were added to the abstract base (`modules/ai/infrastructure/providers/base.py`) and implemented in both `MockAIProvider` (`modules/ai/infrastructure/providers/mock_provider.py` — the reply draft reuses `analyze_conversation`'s own language/intent detection as a pure computation, so the two stay consistent by construction) and `AnthropicProvider` (`modules/ai/infrastructure/providers/anthropic_provider.py` — two new JSON schemas, `_REPLY_SCHEMA`/`_QUOTE_DRAFT_SCHEMA`, and a dedicated system prompt for the reply draft that explicitly instructs the model this is a draft a human still sends).
+- **Two new recommendation types** (`modules/ai/domain/value_objects.py`) — `suggested_reply` and `quote_draft_line_items` — reuse the existing `ANALYSIS_KIND_CONVERSATION`/`ANALYSIS_KIND_QUOTE` categories and the existing `ai_recommendations` table; no migration needed.
+- **`DraftConversationReplyUseCase`** (`modules/ai/application/use_cases/conversation_reply_draft_use_case.py`) — loads a Conversation's last 100 messages (`MessageRepository.list_for_conversation`), calls the provider through the existing `run_provider()` (so rate-limiting, the daily budget cap, and prompt/response audit logging are unchanged), and creates one `suggested_reply` recommendation. `POST /ai/conversations/{id}/draft-reply` (`ai:recommendations:write`, same tier as the other four analysis endpoints).
+- **`DraftQuoteLineItemsUseCase`** (`modules/ai/application/use_cases/quote_draft_use_case.py`) — loads a Project's Rooms/Items (`RoomRepository`/`ProjectItemRepository`) and, where the company has a default Price List, each item's sale price (`PriceListRepository`/`PriceListEntryRepository`). The provider supplies only `description` and a bounded `waste_factor_pct` (0–20) per item; `suggested_quantity = base_quantity * (1 + waste_factor_pct / 100)` and `estimated_total = suggested_quantity * unit_sale_price` are always computed in the use case, never trusted from the model, and a returned `project_item_id` outside the real item set is dropped rather than kept. `POST /ai/projects/{id}/draft-quote-items` (`ai:recommendations:write`).
+- **Communication inbox UI** (`frontend/app/(app)/communication/inbox/page.tsx`) — a "Draft Reply" button calls the new endpoint and shows the resulting recommendation in the existing AI panel; accepting it copies `draft_reply` into the existing compose box (`setComposerText`) — the same mechanism already used for message templates, so accepting a draft never sends anything by itself.
+- **Sales Project detail UI** (`frontend/app/(app)/sales/projects/[id]/page.tsx`) — a new "AI Draft Quote Items" card on the Overview tab calls the new endpoint and renders each `quote_draft_line_items` recommendation via the shared `RecommendationCard` plus a review table (room, item, description, suggested quantity, unit price, estimated total). Reviewing/accepting only ever changes the recommendation's own status — no Quote or `QuoteSectionItem` is created by this flow; creating the actual Quote remains the existing "Create Quote" action on the same page.
+- i18n keys added to all three locale files (`draftReply`, `type_suggested_reply`, `draftQuoteItemsTitle`/`draftQuoteItems`/`draftQuoteItemsDesc`, `type_quote_draft_line_items`, and the draft table's column headers).
+
+### 14.3 Tests Added
+
+| Area | New tests |
+|---|---|
+| `AnthropicProvider` (`tests/ai/test_anthropic_provider.py`, appended) | 3 — reply draft returns text + detected language; a hallucinated `project_item_id` in the quote draft is dropped; an out-of-range `waste_factor_pct` is clamped to 0–20 |
+| `tests/ai/test_conversation_reply_draft.py` | 4 — creates a `suggested_reply` recommendation; never creates a real `Message` row; 404 for an unknown conversation; 403 for a viewer-role caller |
+| `tests/ai/test_quote_draft.py` | 6 — creates a recommendation with correct deterministic `suggested_quantity`/`estimated_total`; prices are `null` with no default Price List configured; an empty Project (no items) still returns a valid empty draft; never creates a `Quote`; 404 for an unknown project; 403 for a viewer-role caller |
+
+No frontend unit-test framework exists in this codebase (consistent with §5/§9.3/§10.3/§11.3/§12.3/§13.3); frontend changes verified via `tsc --noEmit`, `npm run lint`, and a full production build.
+
+### 14.4 Verification
+
+Full backend suite passing (793/793 — 780 prior + 13 new), `lint-imports` clean (no new module boundary crossed — both new use cases stay inside `modules/ai/`), frontend `tsc --noEmit` clean, `npm run lint` clean, frontend production build clean (66 routes, no new routes this phase — both features extend existing pages in place).
+
+### 14.5 Remaining Issues (re-verified, current as of this addendum)
+
+| # | Issue | Status |
+|---|---|---|
+| — | RLS full efficacy in production (non-owner runtime DB role) | Still open — infra step, tracked since Phase 18 (§10.5) |
+| — | Per-session/device token revocation | Still open — tracked since Phase 18 (§10.5) |
+| — | Batch optimization runs synchronously in the request/response cycle | Still open — tracked since Phase 20 (§12.5), part of Phase 24's background job queue |
+| — | Rate limiting is in-process only | Still open — tracked since Phase 21 (§13.5), part of Phase 24 |
 | — | Payments, mobile client | Not started — Phases 22/25 |
 
 Full detail is in `CHANGELOG.md` [2.40.0].

@@ -72,3 +72,26 @@ class AIProvider(ABC):
         suggestion based on current workload, task-priority suggestions,
         and overdue-risk detection, company-wide."""
         raise NotImplementedError
+
+    @abstractmethod
+    def draft_conversation_reply(self, *, prompt: str, context: dict) -> AIAnalysisResult:
+        """AI draft generation (Phase 21 follow-through): a draft reply to
+        the customer's most recent message in one Conversation, in the
+        conversation's own detected language -- draft-only, never sent
+        automatically. The calling use case creates exactly one
+        `suggested_reply` recommendation from this; a human copies the
+        draft into the compose box, edits it, and sends it themselves
+        through the existing send-message action."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def draft_quote_line_items(self, *, prompt: str, context: dict) -> AIAnalysisResult:
+        """AI draft generation (Phase 21 follow-through): suggested Quote
+        line-item descriptions (and a bounded waste-factor suggestion) for
+        one Project's already-specified Rooms/Items -- draft-only, never
+        applied to a Quote automatically. Exact quantities/prices are
+        computed deterministically by the calling use case from real
+        ProjectItem/PriceListEntry data; the model only supplies the
+        language-shaped half (description text, a clamped waste-factor
+        percentage)."""
+        raise NotImplementedError

@@ -109,12 +109,53 @@ _TASKS_SCHEMA = {
     "additionalProperties": False,
 }
 
+_REPLY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "draft_reply": {"type": "string"},
+        "reply_language": {"type": "string", "description": "ISO 639-1 code, e.g. az/ru/en"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    },
+    "required": ["draft_reply", "reply_language", "confidence"],
+    "additionalProperties": False,
+}
+
+_QUOTE_DRAFT_ITEM_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "project_item_id": {"type": "string"},
+        "description": {"type": "string"},
+        "waste_factor_pct": {"type": "number", "minimum": 0, "maximum": 20},
+    },
+    "required": ["project_item_id", "description", "waste_factor_pct"],
+    "additionalProperties": False,
+}
+
+_QUOTE_DRAFT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "items": {"type": "array", "items": _QUOTE_DRAFT_ITEM_SCHEMA},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    },
+    "required": ["items", "confidence"],
+    "additionalProperties": False,
+}
+
 _SYSTEM_PROMPT = (
     "You are the AI Sales Assistant embedded in G-STONE ERP, a stone/slab gallery "
     "business management system. You analyze CRM/sales data and return a single JSON "
     "object matching the provided schema exactly -- no prose outside the JSON. Every "
     "recommendation you produce is reviewed by a human before anything happens; you "
     "are not able to and must not claim to take any action yourself."
+)
+
+_REPLY_SYSTEM_PROMPT = (
+    "You are drafting a customer-service reply for G-STONE ERP, a stone/slab gallery "
+    "business. Write a warm, professional, concise reply in the same language the "
+    "customer has been writing in. Return a single JSON object matching the provided "
+    "schema exactly -- no prose outside the JSON. This is a DRAFT ONLY: a human "
+    "reviews, edits, and sends it themselves -- never claim the message has already "
+    "been sent, and never take any action beyond producing the draft text."
 )
 
 
@@ -141,17 +182,18 @@ class AnthropicProvider(AIProvider):
             self._client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
         return self._client
 
-    def _call(self, *, user_prompt: str, schema: dict) -> tuple:
+    def _call(self, *, user_prompt: str, schema: dict, system: str = _SYSTEM_PROMPT) -> tuple:
         """One structured-output request. Returns (data_without_confidence,
-        confidence, AIAnalysisResult-shaped extras) -- factored out since all
-        four analysis methods share this exact call/parse/error shape and
-        differ only in prompt/schema/deterministic post-processing."""
+        confidence, AIAnalysisResult-shaped extras) -- factored out since
+        every analysis/draft method shares this exact call/parse/error shape
+        and differs only in prompt/schema/system-prompt/deterministic
+        post-processing."""
         client = self._get_client()
         try:
             response = client.messages.create(
                 model=self.model,
                 max_tokens=_MAX_TOKENS,
-                system=_SYSTEM_PROMPT,
+                system=system,
                 messages=[{"role": "user", "content": user_prompt}],
                 output_config={"format": {"type": "json_schema", "schema": schema}},
             )
@@ -293,3 +335,39 @@ class AnthropicProvider(AIProvider):
             "overdue_risks": helpers.compute_overdue_risks(at_risk_tasks),
         }
         return AIAnalysisResult(data=data, confidence=confidence, **extras)
+
+    # ── AI draft generation (Phase 21 follow-through) ────────────────────
+
+    def draft_conversation_reply(self, *, prompt: str, context: dict) -> AIAnalysisResult:
+        messages: List[dict] = context.get("messages", [])
+        transcript = "\n".join(f"[{m.get('direction')}] {m.get('body')}" for m in messages[-20:])
+        contact_name = (context.get("conversation") or {}).get("external_contact_name") or "the customer"
+        user_prompt = (
+            f"{prompt}\n\nCustomer name: {contact_name}\n"
+            f"Conversation transcript (most recent last):\n{transcript}"
+        )
+        parsed, confidence, extras = self._call(
+            user_prompt=user_prompt, schema=_REPLY_SCHEMA, system=_REPLY_SYSTEM_PROMPT
+        )
+        data = {"draft_reply": parsed["draft_reply"], "reply_language": parsed["reply_language"]}
+        return AIAnalysisResult(data=data, confidence=confidence, **extras)
+
+    def draft_quote_line_items(self, *, prompt: str, context: dict) -> AIAnalysisResult:
+        items: List[dict] = context.get("items", [])
+        candidate_summary = (
+            f"Project items to draft quote lines for (id/room/material/quantity/unit/notes): {json.dumps(items)}\n"
+            "Only reference project_item_id values from the list above -- do not invent new ones."
+        )
+        parsed, confidence, extras = self._call(user_prompt=f"{prompt}\n\n{candidate_summary}", schema=_QUOTE_DRAFT_SCHEMA)
+
+        valid_ids = {i["project_item_id"] for i in items}
+        drafted = [
+            {
+                "project_item_id": entry["project_item_id"],
+                "description": entry["description"],
+                "waste_factor_pct": max(0, min(20, entry["waste_factor_pct"])),
+            }
+            for entry in parsed["items"]
+            if entry["project_item_id"] in valid_ids
+        ]
+        return AIAnalysisResult(data={"items": drafted}, confidence=confidence, **extras)

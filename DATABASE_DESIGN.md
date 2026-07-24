@@ -658,7 +658,7 @@ _Unified omnichannel inbox (WhatsApp Business, Instagram Direct, Facebook Messen
 | id | UUID | PK |
 | company_id | UUID | NOT NULL, indexed |
 | analysis_kind | TEXT | NOT NULL, indexed — `lead`\|`conversation`\|`quote`\|`task` |
-| recommendation_type | TEXT | NOT NULL, indexed — one of 27 values across CRM/Communication/Sales/Task Intelligence |
+| recommendation_type | TEXT | NOT NULL, indexed — one of 29 values across CRM/Communication/Sales/Task Intelligence (adds `suggested_reply`/`quote_draft_line_items`, Version 2.42.0 — Phase 21 follow-through) |
 | related_entity_type / related_entity_id | TEXT / UUID | nullable, indexed |
 | provider | TEXT | NOT NULL, DEFAULT `mock`, indexed |
 | model | TEXT | NOT NULL, DEFAULT `""` |
@@ -673,7 +673,9 @@ _Unified omnichannel inbox (WhatsApp Business, Instagram Direct, Facebook Messen
 | reviewed_at | TIMESTAMPTZ | nullable |
 | provider_call_id | UUID | nullable, REFERENCES ai_provider_call_logs(id) — **added Version 2.40.0**, see §12.2 |
 
-**This table is owned by `modules/ai/`, not `core/`** — it is entirely separate from the reserved-but-unused core `ai_jobs` table (§3.7). One table covers all 27 recommendation types, discriminated by `recommendation_type`, the same pattern `communication_message_templates` uses. **Nothing in this module ever writes to another module's tables** — accepting/rejecting/editing a recommendation only ever updates this table's own `status`/`reviewed_by`/`reviewed_at`/`edited_response` columns, making "AI never performs business actions automatically" a structural property, not a UI convention.
+**This table is owned by `modules/ai/`, not `core/`** — it is entirely separate from the reserved-but-unused core `ai_jobs` table (§3.7). One table covers all 29 recommendation types, discriminated by `recommendation_type`, the same pattern `communication_message_templates` uses. **Nothing in this module ever writes to another module's tables** — accepting/rejecting/editing a recommendation only ever updates this table's own `status`/`reviewed_by`/`reviewed_at`/`edited_response` columns, making "AI never performs business actions automatically" a structural property, not a UI convention.
+
+**`suggested_reply` and `quote_draft_line_items` (Version 2.42.0 — Phase 21 follow-through)** reuse this same table and the existing `conversation`/`quote` analysis kinds — no new migration. `suggested_reply.response` is `{draft_reply, reply_language}`; `quote_draft_line_items.response` is `{items: [{project_item_id, description, waste_factor_pct, suggested_quantity, estimated_total, unit_sale_price, ...}]}` where `waste_factor_pct` (bounded 0–20) and `description` come from the provider, while `suggested_quantity`/`estimated_total` are always computed deterministically in `DraftQuoteLineItemsUseCase` against the company's default Price List — the provider never supplies a quantity or a price directly.
 
 ### 12.2 `ai_provider_call_logs` (Real AI Provider Integration, Phase 21, Version 2.40.0)
 One row per provider call attempt — mock or real, successful or rejected/failed — so every `AIRecommendation` is traceable back to the exact prompt sent and exact raw response received, and so real spend is queryable for the daily budget cap without recomputing it from anything else.

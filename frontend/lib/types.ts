@@ -1573,6 +1573,8 @@ export const AI_RECOMMENDATION_TYPES = [
   "assignee_suggestion",
   "task_priority_suggestion",
   "overdue_risk",
+  "suggested_reply",
+  "quote_draft_line_items",
 ] as const;
 export type AIRecommendationType = (typeof AI_RECOMMENDATION_TYPES)[number];
 
@@ -1668,6 +1670,36 @@ export type AIUsage = {
   calls_today: number;
   budget_remaining_usd: number | null;
   recent_calls: AIProviderCallLog[];
+};
+
+// ── AI draft generation (Phase 21 follow-through) ────────────────────────────
+// Shapes of `AIRecommendation.response` for the two new recommendation
+// types -- narrowed via a cast at the call site, same as every other
+// recommendation type's response is a generic `Record<string, unknown>` on
+// the wire.
+
+export type SuggestedReplyResponse = {
+  draft_reply: string;
+  reply_language: string;
+};
+
+export type QuoteDraftLineItem = {
+  project_item_id: string;
+  room_name: string | null;
+  item_name: string | null;
+  material_id: string | null;
+  material_name: string | null;
+  description: string;
+  unit: string;
+  base_quantity: string;
+  waste_factor_pct: string;
+  suggested_quantity: string;
+  unit_sale_price: string | null;
+  estimated_total: string | null;
+};
+
+export type QuoteDraftLineItemsResponse = {
+  items: QuoteDraftLineItem[];
 };
 
 // --- Purchasing --------------------------------------------------------

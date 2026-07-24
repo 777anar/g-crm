@@ -1453,7 +1453,20 @@
     "usageTableStatus": "Статус",
     "usageTableWhen": "Когда",
     "usageStatusSuccess": "Успешно",
-    "usageStatusFailed": "Ошибка"
+    "usageStatusFailed": "Ошибка",
+    "draftReply": "Черновик ответа",
+    "drafting": "Формируется...",
+    "type_suggested_reply": "Предложенный ответ",
+    "type_quote_draft_line_items": "Черновик позиций КП",
+    "draftQuoteItemsTitle": "ИИ-черновик позиций КП",
+    "draftQuoteItems": "Сформировать позиции",
+    "draftQuoteItemsDesc": "Сгенерировать описание, процент отходов и примерную сумму для каждой позиции -- проверьте перед созданием коммерческого предложения.",
+    "draftRoom": "Помещение",
+    "draftItem": "Позиция",
+    "draftDescription": "Описание",
+    "draftQuantity": "Реком. кол-во",
+    "draftUnitPrice": "Цена за ед.",
+    "draftEstimatedTotal": "Примерная сумма"
   },
   "integrations": {
     "title": "Интеграции",
