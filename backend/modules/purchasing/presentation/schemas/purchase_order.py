@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Optional
 
@@ -38,6 +38,7 @@ class PurchaseOrderUpdate(BaseModel):
 class PurchaseOrderStatusUpdate(BaseModel):
     status: str
     cancelled_reason: Optional[str] = None
+    approval_notes: Optional[str] = None
 
     def model_post_init(self, __context) -> None:
         if self.status not in MANUALLY_SETTABLE_PURCHASE_ORDER_STATUSES:
@@ -60,8 +61,20 @@ class PurchaseOrderOut(BaseModel):
     created_by: Optional[uuid.UUID]
     created_at: datetime
     updated_at: datetime
+    approved_by: Optional[uuid.UUID]
+    approved_at: Optional[datetime]
+    approval_notes: Optional[str]
+    payment_status: str
+    amount_paid: Decimal
+    payment_due_date: Optional[str]
+    rfq_id: Optional[uuid.UUID]
 
     model_config = {"from_attributes": True}
+
+    def model_post_init(self, __context) -> None:
+        if (self.payment_due_date and self.payment_status != "paid" and
+                date.fromisoformat(self.payment_due_date) < date.today()):
+            self.payment_status = "overdue"
 
 
 class PurchaseOrderListOut(BaseModel):
@@ -110,6 +123,9 @@ class GoodsReceiptOut(BaseModel):
     notes: Optional[str]
     received_by: Optional[uuid.UUID]
     received_at: datetime
+    warehouse_id: Optional[uuid.UUID]
+    receipt_number: Optional[str]
+    quantity_returned: Decimal
 
     model_config = {"from_attributes": True}
 

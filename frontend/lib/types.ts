@@ -1254,6 +1254,9 @@ export type InstallationAnalytics = {
 
 export const INVOICE_STATUSES = [
   "draft",
+  "pending_approval",
+  "approved",
+  "rejected",
   "sent",
   "partially_paid",
   "paid",
@@ -1343,6 +1346,9 @@ export type FinanceAnalytics = {
     pipeline_value: string;
     cancelled_value: string;
     orders_count: number;
+    purchase_cost: string;
+    supplier_payments: string;
+    supplier_payables: string;
   };
   monthly_trend: { month: string; revenue: string; cost: string; profit: string; count: number }[];
   revenue_by_currency: { currency: string; revenue: string }[];
@@ -1682,10 +1688,17 @@ export type Supplier = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  tax_id: string | null;
+  payment_terms_days: number;
+  default_currency: string;
+  rating: number;
 };
 
 export const PURCHASE_ORDER_STATUSES = [
   "draft",
+  "pending_approval",
+  "approved",
+  "rejected",
   "sent",
   "confirmed",
   "partially_received",
@@ -1696,7 +1709,7 @@ export type PurchaseOrderStatus = (typeof PURCHASE_ORDER_STATUSES)[number];
 
 // The manual "change status" action only ever drives these three targets --
 // partially_received/received are exclusively a side effect of receiving.
-export const MANUALLY_SETTABLE_PURCHASE_ORDER_STATUSES = ["sent", "confirmed", "cancelled"] as const;
+export const MANUALLY_SETTABLE_PURCHASE_ORDER_STATUSES = ["pending_approval", "approved", "rejected", "draft", "sent", "confirmed", "cancelled"] as const;
 
 export type PurchaseOrder = {
   id: string;
@@ -1714,6 +1727,13 @@ export type PurchaseOrder = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  approval_notes: string | null;
+  payment_status: "unpaid" | "partially_paid" | "paid" | "overdue";
+  amount_paid: string;
+  payment_due_date: string | null;
+  rfq_id: string | null;
 };
 
 export type PurchaseOrderLine = {
@@ -1738,7 +1758,19 @@ export type GoodsReceipt = {
   notes: string | null;
   received_by: string | null;
   received_at: string;
+  warehouse_id: string | null;
+  receipt_number: string | null;
+  quantity_returned: string;
 };
+
+export type SupplierContact = { id: string; supplier_id: string; name: string; job_title: string | null; email: string | null; phone: string | null; is_primary: boolean; created_at: string };
+export type PurchaseRFQLine = { id: string; rfq_id: string; material_id: string | null; description: string; quantity: string; unit: string; quoted_unit_cost: string | null; sort_order: number };
+export type PurchaseRFQ = { id: string; supplier_id: string; rfq_number: string; status: string; currency: string; response_due_date: string | null; quoted_total: string | null; supplier_reference: string | null; notes: string | null; created_at: string; updated_at: string; lines: PurchaseRFQLine[] };
+export type PurchaseReturnLine = { id: string; goods_receipt_id: string; quantity: string; unit_cost: string; line_total: string };
+export type PurchaseReturn = { id: string; supplier_id: string; purchase_order_id: string; return_number: string; status: string; reason: string; total_amount: string; created_at: string; completed_at: string | null; lines: PurchaseReturnLine[] };
+export type SupplierMetrics = { supplier_id: string; total_orders: number; total_spend: string; open_orders: number; completed_orders: number; on_time_delivery_rate: number; fill_rate: number; return_rate: number; outstanding_amount: string };
+export type ProcurementDashboard = { supplier_count: number; open_rfqs: number; pending_approvals: number; open_orders: number; overdue_orders: number; outstanding_payables: string; recent_orders: Array<{id:string;po_number:string;status:string;total_amount:string;currency:string}> };
+export type PurchaseAttachment = { id:string; entity_type:string; entity_id:string; document_id:string; label:string|null; created_at:string };
 
 // --- Marketing -----------------------------------------------------------
 

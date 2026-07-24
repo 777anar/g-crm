@@ -37,6 +37,8 @@ from modules.purchasing.domain.exceptions import (
 )
 from modules.purchasing.domain.value_objects import (
     PO_STATUS_CANCELLED,
+    PO_STATUS_APPROVED,
+    PO_STATUS_REJECTED,
     PO_STATUS_DRAFT,
     PO_STATUS_PARTIALLY_RECEIVED,
     PO_STATUS_RECEIVED,
@@ -196,6 +198,13 @@ class UpdatePurchaseOrderStatusUseCase:
             purchase_order.cancelled_at = _now()
             if data.cancelled_reason is not None:
                 purchase_order.cancelled_reason = data.cancelled_reason
+        if data.status == PO_STATUS_APPROVED:
+            purchase_order.approved_by = data.actor_user_id
+            purchase_order.approved_at = _now()
+            purchase_order.approval_notes = data.approval_notes
+        elif data.status == PO_STATUS_REJECTED:
+            purchase_order.approved_by = data.actor_user_id
+            purchase_order.approval_notes = data.approval_notes
 
         record_audit(
             self.db,
@@ -281,6 +290,8 @@ class ReceivePurchaseOrderLineUseCase:
             purchase_order_id=purchase_order.id,
             purchase_order_line_id=line.id,
             slab_id=slab_id,
+            warehouse_id=data.warehouse_id,
+            receipt_number=f"GR-{_now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
             quantity_received=data.quantity_received,
             notes=data.notes,
             received_by=data.actor_user_id,

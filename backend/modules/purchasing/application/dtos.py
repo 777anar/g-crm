@@ -21,6 +21,9 @@ class CreateSupplierInput(ActorContext):
     email: Optional[str] = None
     address: Optional[str] = None
     notes: Optional[str] = None
+    tax_id: Optional[str] = None
+    payment_terms_days: int = 30
+    default_currency: str = "AZN"
 
 
 @dataclass
@@ -33,6 +36,9 @@ class UpdateSupplierInput(ActorContext):
     address: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = None
+    tax_id: Optional[str] = None
+    payment_terms_days: Optional[int] = None
+    default_currency: Optional[str] = None
 
 
 @dataclass
@@ -65,6 +71,7 @@ class UpdatePurchaseOrderStatusInput(ActorContext):
     purchase_order_id: uuid.UUID
     status: str
     cancelled_reason: Optional[str] = None
+    approval_notes: Optional[str] = None
 
 
 @dataclass

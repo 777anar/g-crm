@@ -59,6 +59,9 @@ export default function FinanceAnalyticsPage() {
             <StatCard label={t("kpiRecognizedRevenue")} value={data.kpis.recognized_revenue} tone="success" />
             <StatCard label={t("kpiPipelineValue")} value={data.kpis.pipeline_value} tone="warning" />
             <StatCard label={t("kpiCancelledValue")} value={data.kpis.cancelled_value} tone="danger" />
+            <StatCard label={t("kpiPurchaseCost")} value={data.kpis.purchase_cost} tone="info" />
+            <StatCard label={t("kpiSupplierPayments")} value={data.kpis.supplier_payments} tone="success" />
+            <StatCard label={t("kpiSupplierPayables")} value={data.kpis.supplier_payables} tone="warning" />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

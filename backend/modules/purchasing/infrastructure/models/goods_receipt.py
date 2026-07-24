@@ -23,6 +23,9 @@ class GoodsReceipt(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         GUID(), ForeignKey("purchase_order_lines.id"), nullable=False, index=True
     )
     slab_id: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("catalog_slabs.id"), nullable=True, index=True)
+    warehouse_id: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("catalog_warehouses.id"), nullable=True, index=True)
+    receipt_number: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    quantity_returned: Mapped[str] = mapped_column(Numeric(10, 3), nullable=False, default=0)
 
     quantity_received: Mapped[str] = mapped_column(Numeric(10, 3), nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

@@ -61,6 +61,9 @@ def create_supplier(
             email=payload.email,
             address=payload.address,
             notes=payload.notes,
+            tax_id=payload.tax_id,
+            payment_terms_days=payload.payment_terms_days,
+            default_currency=payload.default_currency,
         )
     )
     db.commit()
@@ -99,6 +102,9 @@ def update_supplier(
             address=payload.address,
             notes=payload.notes,
             status=payload.status,
+            tax_id=payload.tax_id,
+            payment_terms_days=payload.payment_terms_days,
+            default_currency=payload.default_currency,
         )
     )
     db.commit()

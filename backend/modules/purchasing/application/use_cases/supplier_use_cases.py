@@ -27,6 +27,9 @@ class CreateSupplierUseCase:
             email=data.email,
             address=data.address,
             notes=data.notes,
+            tax_id=data.tax_id,
+            payment_terms_days=data.payment_terms_days,
+            default_currency=data.default_currency.upper(),
             created_by=data.actor_user_id,
         )
         self.suppliers.add(supplier)
@@ -81,6 +84,12 @@ class UpdateSupplierUseCase:
             if data.status not in VALID_SUPPLIER_STATUSES:
                 raise ValueError(f"status must be one of {sorted(VALID_SUPPLIER_STATUSES)}")
             supplier.status = data.status
+        if data.tax_id is not None:
+            supplier.tax_id = data.tax_id
+        if data.payment_terms_days is not None:
+            supplier.payment_terms_days = data.payment_terms_days
+        if data.default_currency is not None:
+            supplier.default_currency = data.default_currency.upper()
 
         record_audit(
             self.db,

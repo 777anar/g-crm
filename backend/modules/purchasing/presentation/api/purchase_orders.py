@@ -4,7 +4,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from core.api.errors import BusinessRuleViolationError, NotFoundError
+from core.api.errors import BusinessRuleViolationError, ForbiddenError, NotFoundError
+from core.rbac.permissions import role_has_permission
 from core.api.pagination import decode_cursor, encode_cursor
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, require_permission
@@ -170,6 +171,12 @@ def update_purchase_order_status(
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_permission("purchasing:purchase_orders:write")),
 ) -> PurchaseOrderOut:
+    if payload.status in {"approved", "rejected"} and not role_has_permission(
+        role=current_user.role,
+        permission="purchasing:purchase_orders:approve",
+        module_permission_overrides=current_user.module_permissions,
+    ):
+        raise ForbiddenError("Purchase order approval requires manager permission")
     uc = UpdatePurchaseOrderStatusUseCase(db)
     try:
         purchase_order = uc.execute(
@@ -178,7 +185,8 @@ def update_purchase_order_status(
                 actor_user_id=current_user.user_id,
                 purchase_order_id=purchase_order_id,
                 status=payload.status,
-                cancelled_reason=payload.cancelled_reason,
+            cancelled_reason=payload.cancelled_reason,
+            approval_notes=payload.approval_notes,
             )
         )
     except _BUSINESS_RULE_ERRORS as exc:

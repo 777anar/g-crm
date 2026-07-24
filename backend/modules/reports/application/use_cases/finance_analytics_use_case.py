@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 
 from modules.reports.application.dtos import ReportFilterInput
 from modules.reports.infrastructure.repositories.reports_repository import ReportsRepository
+from modules.purchasing.infrastructure.models.purchase_order import PurchaseOrder
+from sqlalchemy import select
 
 
 class FinanceAnalyticsUseCase:
@@ -41,6 +43,15 @@ class FinanceAnalyticsUseCase:
         for o in orders:
             by_currency[o.currency] += o.total_final
 
+        purchase_orders = list(self.repo.db.scalars(select(PurchaseOrder).where(
+            PurchaseOrder.company_id == company_id,
+            PurchaseOrder.created_at >= dr.date_from,
+            PurchaseOrder.created_at <= dr.date_to,
+        )).all())
+        purchase_cost = sum((Decimal(p.total_amount) for p in purchase_orders if p.status != "cancelled"), Decimal("0"))
+        supplier_payments = sum((Decimal(p.amount_paid) for p in purchase_orders if p.status != "cancelled"), Decimal("0"))
+        supplier_payables = purchase_cost - supplier_payments
+
         return {
             "date_from": dr.date_from,
             "date_to": dr.date_to,
@@ -53,6 +64,9 @@ class FinanceAnalyticsUseCase:
                 "pipeline_value": pipeline_value,
                 "cancelled_value": cancelled_value,
                 "orders_count": len(orders),
+                "purchase_cost": purchase_cost,
+                "supplier_payments": supplier_payments,
+                "supplier_payables": supplier_payables,
             },
             "monthly_trend": [
                 {

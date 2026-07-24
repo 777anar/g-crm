@@ -11,9 +11,12 @@ import {
   receivePurchaseOrderLine,
   updatePurchaseOrder,
   updatePurchaseOrderStatus,
+  updatePurchasePayment,
+  listPurchaseAttachments,
+  uploadPurchaseDocument,
 } from "@/lib/api/purchasing";
 import { listWarehouses } from "@/lib/api/catalog";
-import type { GoodsReceipt, PurchaseOrder, PurchaseOrderLine, Warehouse } from "@/lib/types";
+import type { GoodsReceipt, PurchaseAttachment, PurchaseOrder, PurchaseOrderLine, Warehouse } from "@/lib/types";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -26,7 +29,10 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { usePermission } from "@/lib/permissions";
 
 const MANUAL_NEXT_STATUS: Record<string, string | null> = {
-  draft: "sent",
+  draft: "pending_approval",
+  pending_approval: "approved",
+  approved: "sent",
+  rejected: "draft",
   sent: "confirmed",
   confirmed: null,
   partially_received: null,
@@ -43,11 +49,15 @@ export default function PurchaseOrderDetailPage() {
   const tNav = useTranslations("nav");
   const toast = useToast();
   const canWrite = usePermission("purchasing:purchase_orders:write");
+  const canApprove = usePermission("purchasing:purchase_orders:approve");
+  const canManagePayments = usePermission("purchasing:payments:write");
 
   const [order, setOrder] = useState<PurchaseOrder | null>(null);
   const [supplierName, setSupplierName] = useState<string | null>(null);
   const [lines, setLines] = useState<PurchaseOrderLine[] | null>(null);
   const [receipts, setReceipts] = useState<GoodsReceipt[] | null>(null);
+  const [attachments, setAttachments] = useState<PurchaseAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [transitioning, setTransitioning] = useState(false);
@@ -57,6 +67,8 @@ export default function PurchaseOrderDetailPage() {
   const [notes, setNotes] = useState("");
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
   const [savingDetails, setSavingDetails] = useState(false);
+  const [amountPaid, setAmountPaid] = useState("");
+  const [paymentDueDate, setPaymentDueDate] = useState("");
 
   const [receivingLineId, setReceivingLineId] = useState<string | null>(null);
   const [receiveQty, setReceiveQty] = useState("");
@@ -75,9 +87,12 @@ export default function PurchaseOrderDetailPage() {
     setOrder(o);
     setNotes(o.notes ?? "");
     setExpectedDeliveryDate(o.expected_delivery_date ?? "");
+    setAmountPaid(o.amount_paid);
+    setPaymentDueDate(o.payment_due_date ?? "");
     getSupplier(o.supplier_id).then((s) => setSupplierName(s.name)).catch(() => {});
     setLines(linesRes.items);
     setReceipts(receiptsRes.items);
+    listPurchaseAttachments("purchase_order",id).then(setAttachments).catch(()=>{});
     setLoading(false);
   }, [id]);
 
@@ -89,7 +104,7 @@ export default function PurchaseOrderDetailPage() {
   async function handleAdvance() {
     if (!order) return;
     const next = MANUAL_NEXT_STATUS[order.status];
-    if (!next) return;
+    if (!next || ((next === "approved" || next === "rejected") && !canApprove)) return;
     setTransitioning(true);
     try {
       await updatePurchaseOrderStatus(id, next);
@@ -101,6 +116,9 @@ export default function PurchaseOrderDetailPage() {
       setTransitioning(false);
     }
   }
+
+  async function handlePayment(){try{await updatePurchasePayment(id,amountPaid,paymentDueDate||undefined);toast.success(t("paymentUpdated"));await reload()}catch(err){toast.error(err instanceof ApiRequestError?err.message:tCommon("actionFailed"))}}
+  async function handleFile(file:File){setUploading(true);try{await uploadPurchaseDocument("purchase_order",id,file);toast.success(t("attachmentAdded"));await reload()}catch(err){toast.error(err instanceof Error?err.message:tCommon("actionFailed"))}finally{setUploading(false)}}
 
   async function handleCancel() {
     setTransitioning(true);
@@ -182,7 +200,7 @@ export default function PurchaseOrderDetailPage() {
         </div>
         {canWrite && !isTerminal && (
           <div className="flex gap-2">
-            {nextStatus && (
+            {nextStatus && (!(["approved","rejected"].includes(nextStatus)) || canApprove) && (
               <Button onClick={handleAdvance} disabled={transitioning}>
                 {transitioning ? t("saving") : `→ ${t(nextStatus as Parameters<typeof t>[0])}`}
               </Button>
@@ -241,6 +259,14 @@ export default function PurchaseOrderDetailPage() {
           </div>
         )}
       </Card>
+
+      <Card>
+        <CardHeader title={t("supplierPayment")} />
+        <div className="grid gap-3 sm:grid-cols-3"><TextField label={t("amountPaid")} type="number" value={amountPaid} onChange={e=>setAmountPaid(e.target.value)} disabled={!canManagePayments}/><TextField label={t("paymentDueDate")} type="date" value={paymentDueDate} onChange={e=>setPaymentDueDate(e.target.value)} disabled={!canManagePayments}/><div className="flex items-end">{canManagePayments&&<Button onClick={handlePayment}>{t("updatePayment")}</Button>}</div></div>
+        <p className="mt-2 text-sm text-text-secondary">{t("paymentStatus")}: {t(order.payment_status)}</p>
+      </Card>
+
+      <Card><CardHeader title={t("attachments")}/><div className="space-y-2">{attachments.map(a=><p key={a.id} className="text-sm text-text-secondary">{a.label??a.document_id}</p>)}</div>{canWrite&&<label className="mt-3 inline-flex cursor-pointer rounded-md border border-border px-3 py-2 text-sm"><input className="sr-only" type="file" disabled={uploading} onChange={e=>{const f=e.target.files?.[0];if(f)handleFile(f)}}/>{uploading?t("uploading"):t("addAttachment")}</label>}</Card>
 
       <Card className="p-0 overflow-hidden">
         <div className="border-b border-border bg-bg px-4 py-2 text-sm font-medium text-text-secondary">

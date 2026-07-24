@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.41.0] — 2026-07-24 — Purchasing Production Completion
+
+### Added
+- Complete supplier profiles with normalized contacts, tax/payment terms, supplier KPIs, search, status management and CSV export.
+- Request-for-quotation workflow with line pricing, supplier responses, status tracking and conversion to a linked purchase order.
+- Manager approval workflow before supplier dispatch, warehouse-linked receiving, returns, payment tracking, attachments and procurement dashboards.
+- Full AZ/RU/EN purchasing UI and end-to-end coverage for the completed lifecycle.
+
+### Changed
+- Purchase orders now require approval before being sent; receipts retain warehouse identity and returned quantity.
+
+---
+
 ## [2.40.0] — 2026-07-24 — Phase 21: Real AI Provider Integration
 
 Closes `MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 21 — the AI Sales Assistant (Phase 5, Version 2.8) was deliberately built provider-agnostic with every provider name resolving to a deterministic mock; this phase is the follow-through, mirroring exactly how Phase 7 followed Phase 4 for Communication.

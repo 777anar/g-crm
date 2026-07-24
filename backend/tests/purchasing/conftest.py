@@ -105,7 +105,7 @@ def confirmed_po(app_client, owner_headers, supplier, material):
             ],
         },
     ).json()
-    for status in ("sent", "confirmed"):
+    for status in ("pending_approval", "approved", "sent", "confirmed"):
         resp = app_client.post(
             f"/api/v1/purchasing/purchase-orders/{po['id']}/status", headers=owner_headers, json={"status": status}
         )

@@ -3,4 +3,13 @@ PURCHASING_PERMISSIONS = [
     "purchasing:suppliers:write",
     "purchasing:purchase_orders:read",
     "purchasing:purchase_orders:write",
+    "purchasing:purchase_orders:approve",
+    "purchasing:rfqs:read",
+    "purchasing:rfqs:write",
+    "purchasing:receiving:write",
+    "purchasing:returns:read",
+    "purchasing:returns:write",
+    "purchasing:payments:read",
+    "purchasing:payments:write",
+    "purchasing:reports:read",
 ]

@@ -3,5 +3,10 @@ from modules.purchasing.infrastructure.models.purchase_order import PurchaseOrde
 from modules.purchasing.infrastructure.models.purchase_order_line import PurchaseOrderLine
 from modules.purchasing.infrastructure.models.purchase_order_number_sequence import PurchaseOrderNumberSequence
 from modules.purchasing.infrastructure.models.supplier import Supplier
+from modules.purchasing.infrastructure.models.procurement import (
+    PurchaseAttachment, PurchaseReturn, PurchaseReturnLine, PurchaseRFQ, PurchaseRFQLine, SupplierContact,
+)
 
-__all__ = ["GoodsReceipt", "PurchaseOrder", "PurchaseOrderLine", "PurchaseOrderNumberSequence", "Supplier"]
+__all__ = ["GoodsReceipt", "PurchaseOrder", "PurchaseOrderLine", "PurchaseOrderNumberSequence", "Supplier",
+           "SupplierContact", "PurchaseRFQ", "PurchaseRFQLine", "PurchaseReturn", "PurchaseReturnLine",
+           "PurchaseAttachment"]

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { PurchasingTabs } from "@/components/purchasing-tabs";
 import { createPurchaseOrder } from "@/lib/api/purchasing";
 import { listSuppliers } from "@/lib/api/purchasing";
 import { listBrands, listMaterials } from "@/lib/api/catalog";
@@ -116,6 +117,7 @@ export default function NewPurchaseOrderPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <PurchasingTabs />
       <div>
         <h1 className="text-xl font-semibold text-text-primary">{t("createOrder")}</h1>
         <p className="text-sm text-text-secondary">{t("createOrderSubtitle")}</p>

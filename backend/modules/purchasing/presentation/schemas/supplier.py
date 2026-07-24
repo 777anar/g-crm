@@ -14,6 +14,9 @@ class SupplierCreate(BaseModel):
     email: Optional[str] = None
     address: Optional[str] = None
     notes: Optional[str] = None
+    tax_id: Optional[str] = None
+    payment_terms_days: int = Field(default=30, ge=0, le=365)
+    default_currency: str = Field(default="AZN", min_length=3, max_length=3)
 
 
 class SupplierUpdate(BaseModel):
@@ -24,6 +27,9 @@ class SupplierUpdate(BaseModel):
     address: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = Field(default=None)
+    tax_id: Optional[str] = None
+    payment_terms_days: Optional[int] = Field(default=None, ge=0, le=365)
+    default_currency: Optional[str] = Field(default=None, min_length=3, max_length=3)
 
     def model_post_init(self, __context) -> None:
         if self.status is not None and self.status not in VALID_SUPPLIER_STATUSES:
@@ -45,6 +51,10 @@ class SupplierOut(BaseModel):
     created_by: Optional[uuid.UUID]
     created_at: datetime
     updated_at: datetime
+    tax_id: Optional[str]
+    payment_terms_days: int
+    default_currency: str
+    rating: float
 
 
 class SupplierListOut(BaseModel):

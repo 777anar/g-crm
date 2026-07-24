@@ -829,6 +829,7 @@
     "reservationStatus_consumed": "İstifadə edilib"
   },
   "reports": {
+    "kpiPurchaseCost": "Satınalma xərci", "kpiSupplierPayments": "Təchizatçı ödənişləri", "kpiSupplierPayables": "Təchizatçı borcları",
     "title": "Hesabatlar",
     "subtitle": "Satış prosesindən mənfəətə qədər bütün modullar üzrə analitika.",
     "tabExecutive": "İcra Paneli",
@@ -1144,6 +1145,16 @@
     "printInvoice": "Çap et"
   },
   "purchasing": {
+    "taxId": "VÖEN", "paymentTermsDays": "Ödəniş müddəti (gün)",
+    "recordQuote": "Təklifi qeydə al", "attachments": "Sənədlər", "addAttachment": "Sənəd əlavə et", "attachmentAdded": "Sənəd əlavə edildi", "uploading": "Yüklənir…",
+    "tabDashboard": "İcmal", "tabRfqs": "Qiymət sorğuları", "tabReturns": "Qaytarmalar",
+    "dashboardTitle": "Satınalma icmalı", "dashboardSubtitle": "Təchizatçı, təsdiq, qəbul və ödəniş fəaliyyəti",
+    "activeSuppliers": "Aktiv təchizatçılar", "openRfqs": "Açıq qiymət sorğuları", "pendingApprovals": "Təsdiq gözləyənlər", "outstandingPayables": "Ödənilməmiş borclar", "recentOrders": "Son satınalma sifarişləri",
+    "rfqsTitle": "Qiymət təklifləri sorğusu", "rfqsSubtitle": "Təchizatçı qiymətlərini sorğulayın, müqayisə edin və qəbul edin", "createRfq": "Qiymət sorğusu yarat", "rfqCreated": "Qiymət sorğusu yaradıldı", "responseDueDate": "Cavab müddəti", "quotedUnitCost": "Təklif olunan vahid qiyməti", "noRfqs": "Qiymət sorğusu yoxdur", "noRfqsDesc": "Təchizatçı sifarişindən əvvəl qiymət sorğusu yaradın.", "rfqNumber": "Sorğu nömrəsi", "send": "Göndər", "convertToOrder": "Satınalma sifarişinə çevir",
+    "returnsTitle": "Satınalma qaytarmaları", "returnsSubtitle": "Qəbul edilmiş malları qaytarın və anbar qalığını yeniləyin", "createReturn": "Qaytarma yarat", "completeReturn": "Qaytarmanı tamamla", "purchaseOrder": "Satınalma sifarişi", "returnReason": "Qaytarma səbəbi", "returnNumber": "Qaytarma nömrəsi",
+    "supplierContacts": "Təchizatçı əlaqələri", "primary": "Əsas", "addContact": "Əlaqə əlavə et", "remove": "Sil", "totalSpend": "Ümumi xərc", "fillRate": "Təminat faizi", "onTimeRate": "Vaxtında çatdırılma", "noTaxId": "VÖEN yoxdur", "days": "gün", "loading": "Yüklənir…",
+    "supplierPayment": "Təchizatçı ödənişi", "amountPaid": "Ödənilən məbləğ", "paymentDueDate": "Ödəniş tarixi", "updatePayment": "Ödənişi yenilə", "paymentUpdated": "Ödəniş yeniləndi", "paymentStatus": "Ödəniş statusu", "unpaid": "Ödənilməyib", "partially_paid": "Qismən ödənilib", "paid": "Ödənilib", "overdue": "Gecikib",
+    "pending_approval": "Təsdiq gözləyir", "approved": "Təsdiqlənib", "rejected": "Rədd edilib", "quoted": "Qiymət verilib", "accepted": "Qəbul edilib", "submitted": "Təqdim edilib", "completed": "Tamamlanıb",
     "loadFailed": "Yüklənmə uğursuz oldu",
     "updateFailed": "Yenilənmə uğursuz oldu",
     "createFailed": "Yaratma uğursuz oldu",

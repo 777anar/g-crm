@@ -503,6 +503,25 @@ All endpoints publish a corresponding analysis-complete event (`LeadAnalyzed`, `
 
 ## 20. Purchasing Module Endpoints (`/api/v1/purchasing/...`, Version 2.31.0)
 
+Version 2.41 completes the procurement lifecycle. All resources are tenant-scoped and all writes are audited and event-published.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET/POST | `/suppliers/{id}/contacts` | Supplier contacts |
+| DELETE | `/suppliers/{id}/contacts/{contact_id}` | Remove contact |
+| GET | `/suppliers/{id}/metrics` | Performance and payable metrics |
+| GET/POST | `/rfqs` | Search/list or create RFQs |
+| GET/POST | `/rfqs/{id}` / `/rfqs/{id}/status` | Read or advance an RFQ |
+| POST | `/rfqs/{id}/convert` | Convert quoted RFQ to a linked PO |
+| POST | `/purchase-orders/{id}/payment` | Track supplier payment |
+| GET/POST | `/returns` | Purchase returns |
+| POST | `/returns/{id}/complete` | Complete return and synchronize stock |
+| GET/POST | `/attachments` | Purchasing document associations |
+| GET | `/dashboard` | Purchasing work queue and KPIs |
+| GET | `/export/{resource}` | UTF-8 CSV export |
+
+PO lifecycle: `draft → pending_approval → approved → sent → confirmed → partially_received/received`. Receiving states are computed from line quantities.
+
 Suppliers and purchase orders, closing the restocking loop for the Stone Catalog. `depends_on=["catalog"]` — a Purchase Order line optionally references a `catalog_materials` row, and receiving against a line can create a real `catalog_slabs` row (reusing Catalog's own `CreateSlabUseCase`, the same cross-module-reuse pattern Production uses for slab status changes).
 
 ### Suppliers

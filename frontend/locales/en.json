@@ -831,6 +831,7 @@
     "reservationStatus_consumed": "Consumed"
   },
   "reports": {
+    "kpiPurchaseCost": "Purchasing Cost", "kpiSupplierPayments": "Supplier Payments", "kpiSupplierPayables": "Supplier Payables",
     "title": "Reports",
     "subtitle": "Cross-module analytics for the business, from pipeline to profit.",
     "tabExecutive": "Executive Dashboard",
@@ -1146,6 +1147,16 @@
     "printInvoice": "Print"
   },
   "purchasing": {
+    "taxId": "Tax ID", "paymentTermsDays": "Payment Terms (days)",
+    "recordQuote": "Record Quote", "attachments": "Attachments", "addAttachment": "Add Attachment", "attachmentAdded": "Attachment added", "uploading": "Uploading…",
+    "tabDashboard": "Overview", "tabRfqs": "RFQs", "tabReturns": "Returns",
+    "dashboardTitle": "Purchasing Overview", "dashboardSubtitle": "Supplier, approval, receiving and payable activity",
+    "activeSuppliers": "Active Suppliers", "openRfqs": "Open RFQs", "pendingApprovals": "Pending Approvals", "outstandingPayables": "Outstanding Payables", "recentOrders": "Recent Purchase Orders",
+    "rfqsTitle": "Requests for Quotation", "rfqsSubtitle": "Request, compare and accept supplier quotations", "createRfq": "Create RFQ", "rfqCreated": "RFQ created", "responseDueDate": "Response Due Date", "quotedUnitCost": "Quoted Unit Cost", "noRfqs": "No RFQs yet", "noRfqsDesc": "Create an RFQ before committing to a supplier order.", "rfqNumber": "RFQ Number", "send": "Send", "convertToOrder": "Convert to Purchase Order",
+    "returnsTitle": "Purchase Returns", "returnsSubtitle": "Return received goods and synchronize warehouse stock", "createReturn": "Create Return", "completeReturn": "Complete Return", "purchaseOrder": "Purchase Order", "returnReason": "Return Reason", "returnNumber": "Return Number",
+    "supplierContacts": "Supplier Contacts", "primary": "Primary", "addContact": "Add Contact", "remove": "Remove", "totalSpend": "Total Spend", "fillRate": "Fill Rate", "onTimeRate": "On-time Delivery", "noTaxId": "No tax ID", "days": "days", "loading": "Loading…",
+    "supplierPayment": "Supplier Payment", "amountPaid": "Amount Paid", "paymentDueDate": "Payment Due Date", "updatePayment": "Update Payment", "paymentUpdated": "Payment updated", "paymentStatus": "Payment Status", "unpaid": "Unpaid", "partially_paid": "Partially Paid", "paid": "Paid", "overdue": "Overdue",
+    "pending_approval": "Pending Approval", "approved": "Approved", "rejected": "Rejected", "quoted": "Quoted", "accepted": "Accepted", "submitted": "Submitted", "completed": "Completed",
     "loadFailed": "Failed to load",
     "updateFailed": "Failed to update",
     "createFailed": "Failed to create",

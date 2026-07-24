@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.db.base import Base
@@ -25,3 +25,7 @@ class Supplier(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String, nullable=False, default=DEFAULT_SUPPLIER_STATUS, index=True)
 
     created_by: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
+    tax_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    payment_terms_days: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    default_currency: Mapped[str] = mapped_column(String(3), nullable=False, default="AZN")
+    rating: Mapped[str] = mapped_column(Numeric(3, 2), nullable=False, default=0)

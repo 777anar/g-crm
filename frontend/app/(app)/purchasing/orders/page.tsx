@@ -4,12 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { getSupplier, listPurchaseOrders } from "@/lib/api/purchasing";
+import { getSupplier, listPurchaseOrders, purchasingExportUrl } from "@/lib/api/purchasing";
 import { PURCHASE_ORDER_STATUSES, type PurchaseOrder } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { PurchaseOrderStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SectionTabs } from "@/components/ui/section-tabs";
+import { PurchasingTabs } from "@/components/purchasing-tabs";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
 import { SortableHeader } from "@/components/ui/sortable-header";
@@ -68,12 +68,7 @@ export default function PurchaseOrdersPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <SectionTabs
-        items={[
-          { label: t("tabSuppliers"), href: "/purchasing/suppliers" },
-          { label: t("tabPurchaseOrders"), href: "/purchasing/orders" },
-        ]}
-      />
+      <PurchasingTabs />
 
       <div className="flex items-center justify-between">
         <div>
@@ -85,6 +80,7 @@ export default function PurchaseOrdersPage() {
             <Button>{t("createOrder")}</Button>
           </Link>
         )}
+        <a href={purchasingExportUrl("purchase-orders")}><Button variant="secondary">CSV</Button></a>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

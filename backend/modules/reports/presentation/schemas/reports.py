@@ -152,6 +152,9 @@ class FinanceKpis(BaseModel):
     pipeline_value: Decimal
     cancelled_value: Decimal
     orders_count: int
+    purchase_cost: Decimal
+    supplier_payments: Decimal
+    supplier_payables: Decimal
 
 
 class FinanceMonthlyPoint(BaseModel):

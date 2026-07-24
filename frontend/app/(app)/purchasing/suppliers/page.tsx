@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { createSupplier, listSuppliers, updateSupplier } from "@/lib/api/purchasing";
+import Link from "next/link";
+import { createSupplier, listSuppliers, purchasingExportUrl, updateSupplier } from "@/lib/api/purchasing";
 import type { Supplier } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EntityStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TextField } from "@/components/ui/field";
-import { SectionTabs } from "@/components/ui/section-tabs";
+import { PurchasingTabs } from "@/components/purchasing-tabs";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { stickyTheadClass, tableScrollShellClass } from "@/components/ui/data-table";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
@@ -34,6 +35,8 @@ export default function SuppliersPage() {
   const [contactName, setContactName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [paymentTerms, setPaymentTerms] = useState("30");
   const [submitting, setSubmitting] = useState(false);
 
   const reload = useCallback(
@@ -85,11 +88,15 @@ export default function SuppliersPage() {
         contact_name: contactName || undefined,
         phone: phone || undefined,
         email: email || undefined,
+        tax_id: taxId || undefined,
+        payment_terms_days: Number(paymentTerms),
       });
       setName("");
       setContactName("");
       setPhone("");
       setEmail("");
+      setTaxId("");
+      setPaymentTerms("30");
       await reload();
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("createFailed"));
@@ -100,17 +107,13 @@ export default function SuppliersPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <SectionTabs
-        items={[
-          { label: t("tabSuppliers"), href: "/purchasing/suppliers" },
-          { label: t("tabPurchaseOrders"), href: "/purchasing/orders" },
-        ]}
-      />
+      <PurchasingTabs />
 
       <div>
         <h1 className="text-xl font-semibold text-text-primary">{t("suppliersTitle")}</h1>
         <p className="text-sm text-text-secondary">{t("suppliersSubtitle")}</p>
       </div>
+      <div><a href={purchasingExportUrl("suppliers")}><Button variant="secondary">CSV</Button></a></div>
 
       {canWrite && (
       <Card>
@@ -126,6 +129,8 @@ export default function SuppliersPage() {
           <TextField label={t("contactName")} value={contactName} onChange={(e) => setContactName(e.target.value)} />
           <TextField label={t("phone")} value={phone} onChange={(e) => setPhone(e.target.value)} />
           <TextField label={t("email")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <TextField label={t("taxId")} value={taxId} onChange={(e) => setTaxId(e.target.value)} />
+          <TextField label={t("paymentTermsDays")} type="number" min="0" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} />
           <div className="flex items-end lg:col-span-4">
             <Button type="submit" disabled={submitting || !name}>
               {submitting ? t("creating") : t("createSupplier")}
@@ -169,7 +174,7 @@ export default function SuppliersPage() {
               <tbody>
                 {suppliers.map((supplier) => (
                   <tr key={supplier.id} className="border-b border-border last:border-0 hover:bg-bg">
-                    <td className="px-4 py-2 font-medium text-text-primary">{supplier.name}</td>
+                    <td className="px-4 py-2 font-medium text-text-primary"><Link className="hover:text-primary" href={`/purchasing/suppliers/${supplier.id}`}>{supplier.name}</Link></td>
                     <td className="px-4 py-2 text-text-secondary">{supplier.contact_name ?? tCommon("dash")}</td>
                     <td className="px-4 py-2 text-text-secondary">{supplier.phone ?? tCommon("dash")}</td>
                     <td className="px-4 py-2 text-text-secondary">{supplier.email ?? tCommon("dash")}</td>

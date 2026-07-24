@@ -71,7 +71,8 @@ def test_update_purchase_order_only_while_draft(app_client, owner_headers, suppl
     assert ok.status_code == 200
     assert ok.json()["notes"] == "urgent"
 
-    app_client.post(f"/api/v1/purchasing/purchase-orders/{po['id']}/status", headers=owner_headers, json={"status": "sent"})
+    for status in ("pending_approval", "approved", "sent"):
+        app_client.post(f"/api/v1/purchasing/purchase-orders/{po['id']}/status", headers=owner_headers, json={"status": status})
     blocked = app_client.patch(
         f"/api/v1/purchasing/purchase-orders/{po['id']}", headers=owner_headers, json={"notes": "too late"}
     )
@@ -97,9 +98,10 @@ def test_purchase_order_status_transitions(app_client, owner_headers, supplier):
     )
     assert not_manual.status_code == 400, not_manual.text
 
-    sent = app_client.post(
-        f"/api/v1/purchasing/purchase-orders/{po['id']}/status", headers=owner_headers, json={"status": "sent"}
-    )
+    for status in ("pending_approval", "approved"):
+        response = app_client.post(f"/api/v1/purchasing/purchase-orders/{po['id']}/status", headers=owner_headers, json={"status": status})
+        assert response.status_code == 200, response.text
+    sent = app_client.post(f"/api/v1/purchasing/purchase-orders/{po['id']}/status", headers=owner_headers, json={"status": "sent"})
     assert sent.status_code == 200
     assert sent.json()["status"] == "sent"
 
@@ -215,7 +217,7 @@ def test_receive_with_slab_details_but_no_material_on_line_rejected(app_client, 
         headers=owner_headers,
         json={"supplier_id": supplier["id"], "lines": [{"description": "Delivery fee", "quantity": "1", "unit_cost": "50"}]},
     ).json()
-    for status in ("sent", "confirmed"):
+    for status in ("pending_approval", "approved", "sent", "confirmed"):
         app_client.post(f"/api/v1/purchasing/purchase-orders/{po['id']}/status", headers=owner_headers, json={"status": status})
     line_id = app_client.get(f"/api/v1/purchasing/purchase-orders/{po['id']}/lines", headers=owner_headers).json()["items"][0]["id"]
 

@@ -30,3 +30,10 @@ class PurchaseOrder(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     cancelled_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     created_by: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
+    approved_by: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[str]] = mapped_column(DateTime(timezone=True), nullable=True)
+    approval_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    payment_status: Mapped[str] = mapped_column(String(30), nullable=False, default="unpaid", index=True)
+    amount_paid: Mapped[str] = mapped_column(Numeric(14, 2), nullable=False, default=0)
+    payment_due_date: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    rfq_id: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("purchase_rfqs.id"), nullable=True, index=True)

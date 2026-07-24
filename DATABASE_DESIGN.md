@@ -699,6 +699,8 @@ One row per provider call attempt — mock or real, successful or rejected/faile
 
 ## 13. Purchasing Module Tables (Version 2.31.0)
 
+Version 2.41 adds `supplier_contacts`, `purchase_rfqs`, `purchase_rfq_lines`, `purchase_returns`, `purchase_return_lines`, and `purchase_attachments`. Purchase orders retain approval, RFQ and payment fields; goods receipts retain warehouse, receipt-number and returned-quantity fields; suppliers retain tax/payment defaults. Receiving creates Catalog slab inventory where applicable, while completed returns remove the returned slab from available stock.
+
 _Suppliers and purchase orders, closing the restocking loop for the Stone Catalog — the inverse of Production's slab-consumption flow (§8.2). Receiving against a line optionally creates a real `catalog_slabs` row via the same `CreateSlabUseCase` Catalog itself uses, rather than duplicating slab-creation logic._
 
 ### 13.1 `suppliers`

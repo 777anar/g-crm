@@ -829,6 +829,7 @@
     "reservationStatus_consumed": "Использовано"
   },
   "reports": {
+    "kpiPurchaseCost": "Стоимость закупок", "kpiSupplierPayments": "Платежи поставщикам", "kpiSupplierPayables": "Долги поставщикам",
     "title": "Отчёты",
     "subtitle": "Межмодульная аналитика бизнеса — от воронки продаж до прибыли.",
     "tabExecutive": "Executive-панель",
@@ -1144,6 +1145,16 @@
     "printInvoice": "Печать"
   },
   "purchasing": {
+    "taxId": "Налоговый номер", "paymentTermsDays": "Срок оплаты (дни)",
+    "recordQuote": "Записать предложение", "attachments": "Документы", "addAttachment": "Добавить документ", "attachmentAdded": "Документ добавлен", "uploading": "Загрузка…",
+    "tabDashboard": "Обзор", "tabRfqs": "Запросы цен", "tabReturns": "Возвраты",
+    "dashboardTitle": "Обзор закупок", "dashboardSubtitle": "Поставщики, согласования, приемка и платежи",
+    "activeSuppliers": "Активные поставщики", "openRfqs": "Открытые запросы цен", "pendingApprovals": "Ожидают согласования", "outstandingPayables": "Задолженность поставщикам", "recentOrders": "Последние заказы на закупку",
+    "rfqsTitle": "Запросы коммерческих предложений", "rfqsSubtitle": "Запрашивайте, сравнивайте и принимайте предложения поставщиков", "createRfq": "Создать запрос", "rfqCreated": "Запрос создан", "responseDueDate": "Срок ответа", "quotedUnitCost": "Предложенная цена за единицу", "noRfqs": "Запросов пока нет", "noRfqsDesc": "Создайте запрос цен до оформления заказа поставщику.", "rfqNumber": "Номер запроса", "send": "Отправить", "convertToOrder": "Преобразовать в заказ",
+    "returnsTitle": "Возвраты поставщикам", "returnsSubtitle": "Возвращайте принятые товары и синхронизируйте склад", "createReturn": "Создать возврат", "completeReturn": "Завершить возврат", "purchaseOrder": "Заказ на закупку", "returnReason": "Причина возврата", "returnNumber": "Номер возврата",
+    "supplierContacts": "Контакты поставщика", "primary": "Основной", "addContact": "Добавить контакт", "remove": "Удалить", "totalSpend": "Общие закупки", "fillRate": "Полнота поставки", "onTimeRate": "Поставка вовремя", "noTaxId": "Нет налогового номера", "days": "дней", "loading": "Загрузка…",
+    "supplierPayment": "Оплата поставщику", "amountPaid": "Оплачено", "paymentDueDate": "Срок оплаты", "updatePayment": "Обновить оплату", "paymentUpdated": "Оплата обновлена", "paymentStatus": "Статус оплаты", "unpaid": "Не оплачено", "partially_paid": "Частично оплачено", "paid": "Оплачено", "overdue": "Просрочено",
+    "pending_approval": "Ожидает согласования", "approved": "Согласован", "rejected": "Отклонен", "quoted": "Предложение получено", "accepted": "Принято", "submitted": "Подано", "completed": "Завершено",
     "loadFailed": "Не удалось загрузить",
     "updateFailed": "Не удалось обновить",
     "createFailed": "Не удалось создать",
