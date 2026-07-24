@@ -50,3 +50,31 @@ class CreateExpenseInput(ActorContext):
     order_id: Optional[uuid.UUID] = None
     description: Optional[str] = None
     currency: str = "AZN"
+
+
+# ── Payment sessions (Phase 22) -- customer-initiated, no staff actor ───────
+
+
+@dataclass
+class CreatePaymentSessionInput:
+    company_id: uuid.UUID
+    customer_id: uuid.UUID
+    invoice_id: uuid.UUID
+    success_url: str
+    cancel_url: str
+    provider_name: Optional[str] = None
+
+
+@dataclass
+class SimulatePaymentSessionInput:
+    company_id: uuid.UUID
+    customer_id: uuid.UUID
+    session_id: uuid.UUID
+    outcome: str  # "completed" | "failed"
+
+
+@dataclass
+class HandlePaymentWebhookInput:
+    raw_body: bytes
+    signature_header: str
+    provider_name: str

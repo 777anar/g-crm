@@ -335,6 +335,22 @@ export function deleteProjectItemMeasurement(id: string) {
   return apiRequest<void>(`${BASE}/project-item-measurements/${id}`, { method: "DELETE" });
 }
 
+// ── E-signature integration (Phase 22) ──────────────────────────────────────
+
+export function requestMeasurementSignature(measurementId: string, provider?: string) {
+  return apiRequest<ProjectItemMeasurement>(`${BASE}/project-item-measurements/${measurementId}/request-signature`, {
+    method: "POST",
+    body: { provider },
+  });
+}
+
+export function simulateMeasurementSignature(measurementId: string, outcome: "completed" | "declined") {
+  return apiRequest<ProjectItemMeasurement>(`${BASE}/project-item-measurements/${measurementId}/simulate-signature`, {
+    method: "POST",
+    body: { outcome },
+  });
+}
+
 // ── Project Item Drawings ──────────────────────────────────────────────────────
 
 export function listProjectItemDrawings(itemId: string) {

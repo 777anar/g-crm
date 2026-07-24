@@ -70,6 +70,21 @@ class InstallationJobRepository:
         )
         return list(self.db.scalars(stmt).all())
 
+    def get_by_signature_provider_request_id(
+        self, *, provider: str, provider_request_id: str
+    ) -> Optional[InstallationJob]:
+        # Webhooks are public (no authenticated active-company context), so
+        # this is looked up across every company by the provider's own
+        # request id alone -- company_id is taken from the resolved row,
+        # never trusted from the request, mirroring Communication's
+        # identical `get_by_id_any_company` webhook lookup.
+        return self.db.scalar(
+            select(InstallationJob).where(
+                InstallationJob.signature_provider == provider,
+                InstallationJob.signature_provider_request_id == provider_request_id,
+            )
+        )
+
     def next_job_number(self, *, company_id: uuid.UUID, year: int) -> str:
         """Atomically increments the per-company-per-year counter and returns
         a formatted job number like 'INST-2026-0001'."""

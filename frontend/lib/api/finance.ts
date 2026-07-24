@@ -1,4 +1,4 @@
-import { apiRequest } from "../api-client";
+import { apiDownload, apiRequest } from "../api-client";
 import type { Expense, Invoice, InvoiceLine, Paginated, Payment } from "../types";
 
 const BASE = "/api/v1/finance";
@@ -105,4 +105,18 @@ export function createExpense(input: {
 
 export function getExpense(id: string) {
   return apiRequest<Expense>(`${BASE}/expenses/${id}`);
+}
+
+// ── Accounting/ERP export (Phase 22) ──────────────────────────────────────────
+
+export type FinanceExportResource = "invoices" | "payments" | "expenses" | "journal";
+
+export function exportFinanceData(
+  resource: FinanceExportResource,
+  params: { dateFrom?: string; dateTo?: string } = {}
+) {
+  return apiDownload(`${BASE}/export/${resource}`, {
+    searchParams: { date_from: params.dateFrom, date_to: params.dateTo },
+    filename: `${resource}.csv`,
+  });
 }

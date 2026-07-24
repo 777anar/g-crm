@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.43.0] — 2026-07-24 — Phase 22: Payments & Financial Ecosystem Integration
+
+Closes the last gap between "the system tracks financial state" and "the system participates in the financial transaction" — all three items `MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 22 named.
+
+### Added
+- **Online payment collection (Customer Portal)** — a new `PaymentGatewayProvider` abstraction (`modules/finance/infrastructure/providers/`) mirrors the `AIProvider`/`ChannelProvider` pattern: `MockPaymentGatewayProvider` (default, no credentials needed) and a real `StripeProvider` using the official `stripe` Python SDK's Checkout Sessions. `POST /customer_portal/me/invoices/{id}/pay` — the Customer Portal's first-ever write action — starts a hosted checkout for an invoice's full outstanding balance, tracked in a new `invoice_payment_sessions` table. The invoice's own balance is only ever moved by the existing, unchanged `RecordPaymentUseCase`, and only once a gateway webhook (`POST /finance/payments/webhooks/{provider}`, public + signature-verified, mirroring Communication's webhook convention) confirms the charge — never trusted from the browser's own success-redirect, since a closed tab or a forged URL could otherwise fake a completed payment. A mock-only `POST /me/payment-sessions/{id}/simulate` plus a new `/portal/pay/[sessionId]` page make the whole flow demoable with no real Stripe account; the portal invoice page gained a "Pay Now" button.
+- **Accounting/ERP export (Finance)** — `GET /finance/export/{invoices|payments|expenses|journal}` (CSV, matching Purchasing's existing `GET /export/{resource}` convention, new `finance:export:read` permission). The `journal` resource is a synthesized double-entry-style export (debit/credit rows for every Invoice/Payment/Expense) any accounting system a company reconciles against (1C and similar are the norm here) can import as journal entries, not just a raw table dump. New "Accounting Export" button group on `/finance/invoices`.
+- **E-signature integration** — a new `core/esignature/` provider library (`MockESignatureProvider` default, real `DropboxSignProvider` using the official `dropbox_sign` SDK) lives in core as cross-cutting infrastructure shared by two modules, exactly like `core/storage`'s Document client, and never imports either module. Sales' measurement sign-off (`POST /sales/project-item-measurements/{id}/request-signature`) and Installation's job-completion sign-off (`POST /installation/jobs/{id}/request-signature`) each gained three tracking columns (`signature_status`/`signature_provider`/`signature_provider_request_id`), a mock-only simulate endpoint, and a public signature-verified webhook. Completion lands in the exact same place the existing manual-upload path already used — `customer_signature_document_id` for a measurement, a `photo_type="signature"` `InstallationPhoto` for a job — so both paths coexist; the frontend's canvas `SignaturePad` and file-upload flows are unchanged and still available alongside "Request E-Signature."
+- Every webhook-originated write (a real payment or a real signature) is attributed to the underlying record's own `created_by` (`Invoice.created_by`, `ProjectItemMeasurement.created_by`, `InstallationJob.created_by`) for its audit-log entry, mirroring Communication's identical channel-webhook attribution guard — there's no authenticated staff user for an external provider's callback.
+- 38 new backend tests (`tests/core/test_esignature_provider.py`, `tests/finance/test_payment_sessions.py`, `tests/finance/test_export.py`, `tests/customer_portal/test_payments.py`, `tests/sales/test_measurement_signature.py`, `tests/installation/test_job_signature.py`).
+
+### Changed
+- `requirements.txt` gained `stripe` and `dropbox-sign` (official SDKs, matching the `anthropic` SDK precedent from Phase 21 rather than hand-rolled HTTP).
+
+### Verification
+Full backend suite passing (831/831 — 793 prior + 38 new), `lint-imports` clean, migration round-trip clean (`upgrade head` → `downgrade -1` → `upgrade head`, SQLite), frontend `tsc --noEmit` clean, `npm run lint` clean, frontend production build clean (67 routes, +1 new: `/portal/pay/[sessionId]`).
+
+---
+
 ## [2.42.0] — 2026-07-24 — Phase 21 Follow-Through: AI Draft Generation for Quotes & Communication
 
 Closes the two items `MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 21 entry named "deliberately out of scope this phase" — AI-drafted Quote line items and AI-drafted Communication Center reply drafts — behind the exact same `AIProvider` abstraction Phase 21 (v2.40.0) introduced. Not Phase 22: this is the same phase's own previously-deferred scope, completed on explicit request.

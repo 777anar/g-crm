@@ -50,6 +50,8 @@ class ProjectItemMeasurementOut(BaseModel):
     measured_at: Optional[date]
     notes: Optional[str]
     customer_signature_document_id: Optional[uuid.UUID]
+    signature_status: Optional[str] = None
+    signature_provider: Optional[str] = None
     created_by: Optional[uuid.UUID]
     created_at: datetime
     updated_at: datetime
@@ -59,3 +61,11 @@ class ProjectItemMeasurementOut(BaseModel):
 
 class ProjectItemMeasurementListOut(BaseModel):
     items: List[ProjectItemMeasurementOut]
+
+
+class RequestSignatureRequest(BaseModel):
+    provider: Optional[str] = None
+
+
+class SimulateSignatureRequest(BaseModel):
+    outcome: str  # "completed" | "declined"

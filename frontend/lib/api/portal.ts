@@ -6,6 +6,7 @@ import type {
   PortalInvoice,
   PortalMe,
   PortalOrder,
+  PortalPaymentSession,
   PortalQuote,
 } from "../types";
 
@@ -63,4 +64,24 @@ export function listPortalDocuments(params: { limit?: number; cursor?: string } 
 
 export function getPortalDocumentDownloadUrl(id: string) {
   return portalApiRequest<{ url: string }>(`${BASE}/me/documents/${id}/download`);
+}
+
+// ── Online payment collection (Phase 22) ─────────────────────────────────────
+
+export function createPortalPaymentSession(invoiceId: string, provider?: string) {
+  return portalApiRequest<PortalPaymentSession>(`${BASE}/me/invoices/${invoiceId}/pay`, {
+    method: "POST",
+    body: { provider },
+  });
+}
+
+export function getPortalPaymentSession(sessionId: string) {
+  return portalApiRequest<PortalPaymentSession>(`${BASE}/me/payment-sessions/${sessionId}`);
+}
+
+export function simulatePortalPaymentSession(sessionId: string, outcome: "completed" | "failed") {
+  return portalApiRequest<PortalPaymentSession>(`${BASE}/me/payment-sessions/${sessionId}/simulate`, {
+    method: "POST",
+    body: { outcome },
+  });
 }

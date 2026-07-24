@@ -103,3 +103,21 @@ VALID_EXPENSE_CATEGORIES = {
     EXPENSE_CATEGORY_RENT,
     EXPENSE_CATEGORY_OTHER,
 }
+
+# ── Payment sessions (Phase 22: online payment collection) ──────────────────
+# A session tracks one Customer-Portal-initiated checkout attempt against one
+# Invoice's full outstanding balance -- separate from `Payment` (which only
+# ever represents money actually received) so a customer abandoning checkout,
+# or a gateway reporting failure, never touches `Invoice.amount_paid`/status.
+
+PAYMENT_SESSION_STATUS_PENDING = "pending"
+PAYMENT_SESSION_STATUS_COMPLETED = "completed"
+PAYMENT_SESSION_STATUS_FAILED = "failed"
+
+VALID_PAYMENT_SESSION_STATUSES = {
+    PAYMENT_SESSION_STATUS_PENDING,
+    PAYMENT_SESSION_STATUS_COMPLETED,
+    PAYMENT_SESSION_STATUS_FAILED,
+}
+
+TERMINAL_PAYMENT_SESSION_STATUSES = {PAYMENT_SESSION_STATUS_COMPLETED, PAYMENT_SESSION_STATUS_FAILED}

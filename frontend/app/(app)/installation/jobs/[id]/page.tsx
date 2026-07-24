@@ -10,6 +10,8 @@ import {
   getInstallationJob,
   listCrews,
   listInstallationPhotos,
+  requestJobSignature,
+  simulateJobSignature,
   updateInstallationJob,
   updateInstallationJobStatus,
   uploadInstallationAsset,
@@ -181,6 +183,24 @@ export default function InstallationJobDetailPage() {
     }
   }
 
+  async function handleRequestSignature() {
+    try {
+      await requestJobSignature(id);
+      await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
+  }
+
+  async function handleSimulateSignature(outcome: "completed" | "declined") {
+    try {
+      await simulateJobSignature(id, outcome);
+      await reload();
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+    }
+  }
+
   if (loading || !job) return <TableSkeleton rows={5} columns={4} />;
 
   const isTerminal = job.status === "completed" || job.status === "cancelled";
@@ -233,8 +253,28 @@ export default function InstallationJobDetailPage() {
           {signature ? (
             <p className="mb-3 text-sm text-success">{t("signatureCaptured")}</p>
           ) : (
-            <div className="mb-3">
+            <div className="mb-3 flex flex-col gap-3">
               <SignaturePad onCapture={handleCaptureSignature} />
+              {!job.signature_status && (
+                <button onClick={handleRequestSignature} className="self-start text-sm text-primary hover:underline">
+                  {t("requestSignatureInstead")}
+                </button>
+              )}
+              {job.signature_status && (
+                <p className="text-sm text-text-secondary">
+                  {t(`signatureStatus_${job.signature_status}` as Parameters<typeof t>[0])}
+                </p>
+              )}
+              {job.signature_status === "sent" && job.signature_provider === "mock" && (
+                <div className="flex gap-2">
+                  <button onClick={() => handleSimulateSignature("completed")} className="text-sm text-success hover:underline">
+                    {t("simulateSigned")}
+                  </button>
+                  <button onClick={() => handleSimulateSignature("declined")} className="text-sm text-danger hover:underline">
+                    {t("simulateDeclined")}
+                  </button>
+                </div>
+              )}
             </div>
           )}
           <div className="flex gap-2">

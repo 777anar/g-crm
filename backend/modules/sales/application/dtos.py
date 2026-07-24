@@ -258,3 +258,23 @@ class AddProjectItemPhotoInput(ActorContext):
     document_id: uuid.UUID
     caption: Optional[str] = None
     sort_order: int = 0
+
+
+# ── E-signature integration (Phase 22) ──────────────────────────────────────
+
+@dataclass
+class RequestMeasurementSignatureInput(ActorContext):
+    measurement_id: uuid.UUID
+    provider_name: Optional[str] = None
+
+
+@dataclass
+class SimulateMeasurementSignatureInput(ActorContext):
+    measurement_id: uuid.UUID
+    outcome: str  # "completed" | "declined"
+
+
+@dataclass
+class HandleMeasurementSignatureWebhookInput:
+    payload: str
+    provider_name: str

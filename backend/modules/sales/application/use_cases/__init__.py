@@ -43,3 +43,8 @@ from modules.sales.application.use_cases.project_item_photo_use_cases import (
     AddProjectItemPhotoUseCase,
     DeleteProjectItemPhotoUseCase,
 )
+from modules.sales.application.use_cases.measurement_signature_use_cases import (
+    RequestMeasurementSignatureUseCase,
+    SimulateMeasurementSignatureUseCase,
+    HandleMeasurementSignatureWebhookUseCase,
+)

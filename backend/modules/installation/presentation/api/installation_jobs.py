@@ -4,19 +4,23 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from core.api.errors import BusinessRuleViolationError, NotFoundError
+from core.api.errors import BusinessRuleViolationError, NotFoundError, ValidationAPIError
 from core.api.pagination import decode_cursor, encode_cursor
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, require_permission
 from modules.installation.application.dtos import (
     AddInstallationPhotoInput,
     CreateInstallationJobInput,
+    RequestJobSignatureInput,
+    SimulateJobSignatureInput,
     UpdateInstallationJobInput,
     UpdateInstallationJobStatusInput,
 )
 from modules.installation.application.use_cases import (
     AddInstallationPhotoUseCase,
     CreateInstallationJobUseCase,
+    RequestJobSignatureUseCase,
+    SimulateJobSignatureUseCase,
     UpdateInstallationJobStatusUseCase,
     UpdateInstallationJobUseCase,
 )
@@ -41,6 +45,8 @@ from modules.installation.presentation.schemas.installation_job import (
     InstallationPhotoCreate,
     InstallationPhotoListOut,
     InstallationPhotoOut,
+    RequestJobSignatureRequest,
+    SimulateJobSignatureRequest,
 )
 
 router = APIRouter()
@@ -217,3 +223,49 @@ def add_installation_photo(
     )
     db.commit()
     return InstallationPhotoOut.model_validate(photo)
+
+
+# ── E-signature integration (Phase 22) ──────────────────────────────────────
+
+
+@router.post("/{job_id}/request-signature", response_model=InstallationJobOut)
+def request_job_signature(
+    job_id: uuid.UUID,
+    payload: RequestJobSignatureRequest,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("installation:write")),
+) -> InstallationJobOut:
+    job = RequestJobSignatureUseCase(db).execute(
+        RequestJobSignatureInput(
+            company_id=current_user.active_company_id,
+            actor_user_id=current_user.user_id,
+            job_id=job_id,
+            provider_name=payload.provider,
+        )
+    )
+    db.commit()
+    db.refresh(job)
+    return InstallationJobOut.model_validate(job)
+
+
+@router.post("/{job_id}/simulate-signature", response_model=InstallationJobOut)
+def simulate_job_signature(
+    job_id: uuid.UUID,
+    payload: SimulateJobSignatureRequest,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("installation:write")),
+) -> InstallationJobOut:
+    try:
+        job = SimulateJobSignatureUseCase(db).execute(
+            SimulateJobSignatureInput(
+                company_id=current_user.active_company_id,
+                actor_user_id=current_user.user_id,
+                job_id=job_id,
+                outcome=payload.outcome,
+            )
+        )
+    except ValueError as exc:
+        raise ValidationAPIError(str(exc)) from exc
+    db.commit()
+    db.refresh(job)
+    return InstallationJobOut.model_validate(job)

@@ -15,6 +15,11 @@ from modules.installation.application.use_cases.notification_use_cases import ( 
 from modules.installation.application.use_cases.photo_use_cases import (  # noqa: F401
     AddInstallationPhotoUseCase,
 )
+from modules.installation.application.use_cases.job_signature_use_cases import (  # noqa: F401
+    RequestJobSignatureUseCase,
+    SimulateJobSignatureUseCase,
+    HandleJobSignatureWebhookUseCase,
+)
 
 __all__ = [
     "CreateCrewUseCase",
@@ -26,4 +31,7 @@ __all__ = [
     "UpdateInstallationJobStatusUseCase",
     "AddInstallationPhotoUseCase",
     "MarkNotificationReadUseCase",
+    "RequestJobSignatureUseCase",
+    "SimulateJobSignatureUseCase",
+    "HandleJobSignatureWebhookUseCase",
 ]

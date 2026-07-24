@@ -12,3 +12,10 @@ class OrderNotReadyForInstallationError(ValueError):
 
 class CrewInactiveError(ValueError):
     """Raised when assigning an inactive crew to a job."""
+
+
+class SignatureAttributionError(ValueError):
+    """Raised when a webhook-originated signature completion can't be
+    attributed to an audit actor because the job has no created_by --
+    mirrors Communication's identical guard for channel webhooks with no
+    configuring user."""

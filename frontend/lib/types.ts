@@ -788,6 +788,8 @@ export type ProjectItemMeasurement = {
   measured_at: string | null;
   notes: string | null;
   customer_signature_document_id: string | null;
+  signature_status: "sent" | "completed" | "declined" | null;
+  signature_provider: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -1121,6 +1123,8 @@ export type InstallationJob = {
   cancelled_reason: string | null;
   notes: string | null;
   completion_notes: string | null;
+  signature_status: "sent" | "completed" | "declined" | null;
+  signature_provider: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -1917,6 +1921,18 @@ export type PortalInvoice = {
   notes: string | null;
   sent_at: string | null;
   paid_at: string | null;
+  created_at: string;
+};
+
+export type PortalPaymentSession = {
+  id: string;
+  invoice_id: string;
+  provider: string;
+  status: "pending" | "completed" | "failed";
+  amount: string;
+  currency: string;
+  checkout_url: string;
+  completed_at: string | null;
   created_at: string;
 };
 

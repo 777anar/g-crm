@@ -4,4 +4,5 @@ FINANCE_PERMISSIONS = [
     "finance:payments:write",
     "finance:expenses:read",
     "finance:expenses:write",
+    "finance:export:read",
 ]

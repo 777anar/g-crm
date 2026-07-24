@@ -33,3 +33,13 @@ class InstallationJob(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     completion_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     created_by: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
+
+    # E-signature integration (Phase 22) -- an alternative to manually
+    # capturing a signature via the canvas SignaturePad and uploading it as
+    # an InstallationPhoto: a real signature request sent via
+    # core.esignature, tracked here until its webhook reports completion
+    # (which then creates the completion InstallationPhoto itself, the same
+    # photo_type="signature" row the manual-capture path has always used).
+    signature_status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    signature_provider: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    signature_provider_request_id: Mapped[Optional[str]] = mapped_column(String(200), nullable=True, index=True)

@@ -129,6 +129,22 @@ export function getDocumentUrl(documentId: string) {
   return apiRequest<{ url: string }>(`/api/v1/core/documents/${documentId}`);
 }
 
+// ── E-signature integration (Phase 22) ──────────────────────────────────────
+
+export function requestJobSignature(jobId: string, provider?: string) {
+  return apiRequest<InstallationJob>(`${BASE}/jobs/${jobId}/request-signature`, {
+    method: "POST",
+    body: { provider },
+  });
+}
+
+export function simulateJobSignature(jobId: string, outcome: "completed" | "declined") {
+  return apiRequest<InstallationJob>(`${BASE}/jobs/${jobId}/simulate-signature`, {
+    method: "POST",
+    body: { outcome },
+  });
+}
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 
 export function listNotifications(params: { unreadOnly?: boolean } = {}) {

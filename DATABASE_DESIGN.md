@@ -132,6 +132,8 @@ Seeded rows: G-STONE GALLERY, KORONA PREMIUM, NEOLITH BAKU.
 
 Every module's file attachments (Catalog material images/docs, Sales drawings/photos, Installation photos, Communication message attachments, CRM customer attachments) are thin join rows pointing here — one shared upload/storage pipeline, no per-module file handling code.
 
+**`core/esignature/` (Phase 22, Version 2.43.0)** is a sibling piece of shared core infrastructure with **no table of its own** — a stateless provider library (`ESignatureProvider` interface, `MockESignatureProvider` default, real `DropboxSignProvider`) that Sales and Installation each call directly, tracking their own request state on their own rows (`sales_project_item_measurements.signature_*`, §6.6; `installation_jobs.signature_*`, §9.2) and storing the completed signed document through this same `documents` table. Lives in core rather than either module because, uniquely among this codebase's three provider abstractions (`AIProvider`, `ChannelProvider`, this one), two independent modules need the identical integration — core never imports either module, exactly like `core/storage/client.py`'s relationship to its callers.
+
 ### 3.5 `audit_log`
 | Column | Type | Constraints |
 |---|---|---|
@@ -455,7 +457,7 @@ Atomic per-company/year counter: `company_id` (FK, indexed), `year INTEGER`, `la
 - **`sales_project_items`** (a fabricated piece, "Məmulat"): `project_id` (FK, indexed, denormalized from room for project-wide queries), `room_id` (FK, indexed), `item_type TEXT(50)` default `other` (curated 12-value picker vocabulary, shared 21-value storage vocabulary with Quote items), `name TEXT(200)` nullable, `material_id` (FK catalog_materials, indexed), `material_thickness_id`/`material_size_id` (FK, indexed — **added by migration `fcaddc974e1c`, Sprint 4**, after the table's original creation), `quantity NUMERIC(10,3)`, `unit TEXT(10)`, `notes`, `production_status`/`installation_status TEXT(50)` nullable (set by the Production/Installation modules' events, no fixed enum in the Sales domain itself), `completion_status TEXT(50)` nullable (**added by migration `4cbc1f1d4028`, Sprint 5**, even later — `pending`\|`delivered`\|`accepted`, distinct from production/installation status; tracks physical handover to the customer), `sort_order`.
 
 ### 6.6 `sales_project_item_measurements` / `_drawings` / `_photos`
-- **`sales_project_item_measurements`**: `project_item_id` (FK, indexed), `revision_number INTEGER` default `1` — **every new measurement is a new revision, never an overwrite**, `status TEXT(20)` default `draft` (`draft`\|`final`), `length_mm`/`width_mm NUMERIC(10,1)`, `thickness_mm NUMERIC(6,1)`, `quantity INTEGER`, `area_m2 NUMERIC(10,4)`, `measurer_name TEXT(200)` default `""` (free text — the measurer is often a field installer with no system login), `measured_at DATE` nullable, `notes`, `customer_signature_document_id` (FK documents, nullable), `created_by`.
+- **`sales_project_item_measurements`**: `project_item_id` (FK, indexed), `revision_number INTEGER` default `1` — **every new measurement is a new revision, never an overwrite**, `status TEXT(20)` default `draft` (`draft`\|`final`), `length_mm`/`width_mm NUMERIC(10,1)`, `thickness_mm NUMERIC(6,1)`, `quantity INTEGER`, `area_m2 NUMERIC(10,4)`, `measurer_name TEXT(200)` default `""` (free text — the measurer is often a field installer with no system login), `measured_at DATE` nullable, `notes`, `customer_signature_document_id` (FK documents, nullable), `created_by`. **Phase 22 (Version 2.43.0)** added `signature_status TEXT(20)` nullable (`sent`\|`completed`\|`declined`), `signature_provider TEXT(20)` nullable, `signature_provider_request_id TEXT(200)` nullable+indexed — an e-signature alternative to manually uploading `customer_signature_document_id`; completion still sets that same column plus `status: final`, so both paths converge on one field.
 - **`sales_project_item_drawings`**: `project_item_id` (FK, indexed), `document_id` (FK documents, indexed), `drawing_type TEXT(20)` default `sketch` (`dwg`\|`dxf`\|`sketch`\|`pdf`), `label`, `sort_order`, `uploaded_by`.
 - **`sales_project_item_photos`**: `project_item_id` (FK, indexed), `document_id` (FK documents, indexed), `caption TEXT(200)` nullable, `sort_order`, `uploaded_by`.
 
@@ -574,9 +576,14 @@ One `installation_jobs` row per Order (1:1, gated on the Order reaching `ready`/
 | route_sequence | INTEGER | nullable |
 | started_at / completed_at / cancelled_at | TIMESTAMPTZ | nullable |
 | cancelled_reason / notes / completion_notes | TEXT | nullable |
+| signature_status | TEXT(20) | nullable — `sent`\|`completed`\|`declined` (**Phase 22, Version 2.43.0**) |
+| signature_provider | TEXT(20) | nullable (**Phase 22**) |
+| signature_provider_request_id | TEXT(200) | nullable, indexed (**Phase 22**) |
 | created_by | UUID | nullable |
 
 **`status`** (default `scheduled`): `scheduled` → `en_route` → `in_progress` → `completed`, with `cancelled` reachable from `scheduled`/`en_route`/`in_progress`; `completed`/`cancelled` terminal. Completing a job cascades `installation_status: done` onto every Order item and advances the Order to `installed`, mirroring Production's pattern exactly.
+
+**Phase 22's three `signature_*` columns** track an e-signature request via `core.esignature` — an alternative to the canvas `SignaturePad` capture flow, coexisting with it. Completion still creates the same `photo_type="signature"` `installation_photos` row (§9.3) the manual capture path already produces, so both converge on one place.
 
 ### 9.3 `installation_photos`
 Photo or captured signature attached to a job, backed by the shared `documents` table: `installation_job_id` (FK, indexed), `document_id` (FK, indexed), `photo_type TEXT(20)` default `other` (`before`\|`after`\|`damage`\|`signature`\|`other`), `caption TEXT(500)` nullable, `sort_order`. A customer's captured signature is a photo row with `photo_type="signature"`, not a separate entity.
@@ -619,6 +626,26 @@ A single payment recorded against an invoice (an invoice can have several): `inv
 
 ### 10.4 `invoice_number_sequences`
 Same shape as §6.4/§7.3/§8.3/§9.5.
+
+### 10.5 `invoice_payment_sessions` (Online Payment Collection, Phase 22, Version 2.43.0)
+One Customer-Portal-initiated checkout attempt against one Invoice's full outstanding balance — separate from `invoice_payments` (which only ever represents money actually received) so an abandoned or failed checkout never touches `invoices.amount_paid`/`status`.
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| invoice_id | UUID | NOT NULL, REFERENCES invoices(id), indexed |
+| customer_id | UUID | NOT NULL, REFERENCES crm_customers(id), indexed |
+| provider | TEXT(20) | NOT NULL — `mock`\|`stripe` |
+| provider_session_id | TEXT(200) | NOT NULL, **UNIQUE**, indexed — correlates a gateway webhook back to this row |
+| status | TEXT(20) | NOT NULL, DEFAULT `pending`, indexed — `pending`\|`completed`\|`failed` (`completed`/`failed` terminal) |
+| amount | NUMERIC(14,2) | NOT NULL — the invoice's `balance_due` at session-creation time |
+| currency | TEXT(3) | NOT NULL |
+| checkout_url | TEXT(1000) | NOT NULL — a relative `/portal/pay/{id}` path for the mock gateway, or the real gateway's own hosted URL |
+| payment_id | UUID | nullable, REFERENCES invoice_payments(id) — set once a webhook (or the mock "simulate" call) resolves the session to a real payment |
+| completed_at | TIMESTAMPTZ | nullable |
+
+The session's own row is created before the provider call (its id is the idempotency/metadata reference handed to the provider), and `invoices.amount_paid`/`status` are only ever moved by the existing, unchanged `RecordPaymentUseCase` once the gateway webhook (`POST /finance/payments/webhooks/{provider}`) confirms the charge — never trusted from the browser's own success-redirect.
 
 ### 10.5 `expenses`
 A company or order-linked cost entry: `company_id` (indexed), `order_id` (FK, **nullable** — null means general overhead, not tied to a job, indexed), `category TEXT(20)` default `other` (`materials`\|`labor`\|`transport`\|`utilities`\|`rent`\|`other`, indexed), `description TEXT` nullable, `amount NUMERIC(14,2)` NOT NULL, `currency TEXT(3)` default `AZN`, `expense_date TEXT(10)` NOT NULL, `created_by` nullable.

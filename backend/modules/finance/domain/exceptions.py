@@ -24,3 +24,15 @@ class InvalidPaymentAmountError(ValueError):
 
 class InvalidExpenseAmountError(ValueError):
     """Raised when an expense is submitted with a zero or negative amount."""
+
+
+class PaymentSessionNotPayableError(ValueError):
+    """Raised when starting a checkout session against an invoice that's
+    draft, cancelled, already fully paid, or already has a pending session."""
+
+
+class PaymentSessionAttributionError(ValueError):
+    """Raised when a gateway-webhook-originated payment can't be attributed
+    to an audit actor because the invoice has no `created_by` -- mirrors
+    Communication's identical guard for channel webhooks with no configuring
+    user (see webhook_use_cases.py's `_load_channel_and_credential`)."""

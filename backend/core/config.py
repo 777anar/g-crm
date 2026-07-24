@@ -21,6 +21,12 @@ class Settings(BaseSettings):
 
     local_storage_dir: str = "./storage_data"
 
+    # Used to build absolute redirect URLs for a real payment gateway's
+    # hosted checkout (Stripe needs an absolute success_url/cancel_url, not a
+    # relative path) -- the customer's browser, not our backend, follows
+    # these, so this must be the frontend's own public origin.
+    frontend_base_url: str = "http://localhost:3000"
+
     cors_allow_origins: list[str] = ["http://localhost:3000"]
     cors_allow_methods: list[str] = ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"]
     cors_allow_headers: list[str] = ["Authorization", "Content-Type", "X-Request-ID"]
@@ -47,6 +53,24 @@ class Settings(BaseSettings):
     # provider call, enforced in modules/ai/application/use_cases/_shared.py
     # before the provider is ever invoked. 0 or below disables the cap.
     ai_daily_budget_usd: float = 20.0
+
+    # Online payment collection (Phase 22). Empty secret key means the
+    # "stripe" gateway is registered but not usable -- resolved at call time
+    # (modules/finance/infrastructure/providers/stripe_provider.py), the same
+    # "genuinely optional integration" pattern anthropic_api_key established.
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    # Which registered gateway `get_payment_gateway_provider(None)` resolves
+    # to when a caller (Customer Portal) doesn't pass one explicitly.
+    payment_gateway_default_provider: str = "mock"
+
+    # E-signature integration (Phase 22), shared by Sales (measurement
+    # sign-off) and Installation (job completion sign-off) -- lives in core
+    # config since the provider library itself lives in core/esignature/
+    # (cross-cutting infrastructure, like core/storage, not owned by either
+    # module). Dropbox Sign (formerly HelloSign) API v3.
+    esignature_api_key: str = ""
+    esignature_default_provider: str = "mock"
 
 
 settings = Settings()

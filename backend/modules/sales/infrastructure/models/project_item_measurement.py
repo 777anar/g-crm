@@ -37,3 +37,12 @@ class ProjectItemMeasurement(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         GUID(), ForeignKey("documents.id"), nullable=True
     )
     created_by: Mapped[Optional[str]] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
+
+    # E-signature integration (Phase 22) -- an alternative to manually
+    # uploading customer_signature_document_id above: a real signature
+    # request sent out via core.esignature, tracked here until its webhook
+    # reports completion (which then sets customer_signature_document_id
+    # itself, the same field the manual-upload path has always used).
+    signature_status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    signature_provider: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    signature_provider_request_id: Mapped[Optional[str]] = mapped_column(String(200), nullable=True, index=True)

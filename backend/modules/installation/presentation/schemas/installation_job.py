@@ -45,6 +45,8 @@ class InstallationJobOut(BaseModel):
     cancelled_reason: Optional[str]
     notes: Optional[str]
     completion_notes: Optional[str]
+    signature_status: Optional[str] = None
+    signature_provider: Optional[str] = None
     created_by: Optional[uuid.UUID]
     created_at: datetime
     updated_at: datetime
@@ -55,6 +57,14 @@ class InstallationJobOut(BaseModel):
 class InstallationJobListOut(BaseModel):
     items: List[InstallationJobOut]
     next_cursor: Optional[str] = None
+
+
+class RequestJobSignatureRequest(BaseModel):
+    provider: Optional[str] = None
+
+
+class SimulateJobSignatureRequest(BaseModel):
+    outcome: str  # "completed" | "declined"
 
 
 class InstallationPhotoCreate(BaseModel):

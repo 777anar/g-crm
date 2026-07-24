@@ -25,6 +25,8 @@ import {
   addProjectItemPhoto,
   deleteProjectItemPhoto,
   uploadProjectItemAsset,
+  requestMeasurementSignature,
+  simulateMeasurementSignature,
 } from "@/lib/api/sales";
 import {
   getMaterial,
@@ -784,6 +786,24 @@ export default function ProjectDetailPage() {
                             toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
                           }
                         }}
+                        onRequestSignature={async (measurementId) => {
+                          try {
+                            await requestMeasurementSignature(measurementId);
+                            const m = await listProjectItemMeasurements(item.id);
+                            setMeasurementsByItem((prev) => ({ ...prev, [item.id]: m.items }));
+                          } catch (err) {
+                            toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+                          }
+                        }}
+                        onSimulateSignature={async (measurementId, outcome) => {
+                          try {
+                            await simulateMeasurementSignature(measurementId, outcome);
+                            const m = await listProjectItemMeasurements(item.id);
+                            setMeasurementsByItem((prev) => ({ ...prev, [item.id]: m.items }));
+                          } catch (err) {
+                            toast.error(err instanceof ApiRequestError ? err.message : tCommon("actionFailed"));
+                          }
+                        }}
                         onAddDrawing={async (file, drawingType) => {
                           try {
                             const doc = await uploadProjectItemAsset(item.id, "project_item_drawing", file);
@@ -1141,6 +1161,8 @@ function ProjectItemRow({
   onAddMeasurement,
   onAttachSignature,
   onDeleteMeasurement,
+  onRequestSignature,
+  onSimulateSignature,
   onAddDrawing,
   onDeleteDrawing,
   onAddPhoto,
@@ -1161,6 +1183,8 @@ function ProjectItemRow({
   onAddMeasurement: (data: { length_mm?: string; width_mm?: string; thickness_mm?: string; measurer_name?: string; measured_at?: string; notes?: string }) => Promise<void>;
   onAttachSignature: (measurementId: string, file: File) => Promise<void>;
   onDeleteMeasurement: (measurementId: string) => Promise<void>;
+  onRequestSignature: (measurementId: string) => Promise<void>;
+  onSimulateSignature: (measurementId: string, outcome: "completed" | "declined") => Promise<void>;
   onAddDrawing: (file: File, drawingType: string) => Promise<void>;
   onDeleteDrawing: (drawingId: string) => Promise<void>;
   onAddPhoto: (file: File, caption: string) => Promise<void>;
@@ -1203,22 +1227,40 @@ function ProjectItemRow({
                   #{m.revision_number} · {m.length_mm ?? "—"}×{m.width_mm ?? "—"}mm · {m.area_m2 ?? "—"}m² ·{" "}
                   {m.measurer_name || "—"} · {t(`measurementStatus_${m.status}` as Parameters<typeof t>[0])}
                   {m.customer_signature_document_id ? ` · ${t("signatureAttached")}` : ""}
+                  {!m.customer_signature_document_id && m.signature_status
+                    ? ` · ${t(`signatureStatus_${m.signature_status}` as Parameters<typeof t>[0])}`
+                    : ""}
                 </span>
                 <span className="flex items-center gap-2">
-                  {canWrite && !m.customer_signature_document_id && (
-                    <label className="cursor-pointer text-primary hover:underline">
-                      {t("attachSignature")}
-                      <input
-                        type="file"
-                        accept="image/*,application/pdf"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) onAttachSignature(m.id, file);
-                          e.target.value = "";
-                        }}
-                      />
-                    </label>
+                  {canWrite && !m.customer_signature_document_id && !m.signature_status && (
+                    <>
+                      <button onClick={() => onRequestSignature(m.id)} className="text-primary hover:underline">
+                        {t("requestSignature")}
+                      </button>
+                      <label className="cursor-pointer text-primary hover:underline">
+                        {t("attachSignature")}
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) onAttachSignature(m.id, file);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                    </>
+                  )}
+                  {canWrite && m.signature_status === "sent" && m.signature_provider === "mock" && (
+                    <>
+                      <button onClick={() => onSimulateSignature(m.id, "completed")} className="text-success hover:underline">
+                        {t("simulateSigned")}
+                      </button>
+                      <button onClick={() => onSimulateSignature(m.id, "declined")} className="text-danger hover:underline">
+                        {t("simulateDeclined")}
+                      </button>
+                    </>
                   )}
                   {canWrite && (
                     <button onClick={() => onDeleteMeasurement(m.id)} className="text-danger hover:underline">✕</button>

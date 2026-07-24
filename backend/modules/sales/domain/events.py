@@ -31,3 +31,7 @@ PROJECT_ITEM_DRAWING_DELETED = "ProjectItemDrawingDeleted"
 
 PROJECT_ITEM_PHOTO_ADDED = "ProjectItemPhotoAdded"
 PROJECT_ITEM_PHOTO_DELETED = "ProjectItemPhotoDeleted"
+
+# E-signature integration (Phase 22)
+MEASUREMENT_SIGNATURE_REQUESTED = "MeasurementSignatureRequested"
+MEASUREMENT_SIGNATURE_COMPLETED = "MeasurementSignatureCompleted"

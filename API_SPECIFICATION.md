@@ -272,6 +272,9 @@ An Order (§13) is created from an **accepted** Quote and deep-copies its Sectio
 | GET | `/sales/measurements?date_from=&date_to=` | `sales:projects:read` | **Company-wide** measurement list across all projects, date-range filterable — a distinct endpoint from the quote-section measurements above; backs the Dashboard's "measurements today" KPI |
 | GET\|POST | `/sales/project-items/{item_id}/measurements` | `sales:projects:read\|write` | List/create measurement revisions for one Project Item — every `POST` is a new revision (`revision_number` increments), never an overwrite |
 | PATCH\|DELETE | `/sales/project-item-measurements/{id}` | `sales:projects:write` | Edit a revision in place (e.g. attach `customer_signature_document_id` and mark `status: final`) or delete it |
+| POST | `/sales/project-item-measurements/{id}/request-signature` | `sales:projects:write` | **Version 2.43.0 (Phase 22).** Sends a measurement summary out for e-signature via `core.esignature` (mock by default; real `dropbox_sign` when configured). Body: `{provider?}` — `400` if the Project's customer has no email on file |
+| POST | `/sales/project-item-measurements/{id}/simulate-signature` | `sales:projects:write` | **Version 2.43.0.** Mock-provider-only: simulates the signer completing or declining. Body: `{outcome: "completed"\|"declined"}` — `400` for a non-mock signature request |
+| POST | `/sales/webhooks/esignature/{provider}` | none (public, signature-verified) | **Version 2.43.0.** Real e-signature provider callback — on completion, stores the signed PDF as a `Document` and sets `customer_signature_document_id` + `status: final`, same as the manual-upload path |
 | GET\|POST | `/sales/project-items/{item_id}/drawings` | `sales:projects:read\|write` | List/attach a DWG/DXF/sketch/PDF drawing (`document_id` from a prior upload) |
 | DELETE | `/sales/project-item-drawings/{id}` | `sales:projects:write` | Detach a drawing |
 | GET\|POST | `/sales/project-items/{item_id}/photos` | `sales:projects:read\|write` | List/attach a site photo |
@@ -373,6 +376,9 @@ One `InstallationJob` per Order (1:1, gated on the Order reaching `ready`/`deliv
 | POST | `/installation/jobs/{id}/status` | `installation:write` | Transition status. Body: `{status, cancelled_reason?, completion_notes?}`. Valid statuses/transitions: `scheduled→en_route→in_progress→completed`, with `cancelled` reachable from `scheduled`/`en_route`/`in_progress`; `completed`/`cancelled` terminal |
 | GET | `/installation/jobs/{id}/photos` | `installation:read` | List photos/signature for a job |
 | POST | `/installation/jobs/{id}/photos` | `installation:write` | Attach a photo. Body: `{document_id, photo_type, caption?, sort_order?}` — `photo_type` one of `before`/`after`/`damage`/`signature`/`other` (a captured customer signature is stored as a `signature`-typed photo row, not a separate entity) |
+| POST | `/installation/jobs/{id}/request-signature` | `installation:write` | **Version 2.43.0 (Phase 22).** Sends a job-completion summary out for e-signature via `core.esignature` — an alternative to the canvas `SignaturePad` capture flow above, coexisting with it. Body: `{provider?}` — `400` if the order's customer has no email on file |
+| POST | `/installation/jobs/{id}/simulate-signature` | `installation:write` | **Version 2.43.0.** Mock-provider-only: simulates the signer completing or declining. Body: `{outcome: "completed"\|"declined"}` |
+| POST | `/installation/webhooks/esignature/{provider}` | none (public, signature-verified) | **Version 2.43.0.** Real e-signature provider callback — on completion, stores the signed PDF as a `Document` and creates a `photo_type: "signature"` `InstallationPhoto`, same shape the manual capture path already produces |
 
 ### Notifications
 | Method | Path | Permission | Description |
@@ -384,7 +390,7 @@ Completing an installation job cascades `installation_status: done` onto every O
 
 ---
 
-## 16. Finance Module Endpoints (`/api/v1/finance/...`)
+## 16. Finance Module Endpoints (`/api/v1/finance/...`; online payments + accounting export added Version 2.43.0 — Phase 22)
 
 ### Invoices
 | Method | Path | Permission | Description |
@@ -405,6 +411,16 @@ Completing an installation job cascades `installation_status: done` onto every O
 | GET | `/finance/expenses?order_id=&category=&date_from=&date_to=&limit=&cursor=` | `finance:expenses:read` | List, cursor-paginated |
 | POST | `/finance/expenses` | `finance:expenses:write` | Create. Body: `{category?, amount, expense_date, order_id?, description?, currency?}` — `category` one of `materials`/`labor`/`transport`/`utilities`/`rent`/`other` (default `other`); `order_id` omitted means general company overhead, not tied to a job. `422` (`InvalidExpenseAmountError`) on a non-positive amount |
 | GET | `/finance/expenses/{id}` | `finance:expenses:read` | Retrieve |
+
+### Online Payment Collection (Version 2.43.0, Phase 22)
+| Method | Path | Permission | Description |
+|---|---|---|---|
+| POST | `/finance/payments/webhooks/{provider}` | none (public, signature-verified) | Real payment gateway callback (`Stripe-Signature` header for `stripe`). Verifies the event, resolves the `InvoicePaymentSession` by the gateway's own session id, and — only on a genuine `checkout.session.completed` — calls the unchanged `RecordPaymentUseCase`. Idempotent: a retried delivery for an already-completed session is a no-op. The customer-facing session-creation/poll/simulate endpoints live under Customer Portal (§22), since they're the customer's own write action, not a staff one |
+
+### Accounting/ERP Export (Version 2.43.0, Phase 22)
+| Method | Path | Permission | Description |
+|---|---|---|---|
+| GET | `/finance/export/{resource}?date_from=&date_to=` | `finance:export:read` | CSV export, UTF-8 BOM (matches Purchasing's `GET /export/{resource}` convention). `resource` one of `invoices`/`payments`/`expenses` (raw per-table dumps) or `journal` — a synthesized double-entry-style export (`date, account, debit, credit, reference, memo` columns) mapping Invoices→Accounts Receivable/Sales Revenue, Payments→Cash-or-Bank/Accounts Receivable, Expenses→Expense:{category}/Cash, for direct import into an external accounting system (1C and similar) |
 
 ---
 
@@ -565,7 +581,7 @@ Marketing campaigns with real lead attribution and revenue performance. `depends
 |---|---|---|
 | POST | `/crm/leads` | `campaign_id?` (optional UUID) added to the existing request body — links a captured lead to a Marketing campaign for performance attribution. No server-side validation that the id refers to an existing campaign (an unconstrained reference, per the pattern above); an unmatched id simply never appears in any campaign's performance numbers |
 
-## 22. Customer Portal Module Endpoints (`/api/v1/customer_portal/...`, Version 2.33.0)
+## 22. Customer Portal Module Endpoints (`/api/v1/customer_portal/...`, Version 2.33.0; online payment collection added Version 2.43.0 — Phase 22)
 
 A second, entirely separate authentication identity from everything above: a customer of G-STONE (not a staff member) can log in and see their own orders, quotes, invoices, installation schedule, and documents. `depends_on=["crm", "sales", "orders", "finance", "installation"]` — `CustomerLogin` (`customer_portal_logins`) carries a real FK to `crm_customers.id` (safe here, unlike Marketing's `campaign_id`, because this table lives in the dependent module, not in CRM), and the read endpoints below query Order/Quote/Invoice/InstallationJob directly, the same "depends_on for read access" pattern Reports and Marketing use.
 
@@ -599,6 +615,13 @@ Phase 18: mirrors staff auth's dual token transport (§2) with its own cookie na
 | GET | `/customer_portal/me/installation-jobs` / `/me/installation-jobs/{id}` | Resolved via the customer's own orders (`InstallationJob` has no direct `customer_id` column) — `crew_id`/`completion_notes`/`route_sequence` excluded as staff-internal |
 | GET | `/customer_portal/me/documents` | Documents attached to the customer's own CRM record (`related_entity_type="customer"`) or their own installation jobs (`related_entity_type="installation_job"`) — every other document type (catalog images, communication attachments, etc.) is excluded even if it happens to reference an id the customer owns |
 | GET | `/customer_portal/me/documents/{id}/download` | Returns a signed URL (same `storage_client.get_signed_url` used by `core/documents`) — `404` if the document isn't one of the customer's own visible documents |
+
+### Online Payment Collection (Version 2.43.0, Phase 22) — the Customer Portal's first write action
+| Method | Path | Description |
+|---|---|---|
+| POST | `/customer_portal/me/invoices/{id}/pay` | Starts a checkout session for the invoice's full outstanding balance via Finance's `CreatePaymentSessionUseCase` (`depends_on=["finance", ...]` makes this direct cross-module call legitimate, the same pattern Reports/Marketing use for reads, extended here to one narrow write path Finance itself owns). Body: `{provider?}`. Returns `{id, checkout_url, ...}` — `checkout_url` is a relative `/portal/pay/{id}` path for the mock gateway, or an absolute Stripe-hosted URL for the real one. `422` if the invoice is draft/cancelled/already fully paid |
+| GET | `/customer_portal/me/payment-sessions/{id}` | Poll a session's status (`pending`/`completed`/`failed`) — used after returning from a real gateway's redirect, since the webhook confirming payment can race with the browser bounce-back |
+| POST | `/customer_portal/me/payment-sessions/{id}/simulate` | Mock-provider-only. Body: `{outcome: "completed"\|"failed"}` — on `"completed"`, calls the same unchanged `RecordPaymentUseCase` a real Stripe webhook would; `400` for a non-mock session |
 
 ## 23. Cut Optimization Module Endpoints (`/api/v1/cut_optimization/...`, Version 2.35.0 — Stone Fabrication Workflow Phase 2; extended Version 2.39.0 — Phase 20)
 

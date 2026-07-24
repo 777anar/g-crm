@@ -180,3 +180,28 @@ class PortalDocumentListOut(BaseModel):
 
 class PortalSignedUrlOut(BaseModel):
     url: str
+
+
+# ── Online payment collection (Phase 22) ─────────────────────────────────────
+
+
+class CreatePaymentSessionRequest(BaseModel):
+    provider: Optional[str] = None
+
+
+class PortalPaymentSessionOut(BaseModel):
+    id: uuid.UUID
+    invoice_id: uuid.UUID
+    provider: str
+    status: str
+    amount: Decimal
+    currency: str
+    checkout_url: str
+    completed_at: Optional[datetime]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class SimulatePaymentSessionRequest(BaseModel):
+    outcome: str  # "completed" | "failed"

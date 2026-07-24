@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { listInvoices } from "@/lib/api/finance";
+import { exportFinanceData, listInvoices, type FinanceExportResource } from "@/lib/api/finance";
 import { INVOICE_STATUSES, type Invoice } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { usePermission } from "@/lib/permissions";
 import { InvoiceStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -39,7 +40,20 @@ export default function InvoicesPage() {
   const [sort, setSort] = useState("-created_at");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<FinanceExportResource | null>(null);
   const search = useDebouncedValue(searchInput, 250);
+  const canExport = usePermission("finance:export:read");
+
+  async function handleExport(resource: FinanceExportResource) {
+    setExporting(resource);
+    try {
+      await exportFinanceData(resource);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : t("exportFailed"));
+    } finally {
+      setExporting(null);
+    }
+  }
 
   const columnDefs = [
     { id: "number", label: t("tableInvoice") },
@@ -120,7 +134,24 @@ export default function InvoicesPage() {
             ))}
           </select>
         </div>
-        <ColumnVisibilityMenu columns={columnDefs} isVisible={isVisible} toggle={toggle} reset={reset} />
+        <div className="flex items-center gap-2">
+          {canExport && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-text-secondary">{t("accountingExport")}:</span>
+              {(["invoices", "payments", "expenses", "journal"] as const).map((resource) => (
+                <Button
+                  key={resource}
+                  variant="secondary"
+                  onClick={() => handleExport(resource)}
+                  disabled={exporting !== null}
+                >
+                  {exporting === resource ? tCommon("loading") : t(`export_${resource}` as Parameters<typeof t>[0])}
+                </Button>
+              ))}
+            </div>
+          )}
+          <ColumnVisibilityMenu columns={columnDefs} isVisible={isVisible} toggle={toggle} reset={reset} />
+        </div>
       </div>
 
       <SavedFiltersBar

@@ -54,3 +54,18 @@ class ProjectItemMeasurementRepository:
     def delete(self, measurement: ProjectItemMeasurement) -> None:
         self.db.delete(measurement)
         self.db.flush()
+
+    def get_by_signature_provider_request_id(
+        self, *, provider: str, provider_request_id: str
+    ) -> Optional[ProjectItemMeasurement]:
+        # Webhooks are public (no authenticated active-company context), so
+        # this is looked up across every company by the provider's own
+        # request id alone -- company_id is taken from the resolved row,
+        # never trusted from the request, mirroring Communication's
+        # identical `get_by_id_any_company` webhook lookup.
+        return self.db.scalar(
+            select(ProjectItemMeasurement).where(
+                ProjectItemMeasurement.signature_provider == provider,
+                ProjectItemMeasurement.signature_provider_request_id == provider_request_id,
+            )
+        )

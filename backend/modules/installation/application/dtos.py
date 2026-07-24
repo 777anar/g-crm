@@ -72,3 +72,23 @@ class AddInstallationPhotoInput(ActorContext):
 @dataclass
 class MarkNotificationReadInput(ActorContext):
     notification_id: uuid.UUID
+
+
+# ── E-signature integration (Phase 22) ──────────────────────────────────────
+
+@dataclass
+class RequestJobSignatureInput(ActorContext):
+    job_id: uuid.UUID
+    provider_name: Optional[str] = None
+
+
+@dataclass
+class SimulateJobSignatureInput(ActorContext):
+    job_id: uuid.UUID
+    outcome: str  # "completed" | "declined"
+
+
+@dataclass
+class HandleJobSignatureWebhookInput:
+    payload: str
+    provider_name: str
