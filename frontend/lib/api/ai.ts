@@ -1,5 +1,5 @@
 import { apiRequest } from "../api-client";
-import type { AIDashboard, AIRecommendation, Paginated } from "../types";
+import type { AIDashboard, AIRecommendation, AIUsage, Paginated } from "../types";
 
 const BASE = "/api/v1/ai";
 
@@ -82,4 +82,12 @@ export function reviewRecommendation(
 
 export function getAIDashboard() {
   return apiRequest<AIDashboard>(`${BASE}/dashboard`);
+}
+
+// ── Usage & cost control (Phase 21) ──────────────────────────────────────────
+
+export function getAIUsage(params: { limit?: number; offset?: number } = {}) {
+  return apiRequest<AIUsage>(`${BASE}/usage`, {
+    searchParams: { limit: params.limit, offset: params.offset },
+  });
 }

@@ -122,7 +122,16 @@ class SuggestTasksUseCase:
         )
 
         provider = get_provider(data.provider_name)
-        timed = run_provider(provider.suggest_tasks, prompt=prompt, context=context)
+        timed = run_provider(
+            provider.suggest_tasks,
+            prompt=prompt,
+            context=context,
+            db=self.db,
+            company_id=data.company_id,
+            actor_user_id=data.actor_user_id,
+            analysis_kind=ANALYSIS_KIND_TASK,
+            provider=provider,
+        )
         d = timed.result.data
 
         builder = RecommendationBuilder(
@@ -136,6 +145,7 @@ class SuggestTasksUseCase:
             prompt=prompt,
             confidence=timed.result.confidence,
             execution_time_ms=timed.execution_time_ms,
+            provider_call_id=timed.provider_call_id,
         )
 
         for task in d["tasks"]:

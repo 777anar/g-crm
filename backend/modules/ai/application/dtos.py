@@ -43,3 +43,9 @@ class ReviewRecommendationInput(ActorContext):
 @dataclass
 class GetAIDashboardInput(ActorContext):
     pass
+
+
+@dataclass
+class GetAIUsageInput(ActorContext):
+    limit: int = 25
+    offset: int = 0

@@ -59,6 +59,11 @@ class RateLimitedError(APIError):
     code = "RATE_LIMITED"
 
 
+class ServiceUnavailableError(APIError):
+    status_code = 503
+    code = "SERVICE_UNAVAILABLE"
+
+
 def _envelope(code: str, message: str, details: List[dict], request_id: str) -> dict:
     return {"error": {"code": code, "message": message, "details": details, "request_id": request_id}}
 

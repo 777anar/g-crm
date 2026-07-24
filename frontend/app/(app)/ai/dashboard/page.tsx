@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { getAIDashboard, listRecommendations, analyzeLead, suggestTasks } from "@/lib/api/ai";
+import { getAIDashboard, getAIUsage, listRecommendations, analyzeLead, suggestTasks } from "@/lib/api/ai";
 import { listLeads } from "@/lib/api/crm";
-import type { AIDashboard, AIRecommendation, Lead } from "@/lib/types";
+import type { AIDashboard, AIRecommendation, AIUsage, Lead } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBarList } from "@/components/ui/charts";
@@ -23,6 +24,7 @@ export default function AIDashboardPage() {
   const tCommon = useTranslations("common");
 
   const [dashboard, setDashboard] = useState<AIDashboard | null>(null);
+  const [usage, setUsage] = useState<AIUsage | null>(null);
   const [pendingById, setPendingById] = useState<Record<string, AIRecommendation>>({});
   const [error, setError] = useState<string | null>(null);
 
@@ -31,12 +33,13 @@ export default function AIDashboardPage() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
-    Promise.all([getAIDashboard(), listRecommendations({ status: "pending", limit: 100 })])
-      .then(([dash, recRes]) => {
+    Promise.all([getAIDashboard(), listRecommendations({ status: "pending", limit: 100 }), getAIUsage({ limit: 10 })])
+      .then(([dash, recRes, usageRes]) => {
         setDashboard(dash);
         const map: Record<string, AIRecommendation> = {};
         recRes.items.forEach((r) => { map[r.id] = r; });
         setPendingById(map);
+        setUsage(usageRes);
       })
       .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
   }, [t]);
@@ -239,6 +242,64 @@ export default function AIDashboardPage() {
           </div>
         )}
       </Card>
+
+      {usage && (
+        <Card>
+          <CardHeader title={t("usageCostTitle")} />
+          <p className="mb-3 text-sm text-text-secondary">{t("usageCostDesc")}</p>
+          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <StatCard label={t("usageSpentToday")} value={`$${usage.spent_today_usd}`} tone="primary" />
+            <StatCard
+              label={t("usageBudget")}
+              value={usage.daily_budget_usd > 0 ? `$${usage.daily_budget_usd.toFixed(2)}` : t("usageBudgetUnlimited")}
+              tone="neutral"
+            />
+            <StatCard label={t("usageCallsToday")} value={usage.calls_today} tone="info" />
+          </div>
+
+          <p className="mb-2 text-sm font-medium text-text-primary">{t("usageRecentCalls")}</p>
+          {usage.recent_calls.length === 0 ? (
+            <EmptyState title={t("usageNoCallsYet")} />
+          ) : (
+            <div className={tableScrollShellClass}>
+              <table className="w-full text-left text-sm">
+                <thead className={stickyTheadClass}>
+                  <tr>
+                    <th className="px-2 py-1 font-medium">{t("usageTableKind")}</th>
+                    <th className="px-2 py-1 font-medium">{t("usageTableProvider")}</th>
+                    <th className="px-2 py-1 font-medium">{t("usageTableModel")}</th>
+                    <th className="px-2 py-1 font-medium">{t("usageTableTokens")}</th>
+                    <th className="px-2 py-1 font-medium">{t("usageTableCost")}</th>
+                    <th className="px-2 py-1 font-medium">{t("usageTableLatency")}</th>
+                    <th className="px-2 py-1 font-medium">{t("usageTableStatus")}</th>
+                    <th className="px-2 py-1 font-medium">{t("usageTableWhen")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usage.recent_calls.map((call) => (
+                    <tr key={call.id} className="border-b border-border last:border-0">
+                      <td className="px-2 py-1 text-text-primary">{call.analysis_kind}</td>
+                      <td className="px-2 py-1 text-text-secondary">{call.provider}</td>
+                      <td className="px-2 py-1 text-text-secondary">{call.model || tCommon("dash")}</td>
+                      <td className="px-2 py-1 text-text-secondary">
+                        {call.input_tokens ?? tCommon("dash")} / {call.output_tokens ?? tCommon("dash")}
+                      </td>
+                      <td className="px-2 py-1 text-text-secondary">{call.cost_usd ? `$${call.cost_usd}` : tCommon("dash")}</td>
+                      <td className="px-2 py-1 text-text-secondary">{call.latency_ms} ms</td>
+                      <td className="px-2 py-1">
+                        <Badge tone={call.success ? "success" : "danger"}>
+                          {call.success ? t("usageStatusSuccess") : t("usageStatusFailed")}
+                        </Badge>
+                      </td>
+                      <td className="px-2 py-1 text-text-secondary">{formatDateTime(call.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

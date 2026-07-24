@@ -1640,6 +1640,30 @@ export type AIDashboard = {
   };
 };
 
+// ── Phase 21: Real AI Provider Integration (cost control / audit trail) ──────
+
+export type AIProviderCallLog = {
+  id: string;
+  analysis_kind: string;
+  provider: string;
+  model: string;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  cost_usd: string | null;
+  latency_ms: number;
+  success: boolean;
+  error_message: string | null;
+  created_at: string;
+};
+
+export type AIUsage = {
+  daily_budget_usd: number;
+  spent_today_usd: string;
+  calls_today: number;
+  budget_remaining_usd: number | null;
+  recent_calls: AIProviderCallLog[];
+};
+
 // --- Purchasing --------------------------------------------------------
 
 export const SUPPLIER_STATUSES = ["active", "hidden"] as const;

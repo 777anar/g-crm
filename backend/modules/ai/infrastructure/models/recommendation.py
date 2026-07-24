@@ -38,6 +38,13 @@ class AIRecommendation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     model: Mapped[str] = mapped_column(String(100), nullable=False, default="")
     prompt: Mapped[str] = mapped_column(Text, nullable=False)
     response: Mapped[Any] = mapped_column(JSON, nullable=False)
+    # Phase 21: traces this recommendation back to the exact provider call
+    # (prompt actually sent, raw response, token/cost figures) that produced
+    # it -- nullable since recommendations created before this column existed
+    # (and any future direct-insert path) have no call log to point to.
+    provider_call_id: Mapped[Optional[str]] = mapped_column(
+        GUID(), ForeignKey("ai_provider_call_logs.id"), nullable=True
+    )
     confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(4, 3), nullable=True)
     execution_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 

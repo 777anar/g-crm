@@ -132,7 +132,16 @@ class AnalyzeConversationUseCase:
         )
 
         provider = get_provider(data.provider_name)
-        timed = run_provider(provider.analyze_conversation, prompt=prompt, context=context)
+        timed = run_provider(
+            provider.analyze_conversation,
+            prompt=prompt,
+            context=context,
+            db=self.db,
+            company_id=data.company_id,
+            actor_user_id=data.actor_user_id,
+            analysis_kind=ANALYSIS_KIND_CONVERSATION,
+            provider=provider,
+        )
         d = timed.result.data
 
         builder = RecommendationBuilder(
@@ -146,6 +155,7 @@ class AnalyzeConversationUseCase:
             prompt=prompt,
             confidence=timed.result.confidence,
             execution_time_ms=timed.execution_time_ms,
+            provider_call_id=timed.provider_call_id,
         )
         builder.add(RECOMMENDATION_TYPE_CONVERSATION_LANGUAGE, {"language": d["language"]}, f"Language: {d['language']}")
         builder.add(

@@ -86,7 +86,16 @@ class AnalyzeLeadUseCase:
         )
 
         provider = get_provider(data.provider_name)
-        timed = run_provider(provider.analyze_lead, prompt=prompt, context=context)
+        timed = run_provider(
+            provider.analyze_lead,
+            prompt=prompt,
+            context=context,
+            db=self.db,
+            company_id=data.company_id,
+            actor_user_id=data.actor_user_id,
+            analysis_kind=ANALYSIS_KIND_LEAD,
+            provider=provider,
+        )
         d = timed.result.data
 
         builder = RecommendationBuilder(
@@ -100,6 +109,7 @@ class AnalyzeLeadUseCase:
             prompt=prompt,
             confidence=timed.result.confidence,
             execution_time_ms=timed.execution_time_ms,
+            provider_call_id=timed.provider_call_id,
         )
         builder.add(RECOMMENDATION_TYPE_LEAD_SCORE, {"score": d["score"]}, f"Lead score: {d['score']}/100")
         builder.add(

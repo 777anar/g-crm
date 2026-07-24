@@ -194,7 +194,16 @@ class AnalyzeQuoteUseCase:
         )
 
         provider = get_provider(data.provider_name)
-        timed = run_provider(provider.analyze_quote, prompt=prompt, context=context)
+        timed = run_provider(
+            provider.analyze_quote,
+            prompt=prompt,
+            context=context,
+            db=self.db,
+            company_id=data.company_id,
+            actor_user_id=data.actor_user_id,
+            analysis_kind=ANALYSIS_KIND_QUOTE,
+            provider=provider,
+        )
         d = timed.result.data
 
         builder = RecommendationBuilder(
@@ -208,6 +217,7 @@ class AnalyzeQuoteUseCase:
             prompt=prompt,
             confidence=timed.result.confidence,
             execution_time_ms=timed.execution_time_ms,
+            provider_call_id=timed.provider_call_id,
         )
         if d["product_recommendations"]:
             builder.add(

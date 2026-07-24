@@ -650,7 +650,7 @@ _Unified omnichannel inbox (WhatsApp Business, Instagram Direct, Facebook Messen
 ### 11.7 `communication_integration_logs` (Version 2.9)
 `channel_id` (FK, nullable, indexed), `provider TEXT(30)` indexed, `direction TEXT(10)` (`outbound`\|`inbound`, indexed), `action TEXT(30)` indexed (`send_message`\|`test_connection`\|`queue_retry`\|`imap_sync`\|`receive_webhook`), `success BOOLEAN`, `status_code INTEGER` nullable, `signature_valid BOOLEAN` nullable (set only for `direction=inbound`), `error_message TEXT` nullable, `duration_ms INTEGER` nullable, `payload JSON` nullable. One table, discriminated by `direction`/`action`, backs Provider Diagnostics, Logs, and the Webhook Monitor at once. A rejected webhook signature is still logged (`success=false`, `signature_valid=false`), not dropped.
 
-## 12. AI Sales Assistant Module Tables (Version 2.8+)
+## 12. AI Sales Assistant Module Tables (Version 2.8+; extended Version 2.40.0 — Phase 21)
 
 ### 12.1 `ai_recommendations`
 | Column | Type | Constraints |
@@ -671,8 +671,31 @@ _Unified omnichannel inbox (WhatsApp Business, Instagram Direct, Facebook Messen
 | edited_response | JSON | nullable |
 | requested_by / reviewed_by | UUID | nullable, REFERENCES users(id) |
 | reviewed_at | TIMESTAMPTZ | nullable |
+| provider_call_id | UUID | nullable, REFERENCES ai_provider_call_logs(id) — **added Version 2.40.0**, see §12.2 |
 
 **This table is owned by `modules/ai/`, not `core/`** — it is entirely separate from the reserved-but-unused core `ai_jobs` table (§3.7). One table covers all 27 recommendation types, discriminated by `recommendation_type`, the same pattern `communication_message_templates` uses. **Nothing in this module ever writes to another module's tables** — accepting/rejecting/editing a recommendation only ever updates this table's own `status`/`reviewed_by`/`reviewed_at`/`edited_response` columns, making "AI never performs business actions automatically" a structural property, not a UI convention.
+
+### 12.2 `ai_provider_call_logs` (Real AI Provider Integration, Phase 21, Version 2.40.0)
+One row per provider call attempt — mock or real, successful or rejected/failed — so every `AIRecommendation` is traceable back to the exact prompt sent and exact raw response received, and so real spend is queryable for the daily budget cap without recomputing it from anything else.
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| requested_by | UUID | nullable, REFERENCES users(id) |
+| analysis_kind | TEXT(20) | NOT NULL, indexed |
+| provider | TEXT(50) | NOT NULL, indexed |
+| model | TEXT(100) | NOT NULL, DEFAULT `""` |
+| prompt | TEXT | NOT NULL |
+| raw_response | TEXT | nullable — the real provider's raw response text before JSON parsing; always `null` for the mock provider, which makes no real API call |
+| input_tokens / output_tokens | INTEGER | nullable |
+| cost_usd | NUMERIC(10,6) | nullable |
+| latency_ms | INTEGER | NOT NULL |
+| success | BOOLEAN | NOT NULL |
+| error_message | TEXT | nullable |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL |
+
+**Written for every call attempt, not just successful ones** — a rate-limited request, a budget rejection, or an upstream Anthropic API failure each write their own row (`success: false`, `error_message` set) before the exception propagates to the caller; `_shared.py`'s `run_provider` commits that row immediately (rather than leaving it to the caller's own `db.commit()`) precisely because the request is about to fail and roll back everything else. `GET /ai/usage` (`API_SPECIFICATION.md` §19) is the read surface over this table; the daily budget cap (`Settings.ai_daily_budget_usd`) is enforced by summing this table's `cost_usd` for the current UTC day before any provider call is made.
 
 ## 13. Purchasing Module Tables (Version 2.31.0)
 
@@ -837,7 +860,7 @@ A sibling to `cut_optimization_runs`, not an extension of it: a batch run's shap
 
 ## 17. Row-Level Security Strategy
 
-**Implemented as of Phase 18 (Security & Compliance Hardening, Version 2.37.0)**, closing the gap this section previously documented as open. Migration `55d19b5b6862_phase18_postgres_row_level_security.py` enables RLS on all 75 tenant-owned tables that existed at the time (every table with a `company_id` column, core and module alike) and creates a `company_isolation` policy on each; `production_notifications` (§8.7, added Version 2.38.0) makes 76, and `cut_optimization_batch_runs` (§16.2, added Version 2.39.0) makes 77, each given its own policy directly inside its own creation migration (`3abcf1e53be8_phase19_production_notifications.py`, `e671b0f05559_phase20_cut_optimization_batch_runs.py`) rather than waiting for a future RLS pass to notice it's missing one — the same pattern any future tenant-scoped table should follow:
+**Implemented as of Phase 18 (Security & Compliance Hardening, Version 2.37.0)**, closing the gap this section previously documented as open. Migration `55d19b5b6862_phase18_postgres_row_level_security.py` enables RLS on all 75 tenant-owned tables that existed at the time (every table with a `company_id` column, core and module alike) and creates a `company_isolation` policy on each; `production_notifications` (§8.7, added Version 2.38.0) makes 76, `cut_optimization_batch_runs` (§16.2, added Version 2.39.0) makes 77, and `ai_provider_call_logs` (§12.2, added Version 2.40.0) makes 78, each given its own policy directly inside its own creation migration (`3abcf1e53be8_phase19_production_notifications.py`, `e671b0f05559_phase20_cut_optimization_batch_runs.py`, `e12a7189e238_phase21_ai_provider_call_logs.py`) rather than waiting for a future RLS pass to notice it's missing one — the same pattern any future tenant-scoped table should follow:
 
 ```sql
 ALTER TABLE crm_customers ENABLE ROW LEVEL SECURITY;

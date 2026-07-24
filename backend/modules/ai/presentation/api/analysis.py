@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from core.api.errors import RateLimitedError, ServiceUnavailableError, ValidationAPIError
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, require_permission
 from modules.ai.application.dtos import (
@@ -17,10 +18,40 @@ from modules.ai.application.use_cases import (
     AnalyzeQuoteUseCase,
     SuggestTasksUseCase,
 )
+from modules.ai.domain.exceptions import (
+    AIBudgetExceededError,
+    AIProviderNotConfiguredError,
+    AIProviderUpstreamError,
+    AIRateLimitedError,
+    UnknownAIProviderError,
+)
 from modules.ai.presentation.schemas.analysis import AnalyzeRequest
 from modules.ai.presentation.schemas.recommendation import AIRecommendationListOut, AIRecommendationOut
 
 router = APIRouter()
+
+# Ordered most-specific-first; a provider/cost-control failure is a real,
+# expected outcome now that a real provider exists (Phase 21) -- previously
+# only UnknownAIProviderError could occur here and nothing translated it, so
+# a bad provider name fell through to a generic 500. All four analysis
+# endpoints share this mapping rather than each re-deriving it.
+_ERROR_MAP = (
+    (UnknownAIProviderError, ValidationAPIError),
+    (AIRateLimitedError, RateLimitedError),
+    (AIBudgetExceededError, RateLimitedError),
+    (AIProviderNotConfiguredError, ServiceUnavailableError),
+    (AIProviderUpstreamError, ServiceUnavailableError),
+)
+
+
+def _run(fn):
+    try:
+        return fn()
+    except Exception as exc:
+        for domain_exc_type, api_exc_type in _ERROR_MAP:
+            if isinstance(exc, domain_exc_type):
+                raise api_exc_type(str(exc)) from exc
+        raise
 
 
 @router.post("/leads/{lead_id}/analyze", response_model=AIRecommendationListOut)
@@ -30,14 +61,14 @@ def analyze_lead(
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_permission("ai:recommendations:write")),
 ) -> AIRecommendationListOut:
-    created = AnalyzeLeadUseCase(db).execute(
+    created = _run(lambda: AnalyzeLeadUseCase(db).execute(
         AnalyzeLeadInput(
             company_id=current_user.active_company_id,
             actor_user_id=current_user.user_id,
             lead_id=lead_id,
             provider_name=payload.provider,
         )
-    )
+    ))
     db.commit()
     for rec in created:
         db.refresh(rec)
@@ -51,14 +82,14 @@ def analyze_conversation(
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_permission("ai:recommendations:write")),
 ) -> AIRecommendationListOut:
-    created = AnalyzeConversationUseCase(db).execute(
+    created = _run(lambda: AnalyzeConversationUseCase(db).execute(
         AnalyzeConversationInput(
             company_id=current_user.active_company_id,
             actor_user_id=current_user.user_id,
             conversation_id=conversation_id,
             provider_name=payload.provider,
         )
-    )
+    ))
     db.commit()
     for rec in created:
         db.refresh(rec)
@@ -72,14 +103,14 @@ def analyze_quote(
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_permission("ai:recommendations:write")),
 ) -> AIRecommendationListOut:
-    created = AnalyzeQuoteUseCase(db).execute(
+    created = _run(lambda: AnalyzeQuoteUseCase(db).execute(
         AnalyzeQuoteInput(
             company_id=current_user.active_company_id,
             actor_user_id=current_user.user_id,
             quote_id=quote_id,
             provider_name=payload.provider,
         )
-    )
+    ))
     db.commit()
     for rec in created:
         db.refresh(rec)
@@ -92,13 +123,13 @@ def suggest_tasks(
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_permission("ai:recommendations:write")),
 ) -> AIRecommendationListOut:
-    created = SuggestTasksUseCase(db).execute(
+    created = _run(lambda: SuggestTasksUseCase(db).execute(
         SuggestTasksInput(
             company_id=current_user.active_company_id,
             actor_user_id=current_user.user_id,
             provider_name=payload.provider,
         )
-    )
+    ))
     db.commit()
     for rec in created:
         db.refresh(rec)

@@ -75,7 +75,7 @@ export function RecommendationCard({
       <p className="text-sm text-text-primary">{recommendation.summary}</p>
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
-        <span>{t("provider")}: {recommendation.provider}</span>
+        <span>{t("provider")}: {recommendation.provider}{recommendation.model ? ` (${recommendation.model})` : ""}</span>
         {recommendation.confidence_score !== null && (
           <span>{t("confidence")}: {Math.round(recommendation.confidence_score * 100)}%</span>
         )}
@@ -85,9 +85,20 @@ export function RecommendationCard({
       </div>
 
       {showDetails && (
-        <pre className="max-h-40 overflow-auto rounded bg-bg p-2 text-xs text-text-secondary">
-          {JSON.stringify(recommendation.response, null, 2)}
-        </pre>
+        <div className="flex flex-col gap-2">
+          <div>
+            <p className="mb-1 text-xs font-medium text-text-secondary">{t("promptLabel")}</p>
+            <pre className="max-h-32 overflow-auto rounded bg-bg p-2 text-xs text-text-secondary">
+              {recommendation.prompt}
+            </pre>
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-medium text-text-secondary">{t("responseLabel")}</p>
+            <pre className="max-h-40 overflow-auto rounded bg-bg p-2 text-xs text-text-secondary">
+              {JSON.stringify(recommendation.response, null, 2)}
+            </pre>
+          </div>
+        </div>
       )}
 
       {editing && (

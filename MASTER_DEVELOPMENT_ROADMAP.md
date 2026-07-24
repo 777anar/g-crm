@@ -1,7 +1,8 @@
 # G-STONE ERP — Master Development Roadmap
 
 _Date: 2026-07-24_
-_Current state: Version **2.39.0**. 14 installed modules, 758/758 backend tests passing, CI-enforced core/module architecture boundary (including a CI-enforced ESLint gate — see Phase 17), Postgres Row-Level Security + httpOnly-cookie auth + staff MFA + a compliance audit-log surface (see Phase 18), a fully operable reservation/stage/notification UI closing every Phase 1/2 Stone Fabrication Workflow gap (see Phase 19), multi-slab batch optimization + CNC/DXF export + automated low-stock purchase suggestions + a real supplier catalog import pipeline (see Phase 20), live in daily use by G-STONE GALLERY._
+_Current state: Version **2.40.0**. 14 installed modules, 774/774 backend tests passing, CI-enforced core/module architecture boundary (including a CI-enforced ESLint gate — see Phase 17), Postgres Row-Level Security + httpOnly-cookie auth + staff MFA + a compliance audit-log surface (see Phase 18), a fully operable reservation/stage/notification UI closing every Phase 1/2 Stone Fabrication Workflow gap (see Phase 19), multi-slab batch optimization + CNC/DXF export + automated low-stock purchase suggestions + a real supplier catalog import pipeline (see Phase 20), a real Anthropic Claude provider behind the AI Sales Assistant with cost controls and a full prompt/response audit trail (see Phase 21), live in daily use by G-STONE GALLERY._
+_Updated 2026-07-24: Phase 21 (Real AI Provider Integration) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.40.0] and `IMPLEMENTATION_REPORT.md` §13 for the complete record._
 _Updated 2026-07-24: Phase 20 (Advanced Cut Optimization & Supply Chain Intelligence) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.39.0] and `IMPLEMENTATION_REPORT.md` §12 for the complete record._
 _Updated 2026-07-23: Phase 19 (Stone Fabrication Workflow, Phase 3) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.38.0] and `IMPLEMENTATION_REPORT.md` §11 for the complete record._
 _Updated 2026-07-23: Phase 18 (Security & Compliance Hardening) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.37.0] and `IMPLEMENTATION_REPORT.md` §10 for the complete record._
@@ -15,7 +16,7 @@ _Scope: this document does not implement anything. It records what is done (so i
 
 - **Part 1** defines what "world-class" means for this specific product, so later phases have a target instead of being an arbitrary backlog.
 - **Part 2** is the delivery history, compressed from 60+ point releases into 20 coherent phases, each marked ✅ **Completed** with its real version numbers and dates. Nothing here needs to be redone.
-- **Part 3** is everything not yet built, sequenced into phases in the order they should be executed, with the reasoning for that order. Phase numbering continues from Part 2 (Phase 21 onward) so the whole platform history reads as one continuous list.
+- **Part 3** is everything not yet built, sequenced into phases in the order they should be executed, with the reasoning for that order. Phase numbering continues from Part 2 (Phase 22 onward) so the whole platform history reads as one continuous list.
 - Every remaining phase cites the source finding it comes from (`PROJECT_AUDIT.md` §, `IMPLEMENTATION_REPORT.md` §, `STONE_WORKFLOW_REPORT.md` §12, or `PROJECT_ANALYSIS.md`'s original Phase 9/10) rather than being invented fresh — this roadmap extends the project's own audit trail, it doesn't restart it.
 
 ---
@@ -27,7 +28,7 @@ Given what this platform already is (a complete quote-to-cash-to-install ERP wit
 1. **No open technical debt or known bugs** — every item a prior audit flagged and re-flagged (customer restore, list sorting, dead code, doc drift) is actually closed, not carried forward a fourth time.
 2. **Security and compliance with no asterisks** — the defense-in-depth layers the architecture docs already promise (RLS, CI-enforced boundaries, httpOnly tokens, tightened CORS) are real, not "acknowledged as accepted tech debt."
 3. **The stone-fabrication domain logic is finished, not just started** — Phase 1/2 of the Stone Fabrication Workflow built the data model and the algorithm; a world-class version closes the UI and operational gaps (reservation UI, drag-and-drop stage boards, notifications, multi-slab optimization, CNC-ready output) those two phases deliberately left for a follow-up.
-4. **Every "mock" or "placeholder" abstraction gets a real implementation** — the AI Sales Assistant is explicitly mock-provider-only by design; a real LLM behind the same abstraction is the difference between a demo and a working assistant.
+4. **Every "mock" or "placeholder" abstraction gets a real implementation** — the AI Sales Assistant was explicitly mock-provider-only by design until Phase 21 gave it a real Claude-backed provider behind the same abstraction, the difference between a demo and a working assistant.
 5. **The business runs on it end-to-end, including money and hardware** — no online payment collection, no accounting-system export, no CNC/machine-file export exists yet. These are the remaining links between "the system has the data" and "the data leaves the system to do something."
 6. **It's validated at the scale and on the devices real usage requires** — mobile client (explicitly Phase 9 of the original architecture, never started) and load/performance testing (explicitly Phase 10, never started) are the two phases the original plan always intended to come last, and still haven't happened.
 
@@ -61,7 +62,7 @@ Unified omnichannel inbox (WhatsApp, Instagram, Messenger, Email, SMS) integrate
 
 ### ✅ Phase 5 — AI Sales Assistant (mock provider)
 **v2.8 · 2026-07-06**
-Lead scoring, conversation/sales/task intelligence, dedicated AI Dashboard — every recommendation requires explicit human Accept/Reject/Edit. Deliberately `MockAIProvider`-only; the abstraction is real, the model behind it is not yet (see Phase 21).
+Lead scoring, conversation/sales/task intelligence, dedicated AI Dashboard — every recommendation requires explicit human Accept/Reject/Edit. Deliberately `MockAIProvider`-only at the time; a real Claude-backed provider was added behind the same abstraction in Phase 21.
 
 ### ✅ Phase 6 — UX & Platform Polish
 **v2.8.1 · 2026-07-06**
@@ -123,24 +124,15 @@ Closed every one of the eight gaps `STONE_WORKFLOW_REPORT.md` §12 named as the 
 **v2.39 · 2026-07-24**
 Took the single-slab nesting engine from Version 2.35.0 and turned it into the shop-floor and procurement automation layer named as this phase's goal: multi-slab/cross-job batch optimization (`POST /cut_optimization/batch-runs`, a new `pack_pieces_multi_slab` outer orchestrator reusing the existing single-slab packer unchanged, persisted to a new `cut_optimization_batch_runs` table, with a job-identifier label-prefix convention for tracking which job a placement belongs to); CNC/machine-ready export (`GET .../export.dxf` on both single-slab and batch runs, `ezdxf`-based, `SLAB`/`CUT`/`LABELS` layers); automated low-stock → purchase suggestion (`GET /reports/inventory/low-stock`, combining a configurable available-stock threshold with Smart Offcut Management's own `no_suitable_offcut` audit-log history, surfaced on `/reports/inventory` linking into Purchasing's existing PO-creation form rather than adding a new write path); and a standardized supplier catalog import pipeline (`POST /catalog/materials/import`, CSV find-or-create/upsert for Brands/Materials/Thicknesses/Sizes, best-effort per row) closing Sprint 2 (Phase 9)'s deliberately-deferred free-text-only catalog data entry. 21 new backend tests (737→758). Full detail in `CHANGELOG.md` [2.39.0] and `IMPLEMENTATION_REPORT.md` §12.
 
+### ✅ Phase 21 — Real AI Provider Integration
+**v2.40 · 2026-07-24**
+Gave the AI Sales Assistant (Phase 5, Version 2.8) its first real model behind the existing `AIProvider` interface: `anthropic` now resolves to a real `AnthropicProvider` calling the Claude API with structured JSON output, asked only for the genuinely language/judgment half of each analysis (score, sentiment, phrasing, ranking within an already-real candidate list) — exact-id matching and financial-threshold math are computed deterministically (new `modules/ai/domain/analysis_helpers.py`) and merged in, so a hallucinated id or an approximated figure is structurally impossible, not just unlikely. No use case, DTO, schema, or frontend change was needed for the swap itself, the same non-goal discipline Phase 7 held for Communication's channel providers. Cost controls closed the phase's other named requirement: every analysis call (mock or real) is rate-limited per company and checked against a configurable daily spend cap before the provider is invoked, both enforced from a new `ai_provider_call_logs` audit table that records every call attempt — success, rejection, or failure — with its exact prompt, raw response, tokens, cost, and latency; `AIRecommendation` gained a `provider_call_id` tracing every recommendation back to the call that produced it, and a new `GET /ai/usage` endpoint (surfaced on the AI Dashboard) makes today's spend/budget/call history visible rather than only enforced. The existing "AI never performs a business action automatically" invariant required no new code to preserve, since `ReviewRecommendationUseCase` was already recommendation-type-agnostic. 16 new backend tests (758→774). **Deliberately out of scope this phase**: the roadmap's own "natural scope expansion once a real model exists" examples (AI-drafted quote line-item suggestions, AI-drafted Communication Center reply drafts) are new product surfaces — new recommendation types, new use cases, new UI — rather than the provider-integration/cost-control/audit-trail infrastructure this phase's four other bullets named; left for a dedicated future pass once real usage data shows which is actually wanted. Full detail in `CHANGELOG.md` [2.40.0] and `IMPLEMENTATION_REPORT.md` §13.
+
 ---
 
 ## Part 3 — Remaining Phases (Execution Order)
 
 _Sequencing logic: close known debt and security gaps first (cheap, and every later phase inherits a cleaner/safer base) → finish the stone-fabrication domain the last two phases started (the platform's actual competitive differentiator) → extend that domain further (advanced optimization, real supply-chain automation) → replace the one remaining major mock (AI) → close the money/paperwork loop (payments, accounting export) → make analytics scale-ready → prove the system at real scale → extend to mobile → formal hardening and launch, exactly as `PROJECT_ANALYSIS.md`'s own Phase 9/10 always intended to come last._
-
----
-
-### 🔲 Phase 21 — Real AI Provider Integration
-**Priority: Medium-High · Size: L · Sequenced after Phase 18 (security) since real LLM calls carry new data-handling and cost-control obligations**
-
-The AI Sales Assistant (Phase 5) was deliberately built provider-agnostic with every provider name (`openai`/`anthropic`/`gemini`/`ollama`/`azure_openai`) resolving to a deterministic `MockAIProvider` — the abstraction was the point of that phase, not a real model. This phase is the follow-through, mirroring exactly how Phase 7 followed Phase 4 for Communication.
-
-- Implement at least one real `AIProvider` (Claude via the Anthropic API is the natural first choice given this codebase's own tooling) behind the existing interface — no change to any use case, schema, or the frontend, the same non-goal discipline Phase 7 held for channel providers.
-- Cost controls and rate limiting on real model calls (this is the first place in the codebase real per-call cost exists).
-- Prompt/response audit logging — every AI-generated recommendation should be traceable to the exact prompt and model response that produced it, for the same accountability reason every other write action gets an audit entry.
-- Preserve the existing hard invariant: **AI never performs a business action automatically** — every recommendation still requires explicit human Accept/Reject/Edit, enforced structurally, not just by UI convention.
-- Natural scope expansion once a real model exists: AI-drafted quote line-item suggestions from a Project's Rooms/Items, AI-drafted customer-message replies in the Communication Center inbox (draft-only, human-sent).
 
 ---
 
@@ -202,9 +194,8 @@ The closing phase, not because there's nothing left after it, but because it's w
 
 | # | Phase | Status | Size | Depends on |
 |---|---|---|---|---|
-| 0–20 | Foundation through Advanced Cut Optimization & Supply Chain Intelligence | ✅ Completed (v1.0–v2.39.0) | — | — |
-| 21 | Real AI Provider Integration | 🔲 Next | L | Phase 18 ✅ |
-| 22 | Payments & Financial Ecosystem Integration | 🔲 | L | Phase 18 ✅ |
+| 0–21 | Foundation through Real AI Provider Integration | ✅ Completed (v1.0–v2.40.0) | — | — |
+| 22 | Payments & Financial Ecosystem Integration | 🔲 Next | L | Phase 18 ✅ |
 | 23 | Reporting & Business Intelligence Maturity | 🔲 | M | None |
 | 24 | Performance, Scale & Reliability Engineering | 🔲 | M | Phase 23 (partial) |
 | 25 | Mobile Client & Offline Field Operations | 🔲 | XL | Phases 18 ✅, 22 |

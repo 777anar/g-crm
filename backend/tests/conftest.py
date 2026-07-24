@@ -67,6 +67,19 @@ def _reset_login_rate_limiter():
 
 
 @pytest.fixture(autouse=True)
+def _reset_ai_rate_limiter():
+    """modules.ai.infrastructure.rate_limit.ai_analysis_rate_limiter is a
+    module-level singleton like the login rate limiter above (Phase 21);
+    reset it before every test so tests exercising the four AI analysis
+    endpoints don't trip each other's per-company counters."""
+    from modules.ai.infrastructure.rate_limit import ai_analysis_rate_limiter
+
+    ai_analysis_rate_limiter.reset()
+    yield
+    ai_analysis_rate_limiter.reset()
+
+
+@pytest.fixture(autouse=True)
 def _reset_token_denylist():
     """core.auth.token_denylist.token_denylist is a module-level singleton
     like the rate limiter above; in this test environment (no Redis server

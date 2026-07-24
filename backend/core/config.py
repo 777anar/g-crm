@@ -31,5 +31,22 @@ class Settings(BaseSettings):
     # so operators don't need to hand-generate a base64 Fernet key.
     channel_credentials_encryption_key: str = "dev-channel-credentials-key-change-me"
 
+    # AI Sales Assistant real provider (Phase 21). Empty key means the
+    # "anthropic" provider name is registered but not usable -- resolved at
+    # call time (modules/ai/infrastructure/providers/anthropic_provider.py),
+    # not a boot-time guard, since unlike the secrets above this integration
+    # is genuinely optional (a company may run on the mock provider only).
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-opus-4-8"
+    # Which registered provider name `get_provider(None)` resolves to when a
+    # caller doesn't pass one explicitly -- lets ops flip every company from
+    # "mock" to "anthropic" (or back, e.g. during a cost incident) via one
+    # environment variable, no code change or redeploy of calling code.
+    ai_default_provider: str = "mock"
+    # Per-company daily spend cap in USD across every real (non-mock)
+    # provider call, enforced in modules/ai/application/use_cases/_shared.py
+    # before the provider is ever invoked. 0 or below disables the cap.
+    ai_daily_budget_usd: float = 20.0
+
 
 settings = Settings()

@@ -11,7 +11,8 @@ established by Communication's ChannelProvider.
 """
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict
+from decimal import Decimal
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -20,10 +21,19 @@ class AIAnalysisResult:
     plus the provider's own confidence in it (0.0-1.0). Execution time is
     measured by the calling use case (wall-clock around the provider call),
     not reported by the provider itself, so it stays comparable across
-    every provider without each one needing to implement timing."""
+    every provider without each one needing to implement timing.
+
+    The four fields below are Phase 21 additions for a real provider's audit
+    trail (`AIProviderCallLog`) -- `None` for `MockAIProvider`, which makes
+    no real API call and has no real cost, tokens, or raw response text to
+    report."""
 
     data: Dict[str, Any]
     confidence: float
+    raw_response: Optional[str] = None
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None
+    cost_usd: Optional[Decimal] = None
 
 
 class AIProvider(ABC):

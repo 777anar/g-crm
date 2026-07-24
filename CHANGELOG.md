@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.40.0] — 2026-07-24 — Phase 21: Real AI Provider Integration
+
+Closes `MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 21 — the AI Sales Assistant (Phase 5, Version 2.8) was deliberately built provider-agnostic with every provider name resolving to a deterministic mock; this phase is the follow-through, mirroring exactly how Phase 7 followed Phase 4 for Communication.
+
+### Added
+- **Real `AnthropicProvider`** — `anthropic` now resolves to a real implementation calling the Claude API (`output_config.format` structured JSON output, model configurable via `ANTHROPIC_MODEL`, default `claude-opus-4-8`), behind the exact same `AIProvider` interface `MockAIProvider` implements — **no change to any use case, DTO, schema, or the frontend**, the same non-goal discipline Phase 7 held for channel providers. The model is asked only for the genuinely language/judgment half of each analysis (score, sentiment, phrasing, ranking within an already-real candidate list); exact-id matching (duplicate leads, similar customers) and financial-threshold math (margin risk, price anomalies, discount averages) are computed deterministically (new `modules/ai/domain/analysis_helpers.py`, shared logic the real provider uses to avoid ever hallucinating an id or approximating an exact figure the database already answers correctly). `Settings.ai_default_provider` (env-configurable, default `mock`) is what a call with no explicit `provider` resolves to — an instant, code-free rollback lever.
+- **Cost controls** — every analysis call (mock or real) is rate-limited per company (20/minute, `FixedWindowRateLimiter`, the same mechanism the login endpoint already uses) and checked against a configurable daily spend cap (`AI_DAILY_BUDGET_USD`, default $20, `0` disables it) computed from real cost logged so far today — both rejections return `429`.
+- **Prompt/response audit logging** — new `ai_provider_call_logs` table: one row per call attempt, success or failure, capturing the exact prompt sent, the real provider's raw response text, token counts, computed cost, latency, and any error — `AIRecommendation` gained a `provider_call_id` FK tracing every recommendation back to the exact call that produced it. A new `GET /ai/usage` endpoint (added to the AI Dashboard UI) surfaces today's spend/budget/call count and a recent-call log.
+- An unconfigured real provider (no `ANTHROPIC_API_KEY`) or an upstream API failure now returns a clean `503` (new `ServiceUnavailableError`) instead of a generic `500` — closes a pre-existing gap where an unknown provider name also fell through to `500` unhandled.
+- The existing hard invariant — **AI never performs a business action automatically** — required no new code to preserve: `ReviewRecommendationUseCase` is recommendation-type-agnostic and only ever updates the recommendation's own status, so it already extends correctly to real-provider-generated recommendations with zero changes.
+- 16 new backend tests (`tests/ai/test_anthropic_provider.py`, `tests/ai/test_usage_and_cost_controls.py`), plus `tests/ai/test_provider_registry.py` updated to reflect `anthropic` now resolving to a real provider.
+
+### Verification
+Full backend suite passing (774/774 — 758 prior + 16 new), `lint-imports` clean, migrations round-trip clean (`upgrade head` → `downgrade -1` → `upgrade head`, SQLite), frontend `tsc --noEmit` clean, `npm run lint` clean, frontend production build clean (78 routes, no new routes this phase — the AI Dashboard page was extended in place).
+
+---
+
 ## [2.39.0] — 2026-07-24 — Phase 20: Advanced Cut Optimization & Supply Chain Intelligence
 
 Closes every item `MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 20 named — takes the single-slab nesting engine from Version 2.35.0 and turns it into the shop-floor and procurement automation layer a world-class fabrication ERP needs.
