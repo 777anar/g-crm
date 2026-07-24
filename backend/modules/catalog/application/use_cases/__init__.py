@@ -25,6 +25,11 @@ from modules.catalog.application.use_cases.slab_reservation_use_cases import (
     ReleaseSlabReservationUseCase,
 )
 from modules.catalog.application.use_cases.slab_use_cases import CreateSlabUseCase, UpdateSlabStatusUseCase
+from modules.catalog.application.use_cases.supplier_catalog_import_use_case import (
+    ImportSummary,
+    ImportSupplierCatalogUseCase,
+    RowError,
+)
 from modules.catalog.application.use_cases.warehouse_use_cases import (
     CreateWarehouseUseCase,
     UpdateWarehouseUseCase,
@@ -53,4 +58,7 @@ __all__ = [
     "DeleteMaterialThicknessUseCase",
     "AddMaterialSizeUseCase",
     "DeleteMaterialSizeUseCase",
+    "ImportSupplierCatalogUseCase",
+    "ImportSummary",
+    "RowError",
 ]

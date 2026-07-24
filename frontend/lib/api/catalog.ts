@@ -1,4 +1,4 @@
-import { apiRequest } from "../api-client";
+import { apiDownload, apiRequest } from "../api-client";
 import type {
   Attachment,
   Brand,
@@ -17,6 +17,7 @@ import type {
   Slab,
   SlabReservation,
   SlabStatus,
+  SupplierCatalogImportSummary,
   Warehouse,
 } from "../types";
 
@@ -145,6 +146,23 @@ export function uploadMaterialAsset(materialId: string, file: File) {
 
 export function listPricesForMaterial(materialId: string) {
   return apiRequest<{ items: PriceListEntry[] }>(`/api/v1/catalog/materials/${materialId}/prices`);
+}
+
+// --- Standardized supplier catalog import (Phase 20) --------------------
+
+export function downloadSupplierCatalogImportTemplate() {
+  return apiDownload("/api/v1/catalog/materials/import/template", {
+    filename: "supplier_catalog_import_template.csv",
+  });
+}
+
+export function importSupplierCatalog(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiRequest<SupplierCatalogImportSummary>("/api/v1/catalog/materials/import", {
+    method: "POST",
+    formData,
+  });
 }
 
 // --- Material Thickness/Size options (Sprint 4) -------------------------

@@ -2,25 +2,42 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from core.api.errors import BusinessRuleViolationError, NotFoundError
 from core.api.pagination import decode_cursor, encode_cursor
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, require_permission
-from modules.cut_optimization.application.dtos import PieceSpecInput, RecommendOffcutsInput, RunCutOptimizationInput
-from modules.cut_optimization.application.use_cases import RecommendOffcutsUseCase, RunCutOptimizationUseCase
+from modules.cut_optimization.application.dtos import (
+    PieceSpecInput,
+    RecommendOffcutsInput,
+    RunBatchCutOptimizationInput,
+    RunCutOptimizationInput,
+)
+from modules.cut_optimization.application.use_cases import (
+    RecommendOffcutsUseCase,
+    RunBatchCutOptimizationUseCase,
+    RunCutOptimizationUseCase,
+)
+from modules.cut_optimization.domain.dxf_export import build_batch_dxf, build_single_slab_dxf
 from modules.cut_optimization.domain.exceptions import CutOptimizationDomainError
+from modules.cut_optimization.infrastructure.repositories.cut_optimization_batch_run_repository import (
+    CutOptimizationBatchRunRepository,
+)
 from modules.cut_optimization.infrastructure.repositories.cut_optimization_run_repository import (
     CutOptimizationRunRepository,
 )
 from modules.cut_optimization.presentation.schemas.cut_optimization import (
+    CutOptimizationBatchRunListOut,
+    CutOptimizationBatchRunOut,
     CutOptimizationRunListOut,
     CutOptimizationRunOut,
     OffcutCandidateOut,
     PlacedPieceOut,
     RecommendOffcutsRequest,
     RecommendOffcutsResponseOut,
+    RunBatchCutOptimizationCreate,
     RunCutOptimizationCreate,
 )
 
@@ -159,4 +176,112 @@ def recommend_offcuts(
         recommend_new_slab=output.recommend_new_slab,
         reason=output.reason,
         persisted_run_id=output.persisted_run.id if output.persisted_run else None,
+    )
+
+
+# ── Multi-slab / cross-job batch optimization (Phase 20) ─────────────────────
+
+
+@router.post("/batch-runs", response_model=CutOptimizationBatchRunOut)
+def run_batch_cut_optimization(
+    payload: RunBatchCutOptimizationCreate,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("cut_optimization:write")),
+) -> CutOptimizationBatchRunOut:
+    use_case = RunBatchCutOptimizationUseCase(db)
+    try:
+        run = use_case.execute(
+            RunBatchCutOptimizationInput(
+                company_id=current_user.active_company_id,
+                actor_user_id=current_user.user_id,
+                material_id=payload.material_id,
+                pieces=_to_piece_inputs(payload.pieces),
+                kerf_mm=payload.kerf_mm,
+                slab_ids=payload.slab_ids,
+                thickness_mm=payload.thickness_mm,
+                finish=payload.finish,
+                warehouse_id=payload.warehouse_id,
+                max_slabs=payload.max_slabs,
+                notes=payload.notes,
+            )
+        )
+    except _DOMAIN_ERRORS as exc:
+        raise BusinessRuleViolationError(str(exc)) from exc
+    db.commit()
+    db.refresh(run)
+    return CutOptimizationBatchRunOut.model_validate(run)
+
+
+@router.get("/batch-runs", response_model=CutOptimizationBatchRunListOut)
+def list_batch_runs(
+    material_id: Optional[uuid.UUID] = Query(default=None),
+    limit: int = Query(default=25, le=100),
+    cursor: Optional[str] = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("cut_optimization:read")),
+) -> CutOptimizationBatchRunListOut:
+    repo = CutOptimizationBatchRunRepository(db)
+    offset = decode_cursor(cursor)
+    items = repo.list(company_id=current_user.active_company_id, material_id=material_id, limit=limit + 1, offset=offset)
+    has_more = len(items) > limit
+    page = items[:limit]
+    next_cursor = encode_cursor(offset=offset + limit) if has_more else None
+    return CutOptimizationBatchRunListOut(
+        items=[CutOptimizationBatchRunOut.model_validate(r) for r in page], next_cursor=next_cursor
+    )
+
+
+@router.get("/batch-runs/{batch_run_id}", response_model=CutOptimizationBatchRunOut)
+def get_batch_run(
+    batch_run_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("cut_optimization:read")),
+) -> CutOptimizationBatchRunOut:
+    run = CutOptimizationBatchRunRepository(db).get(company_id=current_user.active_company_id, run_id=batch_run_id)
+    if run is None:
+        raise NotFoundError("Batch optimization run not found")
+    return CutOptimizationBatchRunOut.model_validate(run)
+
+
+# ── CNC/machine-ready export (Phase 20) ───────────────────────────────────────
+
+
+@router.get("/runs/{run_id}/export.dxf")
+def export_run_dxf(
+    run_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("cut_optimization:read")),
+) -> Response:
+    """A DXF (CAM-ready) export of a completed single-slab layout, so the
+    optimization result can drive an actual CNC/waterjet machine instead of
+    only informing a human operator from the SVG visualization."""
+    run = CutOptimizationRunRepository(db).get(company_id=current_user.active_company_id, run_id=run_id)
+    if run is None:
+        raise NotFoundError("Optimization run not found")
+    content = build_single_slab_dxf(
+        slab_length_mm=run.slab_length_mm, slab_width_mm=run.slab_width_mm, placements=run.placements
+    )
+    return Response(
+        content=content,
+        media_type="application/dxf",
+        headers={"Content-Disposition": f'attachment; filename="cut-optimization-{run.id}.dxf"'},
+    )
+
+
+@router.get("/batch-runs/{batch_run_id}/export.dxf")
+def export_batch_run_dxf(
+    batch_run_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("cut_optimization:read")),
+) -> Response:
+    """One DXF file covering every slab used in a batch run, laid out side
+    by side (see build_batch_dxf's docstring)."""
+    run = CutOptimizationBatchRunRepository(db).get(company_id=current_user.active_company_id, run_id=batch_run_id)
+    if run is None:
+        raise NotFoundError("Batch optimization run not found")
+    content = build_batch_dxf(slabs=run.slabs, placements=run.placements)
+    return Response(
+        content=content,
+        media_type="application/dxf",
+        headers={"Content-Disposition": f'attachment; filename="cut-optimization-batch-{run.id}.dxf"'},
     )

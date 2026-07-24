@@ -65,3 +65,20 @@ class MaterialOut(BaseModel):
 class MaterialListOut(BaseModel):
     items: list[MaterialOut]
     next_cursor: Optional[str] = None
+
+
+# ── Standardized supplier catalog import (Phase 20) ───────────────────────────
+
+
+class SupplierCatalogImportRowErrorOut(BaseModel):
+    row_number: int
+    message: str
+
+
+class SupplierCatalogImportSummaryOut(BaseModel):
+    brands_created: int
+    materials_created: int
+    materials_updated: int
+    thicknesses_added: int
+    sizes_added: int
+    errors: list[SupplierCatalogImportRowErrorOut]

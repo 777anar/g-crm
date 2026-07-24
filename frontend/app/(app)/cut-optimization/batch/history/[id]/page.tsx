@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { exportRunDxf, getCutOptimizationRun } from "@/lib/api/cut-optimization";
-import type { CutOptimizationRun } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
+import { exportBatchRunDxf, getBatchCutOptimizationRun } from "@/lib/api/cut-optimization";
+import type { CutOptimizationBatchRun } from "@/lib/types";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -14,17 +13,17 @@ import { ApiRequestError } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import { SlabLayoutSvg } from "@/components/cut-optimization/slab-layout-svg";
 
-export default function CutOptimizationRunDetailPage() {
+export default function BatchCutOptimizationRunDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("cutOptimization");
   const tNav = useTranslations("nav");
 
-  const [run, setRun] = useState<CutOptimizationRun | null>(null);
+  const [run, setRun] = useState<CutOptimizationBatchRun | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    getCutOptimizationRun(id)
+    getBatchCutOptimizationRun(id)
       .then(setRun)
       .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
   }, [id, t]);
@@ -32,7 +31,7 @@ export default function CutOptimizationRunDetailPage() {
   async function handleExport() {
     setExporting(true);
     try {
-      await exportRunDxf(id);
+      await exportBatchRunDxf(id);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("exportFailed"));
     } finally {
@@ -48,19 +47,15 @@ export default function CutOptimizationRunDetailPage() {
       <Breadcrumb
         items={[
           { label: tNav("cutOptimization"), href: "/cut-optimization" },
-          { label: t("historyLink"), href: "/cut-optimization/history" },
-          { label: `${run.slab_length_mm}×${run.slab_width_mm}mm` },
+          { label: t("batchTitle"), href: "/cut-optimization/batch" },
+          { label: t("historyLink"), href: "/cut-optimization/batch/history" },
+          { label: `${run.slabs_used_count} ${t("slabsUsed")}` },
         ]}
       />
 
-      <div className="flex items-center gap-3">
-        <h1 className="text-xl font-semibold text-text-primary">
-          {run.slab_length_mm}×{run.slab_width_mm}mm
-        </h1>
-        <Badge tone={run.source === "offcut_recommendation" ? "info" : "neutral"}>
-          {t(`source_${run.source}` as Parameters<typeof t>[0])}
-        </Badge>
-      </div>
+      <h1 className="text-xl font-semibold text-text-primary">
+        {run.slabs_used_count} {t("slabsUsed")}
+      </h1>
       <p className="text-xs text-text-secondary">{t("created")}: {formatDateTime(run.created_at)}</p>
 
       <Card>
@@ -72,7 +67,11 @@ export default function CutOptimizationRunDetailPage() {
             </Button>
           }
         />
-        <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-5">
+          <div>
+            <p className="text-xs text-text-secondary">{t("slabsUsed")}</p>
+            <p className="text-lg font-semibold text-text-primary">{run.slabs_used_count}</p>
+          </div>
           <div>
             <p className="text-xs text-text-secondary">{t("utilization")}</p>
             <p className="text-lg font-semibold text-text-primary">{run.utilization_pct}%</p>
@@ -91,14 +90,8 @@ export default function CutOptimizationRunDetailPage() {
           </div>
         </div>
 
-        <SlabLayoutSvg
-          slabLengthMm={parseFloat(run.slab_length_mm)}
-          slabWidthMm={parseFloat(run.slab_width_mm)}
-          placements={run.placements}
-        />
-
         {run.unplaced.length > 0 && (
-          <div className="mt-4 rounded-md border border-danger/30 bg-danger/5 p-3">
+          <div className="mb-4 rounded-md border border-danger/30 bg-danger/5 p-3">
             <p className="text-sm font-medium text-danger">{t("unplacedWarning")}</p>
             <ul className="mt-1 list-disc pl-5 text-sm text-danger">
               {run.unplaced.map((u, i) => (
@@ -107,6 +100,21 @@ export default function CutOptimizationRunDetailPage() {
             </ul>
           </div>
         )}
+
+        <div className="flex flex-col gap-4">
+          {run.slabs.map((slab) => (
+            <div key={slab.slab_ref}>
+              <p className="mb-2 text-sm font-medium text-text-primary">
+                {slab.slab_ref} ({slab.length_mm}×{slab.width_mm}mm)
+              </p>
+              <SlabLayoutSvg
+                slabLengthMm={parseFloat(slab.length_mm)}
+                slabWidthMm={parseFloat(slab.width_mm)}
+                placements={run.placements.filter((p) => p.slab_ref === slab.slab_ref)}
+              />
+            </div>
+          ))}
+        </div>
       </Card>
 
       <Card>

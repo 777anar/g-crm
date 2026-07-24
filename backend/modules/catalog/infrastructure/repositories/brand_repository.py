@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from modules.catalog.infrastructure.models.brand import Brand
@@ -18,6 +18,14 @@ class BrandRepository:
 
     def get(self, *, company_id: uuid.UUID, brand_id: uuid.UUID) -> Optional[Brand]:
         return self.db.scalar(select(Brand).where(Brand.id == brand_id, Brand.company_id == company_id))
+
+    def get_by_name(self, *, company_id: uuid.UUID, name: str) -> Optional[Brand]:
+        """Case-insensitive exact match -- the find-or-create key for
+        Supplier Catalog Import (Phase 20), since a CSV's brand column is
+        free text a human typed, not a stable id."""
+        return self.db.scalar(
+            select(Brand).where(Brand.company_id == company_id, func.lower(Brand.name) == name.strip().lower())
+        )
 
     def list(
         self,

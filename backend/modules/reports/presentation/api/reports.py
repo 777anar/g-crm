@@ -18,6 +18,7 @@ from modules.reports.application.use_cases import (
     FinanceAnalyticsUseCase,
     InstallationAnalyticsUseCase,
     InventoryAnalyticsUseCase,
+    LowStockPurchaseSuggestionsUseCase,
     ProductionAnalyticsUseCase,
     ProductionPlanningUseCase,
     SalesAnalyticsUseCase,
@@ -33,6 +34,7 @@ from modules.reports.presentation.schemas.reports import (
     FinanceAnalyticsOut,
     InstallationAnalyticsOut,
     InventoryAnalyticsOut,
+    LowStockSuggestionsOut,
     ProductionAnalyticsOut,
     ProductionPlanningOut,
     SalesAnalyticsOut,
@@ -143,6 +145,30 @@ def get_inventory_analytics(
         _filter_input(current_user=current_user, period=period, date_from=date_from, date_to=date_to)
     )
     return InventoryAnalyticsOut(**data)
+
+
+@router.get("/inventory/low-stock", response_model=LowStockSuggestionsOut)
+def get_low_stock_suggestions(
+    stock_threshold: int = Query(default=3, ge=0),
+    no_fit_window_days: int = Query(default=30, ge=1),
+    no_fit_threshold: int = Query(default=3, ge=1),
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("reports:read")),
+) -> LowStockSuggestionsOut:
+    """Phase 20's "automated low-stock -> purchase suggestion": a material
+    is surfaced when it has few/no available slabs left, or Smart Offcut
+    Management has repeatedly found nothing that fits a requested cut for
+    it recently. Read-only -- the actual draft Purchase Order is created
+    via Purchasing's own existing `POST /purchasing/purchase-orders`
+    (the frontend pre-fills that form from a row here), keeping the write
+    action inside Purchasing's own module boundary."""
+    data = LowStockPurchaseSuggestionsUseCase(db).execute(
+        company_id=current_user.active_company_id,
+        stock_threshold=stock_threshold,
+        no_fit_window_days=no_fit_window_days,
+        no_fit_threshold=no_fit_threshold,
+    )
+    return LowStockSuggestionsOut(**data)
 
 
 @router.get("/production-planning", response_model=ProductionPlanningOut)

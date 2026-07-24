@@ -100,3 +100,43 @@ class RecommendOffcutsResponseOut(BaseModel):
     recommend_new_slab: bool
     reason: str
     persisted_run_id: Optional[uuid.UUID] = None
+
+
+# ── Multi-slab / cross-job batch optimization (Phase 20) ─────────────────────
+
+
+class RunBatchCutOptimizationCreate(BaseModel):
+    material_id: uuid.UUID
+    pieces: List[PieceSpecIn]
+    kerf_mm: Decimal = Decimal("3")
+    slab_ids: Optional[List[uuid.UUID]] = None
+    thickness_mm: Optional[str] = None
+    finish: Optional[str] = None
+    warehouse_id: Optional[uuid.UUID] = None
+    max_slabs: int = 20
+    notes: Optional[str] = None
+
+
+class CutOptimizationBatchRunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    material_id: Optional[uuid.UUID]
+    kerf_mm: Decimal
+    slabs: list
+    pieces: list
+    placements: list
+    unplaced: list
+    slabs_used_count: int
+    total_area_m2: Decimal
+    placed_area_m2: Decimal
+    waste_area_m2: Decimal
+    utilization_pct: Decimal
+    notes: Optional[str]
+    created_by: Optional[uuid.UUID]
+    created_at: datetime
+
+
+class CutOptimizationBatchRunListOut(BaseModel):
+    items: List[CutOptimizationBatchRunOut]
+    next_cursor: Optional[str] = None

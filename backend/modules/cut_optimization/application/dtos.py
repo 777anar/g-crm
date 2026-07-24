@@ -44,3 +44,21 @@ class RecommendOffcutsInput(ActorContext):
     finish: Optional[str] = None
     warehouse_id: Optional[uuid.UUID] = None
     persist_top_candidate: bool = True
+
+
+@dataclass
+class RunBatchCutOptimizationInput(ActorContext):
+    """Multi-slab / cross-job batch optimization (Phase 20). `pieces` is
+    one combined pool -- pieces from multiple jobs/work orders are simply
+    concatenated into this one list, distinguished only by their `label`
+    (see batch_cutting_algorithm.py's module docstring for the "prefix the
+    label with a job identifier" convention this relies on)."""
+    material_id: uuid.UUID
+    pieces: List[PieceSpecInput] = field(default_factory=list)
+    kerf_mm: Decimal = Decimal("3")
+    slab_ids: Optional[List[uuid.UUID]] = None
+    thickness_mm: Optional[str] = None
+    finish: Optional[str] = None
+    warehouse_id: Optional[uuid.UUID] = None
+    max_slabs: int = 20
+    notes: Optional[str] = None

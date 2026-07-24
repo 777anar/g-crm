@@ -4,6 +4,7 @@ import type {
   FinanceAnalytics,
   InstallationAnalytics,
   InventoryAnalytics,
+  LowStockSuggestions,
   ProductionAnalytics,
   ProductionPlanning,
   ReportPeriod,
@@ -52,6 +53,18 @@ export function getInventoryAnalytics(params: ReportFilterParams = {}) {
 
 export function getProductionPlanning() {
   return apiRequest<ProductionPlanning>(`${BASE}/production-planning`);
+}
+
+export function getLowStockSuggestions(
+  params: { stockThreshold?: number; noFitWindowDays?: number; noFitThreshold?: number } = {}
+) {
+  return apiRequest<LowStockSuggestions>(`${BASE}/inventory/low-stock`, {
+    searchParams: {
+      stock_threshold: params.stockThreshold,
+      no_fit_window_days: params.noFitWindowDays,
+      no_fit_threshold: params.noFitThreshold,
+    },
+  });
 }
 
 export type ReportType = "executive" | "sales" | "production" | "installation" | "finance" | "inventory";

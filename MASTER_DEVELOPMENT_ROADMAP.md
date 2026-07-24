@@ -1,7 +1,8 @@
 # G-STONE ERP — Master Development Roadmap
 
-_Date: 2026-07-23_
-_Current state: Version **2.38.0**. 14 installed modules, 737/737 backend tests passing, CI-enforced core/module architecture boundary (including a CI-enforced ESLint gate — see Phase 17), Postgres Row-Level Security + httpOnly-cookie auth + staff MFA + a compliance audit-log surface (see Phase 18), a fully operable reservation/stage/notification UI closing every Phase 1/2 Stone Fabrication Workflow gap (see Phase 19), live in daily use by G-STONE GALLERY._
+_Date: 2026-07-24_
+_Current state: Version **2.39.0**. 14 installed modules, 758/758 backend tests passing, CI-enforced core/module architecture boundary (including a CI-enforced ESLint gate — see Phase 17), Postgres Row-Level Security + httpOnly-cookie auth + staff MFA + a compliance audit-log surface (see Phase 18), a fully operable reservation/stage/notification UI closing every Phase 1/2 Stone Fabrication Workflow gap (see Phase 19), multi-slab batch optimization + CNC/DXF export + automated low-stock purchase suggestions + a real supplier catalog import pipeline (see Phase 20), live in daily use by G-STONE GALLERY._
+_Updated 2026-07-24: Phase 20 (Advanced Cut Optimization & Supply Chain Intelligence) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.39.0] and `IMPLEMENTATION_REPORT.md` §12 for the complete record._
 _Updated 2026-07-23: Phase 19 (Stone Fabrication Workflow, Phase 3) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.38.0] and `IMPLEMENTATION_REPORT.md` §11 for the complete record._
 _Updated 2026-07-23: Phase 18 (Security & Compliance Hardening) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.37.0] and `IMPLEMENTATION_REPORT.md` §10 for the complete record._
 _Updated 2026-07-22: Phase 17 (Stabilization & Technical Debt Closeout) delivered in full — moved from Part 3 to Part 2 below. See `CHANGELOG.md` [2.36.0] and `PHASE17_COMPLETION_REPORT.md` for the complete record._
@@ -14,7 +15,7 @@ _Scope: this document does not implement anything. It records what is done (so i
 
 - **Part 1** defines what "world-class" means for this specific product, so later phases have a target instead of being an arbitrary backlog.
 - **Part 2** is the delivery history, compressed from 60+ point releases into 20 coherent phases, each marked ✅ **Completed** with its real version numbers and dates. Nothing here needs to be redone.
-- **Part 3** is everything not yet built, sequenced into phases in the order they should be executed, with the reasoning for that order. Phase numbering continues from Part 2 (Phase 20 onward) so the whole platform history reads as one continuous list.
+- **Part 3** is everything not yet built, sequenced into phases in the order they should be executed, with the reasoning for that order. Phase numbering continues from Part 2 (Phase 21 onward) so the whole platform history reads as one continuous list.
 - Every remaining phase cites the source finding it comes from (`PROJECT_AUDIT.md` §, `IMPLEMENTATION_REPORT.md` §, `STONE_WORKFLOW_REPORT.md` §12, or `PROJECT_ANALYSIS.md`'s original Phase 9/10) rather than being invented fresh — this roadmap extends the project's own audit trail, it doesn't restart it.
 
 ---
@@ -118,23 +119,15 @@ Closed every gap Part 1's pillar #2 named: Postgres Row-Level Security (RLS enab
 **v2.38 · 2026-07-23**
 Closed every one of the eight gaps `STONE_WORKFLOW_REPORT.md` §12 named as the deliberately-scoped Phase 1/2 boundary: a reservation UI outside the Production Job page (bulk-select-and-reserve on `/catalog/slabs`, a new company-wide `/catalog/reservations` browse-and-release page, and a Reserved Slabs card on `/orders/{id}`); real drag-and-drop stage movement plus a multi-select bulk-move toolbar on the Production Planning Dashboard; move-up/move-down stage reordering on `/production/stages`; a new Production notification subsystem (mirroring Installation's `notify_crew` pattern) firing on urgent-priority, stage-change, and operator-assignment moments, surfaced on the Dashboard; bulk slab reservation and bulk stage movement (both frontend `Promise.allSettled` fan-outs, matching the only bulk-action convention this codebase actually has); `production:priority:write`/`production:operator:write`/`production:stage:write` splitting the previously-coarse `production:write`; offcut dimension/area plausibility validation (checked in both orientations against the parent slab); and the `sold`-vs-`consumed` boundary closed two ways (`consumed` now reachable only via Production's own completion cascade; selling/scrapping a still-reserved slab now auto-releases its dangling reservation instead of leaving it stuck `active`). 15 new backend tests (722→737). Full detail in `CHANGELOG.md` [2.38.0] and `IMPLEMENTATION_REPORT.md` §11.
 
+### ✅ Phase 20 — Advanced Cut Optimization & Supply Chain Intelligence
+**v2.39 · 2026-07-24**
+Took the single-slab nesting engine from Version 2.35.0 and turned it into the shop-floor and procurement automation layer named as this phase's goal: multi-slab/cross-job batch optimization (`POST /cut_optimization/batch-runs`, a new `pack_pieces_multi_slab` outer orchestrator reusing the existing single-slab packer unchanged, persisted to a new `cut_optimization_batch_runs` table, with a job-identifier label-prefix convention for tracking which job a placement belongs to); CNC/machine-ready export (`GET .../export.dxf` on both single-slab and batch runs, `ezdxf`-based, `SLAB`/`CUT`/`LABELS` layers); automated low-stock → purchase suggestion (`GET /reports/inventory/low-stock`, combining a configurable available-stock threshold with Smart Offcut Management's own `no_suitable_offcut` audit-log history, surfaced on `/reports/inventory` linking into Purchasing's existing PO-creation form rather than adding a new write path); and a standardized supplier catalog import pipeline (`POST /catalog/materials/import`, CSV find-or-create/upsert for Brands/Materials/Thicknesses/Sizes, best-effort per row) closing Sprint 2 (Phase 9)'s deliberately-deferred free-text-only catalog data entry. 21 new backend tests (737→758). Full detail in `CHANGELOG.md` [2.39.0] and `IMPLEMENTATION_REPORT.md` §12.
+
 ---
 
 ## Part 3 — Remaining Phases (Execution Order)
 
 _Sequencing logic: close known debt and security gaps first (cheap, and every later phase inherits a cleaner/safer base) → finish the stone-fabrication domain the last two phases started (the platform's actual competitive differentiator) → extend that domain further (advanced optimization, real supply-chain automation) → replace the one remaining major mock (AI) → close the money/paperwork loop (payments, accounting export) → make analytics scale-ready → prove the system at real scale → extend to mobile → formal hardening and launch, exactly as `PROJECT_ANALYSIS.md`'s own Phase 9/10 always intended to come last._
-
----
-
-### 🔲 Phase 20 — Advanced Cut Optimization & Supply Chain Intelligence
-**Priority: High · Size: L · Builds on Phase 16's algorithm and Phase 19's completed reservation/stage UI**
-
-Takes the single-slab nesting engine from Version 2.35.0 and turns it into the shop-floor and procurement automation layer a world-class fabrication ERP needs.
-
-- **Multi-slab / cross-job batch optimization** — today's engine optimizes one job against one slab or offcut; extend it to nest multiple queued work orders' pieces across the available slab/offcut inventory at once, minimizing total waste across a whole production run, not just one job at a time.
-- **CNC/machine-ready export** — the current output is a visualization SVG; add a DXF (or equivalent CAM-ready) export of a completed cut layout so the optimization result can drive an actual CNC/waterjet machine, not just inform a human operator.
-- **Automated low-stock → purchase suggestion** — tie Reports' Inventory Analytics (Phase 10) and the Purchasing module (Phase 12) together: when Smart Offcut Management's `recommend_new_slab` fires repeatedly for a material, or stock for a material drops below a threshold, surface a suggested Purchase Order draft instead of requiring a manager to notice the pattern manually.
-- **Standardized supplier catalog import** — Sprint 2 (Phase 9) deliberately kept Brand/Stone/Thickness/Size as free-text-backed curated suggestions rather than real manufacturer spec-sheet data, explicitly deferring this. Build a real import pipeline (CSV/API) for supplier catalogs (NEOLITH, MARAZZI, SAPIENSTONE, etc. — already named as suggested brands) so Materials/Thickness/Size options are sourced from real supplier data instead of typed in by hand.
 
 ---
 
@@ -209,9 +202,8 @@ The closing phase, not because there's nothing left after it, but because it's w
 
 | # | Phase | Status | Size | Depends on |
 |---|---|---|---|---|
-| 0–19 | Foundation through Stone Fabrication Workflow, Phase 3 | ✅ Completed (v1.0–v2.38.0) | — | — |
-| 20 | Advanced Cut Optimization & Supply Chain Intelligence | 🔲 Next | L | Phase 19 ✅ |
-| 21 | Real AI Provider Integration | 🔲 | L | Phase 18 ✅ |
+| 0–20 | Foundation through Advanced Cut Optimization & Supply Chain Intelligence | ✅ Completed (v1.0–v2.39.0) | — | — |
+| 21 | Real AI Provider Integration | 🔲 Next | L | Phase 18 ✅ |
 | 22 | Payments & Financial Ecosystem Integration | 🔲 | L | Phase 18 ✅ |
 | 23 | Reporting & Business Intelligence Maturity | 🔲 | M | None |
 | 24 | Performance, Scale & Reliability Engineering | 🔲 | M | Phase 23 (partial) |

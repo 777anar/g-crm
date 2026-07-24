@@ -2,9 +2,9 @@
 these before calling a use-case, keeping the use-case layer free of any
 FastAPI/Pydantic import -- same pattern as modules/crm."""
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclass
@@ -189,3 +189,25 @@ class AddMaterialSizeInput(ActorContext):
     material_id: uuid.UUID
     dimensions: str
     sort_order: int = 0
+
+
+@dataclass
+class SupplierCatalogRowInput:
+    """One parsed CSV row for Supplier Catalog Import (Phase 20). Kept
+    presentation-agnostic (the API layer parses the CSV into these, the
+    use case never sees a raw file) per this module's existing DTO
+    convention."""
+    brand_name: str
+    material_name: str
+    material_type: Optional[str] = None
+    color: Optional[str] = None
+    finish: Optional[str] = None
+    country_of_origin: Optional[str] = None
+    description: Optional[str] = None
+    thicknesses_mm: List[str] = field(default_factory=list)
+    sizes: List[str] = field(default_factory=list)
+
+
+@dataclass
+class ImportSupplierCatalogInput(ActorContext):
+    rows: List[SupplierCatalogRowInput] = field(default_factory=list)

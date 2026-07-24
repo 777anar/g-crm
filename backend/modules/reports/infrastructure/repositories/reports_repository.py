@@ -9,7 +9,7 @@ in production).
 """
 import uuid
 from collections import defaultdict
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 
@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from core.audit.models import AuditLog
 from core.auth.models import User
 from modules.catalog.domain.value_objects import MATERIAL_STATUS_ACTIVE, SLAB_STATUS_AVAILABLE
+from modules.catalog.infrastructure.models.brand import Brand
 from modules.catalog.infrastructure.models.material import StoneMaterial
 from modules.catalog.infrastructure.models.slab import Slab
 from modules.catalog.infrastructure.models.warehouse import Warehouse
@@ -296,6 +297,70 @@ class ReportsRepository:
             StoneMaterial.id.notin_(available_material_ids),
         )
         return self.db.scalar(stmt) or 0
+
+    def low_stock_materials(
+        self,
+        *,
+        company_id: uuid.UUID,
+        stock_threshold: int = 3,
+        no_fit_window_days: int = 30,
+        no_fit_threshold: int = 3,
+    ) -> List[dict]:
+        """Phase 20's "automated low-stock -> purchase suggestion" signal,
+        combining two independent reasons a material might need restocking:
+        (1) few or no `available` slabs left in inventory, and (2) Smart
+        Offcut Management has repeatedly found no existing offcut that fits
+        a requested cut for this material recently (`no_suitable_offcut`
+        outcomes in the audit log -- see `RecommendOffcutsUseCase._audit`,
+        `modules/cut_optimization/application/use_cases/
+        recommend_offcuts_use_case.py`). Read directly off the shared
+        `core.audit_log` table rather than a new counter table: every
+        recommendation call already writes one row there, so the signal
+        this needs already exists, it was just never queried before."""
+        stmt = (
+            select(
+                StoneMaterial.id,
+                StoneMaterial.name,
+                Brand.name,
+                func.count(Slab.id),
+                func.coalesce(func.sum(Slab.area_m2), 0),
+            )
+            .select_from(StoneMaterial)
+            .join(Brand, Brand.id == StoneMaterial.brand_id)
+            .outerjoin(
+                Slab,
+                (Slab.material_id == StoneMaterial.id) & (Slab.status == SLAB_STATUS_AVAILABLE),
+            )
+            .where(StoneMaterial.company_id == company_id, StoneMaterial.status == MATERIAL_STATUS_ACTIVE)
+            .group_by(StoneMaterial.id, StoneMaterial.name, Brand.name)
+        )
+        rows = self.db.execute(stmt).all()
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=no_fit_window_days)
+        audit_stmt = select(AuditLog).where(
+            AuditLog.company_id == company_id,
+            AuditLog.module == "cut_optimization",
+            AuditLog.action == "offcut_recommendation.computed",
+            AuditLog.created_at >= cutoff,
+        )
+        no_fit_counts: Dict[str, int] = defaultdict(int)
+        for row in self.db.scalars(audit_stmt).all():
+            if (row.diff_json or {}).get("outcome") == "no_suitable_offcut":
+                no_fit_counts[str(row.entity_id)] += 1
+
+        results = []
+        for material_id, material_name, brand_name, slab_count, area_m2 in rows:
+            no_fit_count = no_fit_counts.get(str(material_id), 0)
+            results.append({
+                "material_id": material_id,
+                "material_name": material_name,
+                "brand_name": brand_name,
+                "available_slab_count": slab_count,
+                "available_area_m2": area_m2,
+                "no_fit_recommendation_count": no_fit_count,
+                "suggested": slab_count <= stock_threshold or no_fit_count >= no_fit_threshold,
+            })
+        return results
 
     def active_warehouses_count(self, *, company_id: uuid.UUID) -> int:
         stmt = select(func.count(Warehouse.id)).where(

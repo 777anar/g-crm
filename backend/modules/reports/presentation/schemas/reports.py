@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 from decimal import Decimal
 from typing import List, Optional
@@ -199,6 +200,26 @@ class InventoryAnalyticsOut(BaseModel):
     kpis: InventoryKpis
     slabs_by_status: List[StatusCount]
     available_slabs_by_warehouse: List[WarehouseCount]
+
+
+# ── Automated low-stock -> purchase suggestion (Phase 20) ────────────────────
+
+
+class LowStockMaterialOut(BaseModel):
+    material_id: uuid.UUID
+    material_name: str
+    brand_name: str
+    available_slab_count: int
+    available_area_m2: Decimal
+    no_fit_recommendation_count: int
+    suggested: bool
+
+
+class LowStockSuggestionsOut(BaseModel):
+    stock_threshold: int
+    no_fit_window_days: int
+    no_fit_threshold: int
+    materials: List[LowStockMaterialOut]
 
 
 # ── Production Planning Dashboard (Phase 2) ──────────────────────────────────

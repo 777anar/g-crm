@@ -414,6 +414,66 @@ export type RecommendOffcutsResponse = {
   persisted_run_id: string | null;
 };
 
+// ── Batch Optimization & Supply Chain Intelligence (Phase 20) ────────────────
+
+export type BatchSlabUsed = {
+  slab_id: string | null;
+  slab_ref: string;
+  length_mm: string;
+  width_mm: string;
+};
+
+export type BatchPlacedPiece = PlacedPiece & { slab_ref: string };
+
+export type CutOptimizationBatchRun = {
+  id: string;
+  material_id: string | null;
+  kerf_mm: string;
+  slabs: BatchSlabUsed[];
+  pieces: PieceSpec[];
+  placements: BatchPlacedPiece[];
+  unplaced: UnplacedPiece[];
+  slabs_used_count: number;
+  total_area_m2: string;
+  placed_area_m2: string;
+  waste_area_m2: string;
+  utilization_pct: string;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type LowStockMaterial = {
+  material_id: string;
+  material_name: string;
+  brand_name: string;
+  available_slab_count: number;
+  available_area_m2: string;
+  no_fit_recommendation_count: number;
+  suggested: boolean;
+};
+
+export type LowStockSuggestions = {
+  stock_threshold: number;
+  no_fit_window_days: number;
+  no_fit_threshold: number;
+  materials: LowStockMaterial[];
+};
+
+export type SupplierCatalogImportRowError = {
+  row_number: number;
+  message: string;
+};
+
+export type SupplierCatalogImportSummary = {
+  brands_created: number;
+  materials_created: number;
+  materials_updated: number;
+  thicknesses_added: number;
+  sizes_added: number;
+  errors: SupplierCatalogImportRowError[];
+};
+
 export type PriceList = {
   id: string;
   name: string;

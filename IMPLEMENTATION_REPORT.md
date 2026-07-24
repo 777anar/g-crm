@@ -1,7 +1,7 @@
 # G-STONE ERP — Implementation Report
 
-_Date: 2026-07-22 (original report), addended 2026-07-22 (Version 2.36.0 / Phase 17), addended again 2026-07-23 (Version 2.37.0 / Phase 18), addended again 2026-07-23 (Version 2.38.0 / Phase 19)_
-_Scope: everything implemented since the last audit (`PROJECT_AUDIT.md`, dated 2026-07-21, frozen at commit `521428e` / Version 2.25.0), through current HEAD (Version 2.38.0). Sections 1–8 below are the original report, kept as written — they describe what was true at the time. §9 is a same-day addendum covering Phase 17 (Version 2.36.0); §10 covers Phase 18 (Version 2.37.0); §11 covers Phase 19 (Version 2.38.0), closing the eight gaps `STONE_WORKFLOW_REPORT.md` §12 deliberately deferred from Phases 1–2. Corrections are recorded as annotations on prior sections rather than silent rewrites, consistent with this project's practice. (Versions 2.34.0 and 2.35.0, the two Stone Fabrication Workflow phases, are covered by their own dedicated `STONE_WORKFLOW_REPORT.md`, not repeated here.)_
+_Date: 2026-07-22 (original report), addended 2026-07-22 (Version 2.36.0 / Phase 17), addended again 2026-07-23 (Version 2.37.0 / Phase 18), addended again 2026-07-23 (Version 2.38.0 / Phase 19), addended again 2026-07-24 (Version 2.39.0 / Phase 20)_
+_Scope: everything implemented since the last audit (`PROJECT_AUDIT.md`, dated 2026-07-21, frozen at commit `521428e` / Version 2.25.0), through current HEAD (Version 2.39.0). Sections 1–8 below are the original report, kept as written — they describe what was true at the time. §9 is a same-day addendum covering Phase 17 (Version 2.36.0); §10 covers Phase 18 (Version 2.37.0); §11 covers Phase 19 (Version 2.38.0), closing the eight gaps `STONE_WORKFLOW_REPORT.md` §12 deliberately deferred from Phases 1–2; §12 covers Phase 20 (Version 2.39.0), extending the Cut Optimization engine and closing Sprint 2's deferred supplier-catalog-import gap. Corrections are recorded as annotations on prior sections rather than silent rewrites, consistent with this project's practice. (Versions 2.34.0 and 2.35.0, the two Stone Fabrication Workflow phases, are covered by their own dedicated `STONE_WORKFLOW_REPORT.md`, not repeated here.)_
 _Method: `git log`/`git diff --stat` against the audit baseline commit, cross-checked against `CHANGELOG.md` entries for each release, plus direct re-verification of every "remaining issue" claim against the current source (not assumed from the prior audit text)._
 
 This window covers **9 commits, 179 files changed, +11,409 / −945 lines**, and the backend test suite grew from 553 to 630 passing. Every numbered item in the prior audit's Priority List (§11, items 1–5) was addressed in this window, in order, plus three entirely new modules were shipped beyond what the audit's remaining-work estimate scoped for a single window.
@@ -315,7 +315,52 @@ Full backend suite passing (737/737), migrations round-trip clean (`upgrade head
 |---|---|---|
 | — | RLS full efficacy in production (non-owner runtime DB role) | Still open — infra step, tracked since Phase 18 (§10.5) |
 | — | Per-session/device token revocation | Still open — tracked since Phase 18 (§10.5) |
-| — | Multi-slab/cross-job batch optimization, CNC export, supplier catalog import | Not started — `MASTER_DEVELOPMENT_ROADMAP.md` Phase 20 |
+| — | Multi-slab/cross-job batch optimization, CNC export, supplier catalog import | ✅ Closed this window — see §12 below |
 | — | Real AI provider, payments, mobile client | Not started — Phases 21/22/25 |
 
 Full detail is in `CHANGELOG.md` [2.38.0].
+
+---
+
+## 12. Addendum — Phase 20: Advanced Cut Optimization & Supply Chain Intelligence (Version 2.39.0)
+
+_Added 2026-07-24, after `MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 20 was executed in full. Covers HEAD commit at time of writing (post-Phase 19/Version 2.38.0)._
+
+### 12.1 Theme
+
+`MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 20 named four items extending the Cut Optimization engine (Version 2.35.0) and the wider supply chain into a shop-floor and procurement automation layer: multi-slab/cross-job batch optimization, CNC/machine-ready export, automated low-stock → purchase suggestions, and a standardized supplier catalog import pipeline (the last one closing a gap Sprint 2/Phase 9 deliberately deferred). This addendum closes all four in one pass.
+
+### 12.2 Features Added
+
+- **Multi-slab / cross-job batch optimization** — `POST /cut_optimization/batch-runs` (`modules/cut_optimization/application/use_cases/run_batch_optimization_use_case.py`). A new `pack_pieces_multi_slab` outer bin-packing orchestrator (`domain/batch_cutting_algorithm.py`) reuses the existing single-slab `pack_pieces` engine (`cutting_algorithm.py`, left completely unmodified) as its inner per-slab packer: given an ordered list of candidate slabs and one combined pool of pieces, it fills slabs in order, carrying whatever didn't fit forward to the next slab, until every piece is placed or the slab list is exhausted. Pieces from multiple jobs/work orders are simply concatenated into one list, distinguished only by a `label` prefix convention (e.g. `"WO-1024: Countertop A"`) — reuses an existing free-text extension point rather than threading a new field through the single-slab engine every other use case depends on. Without explicit `slab_ids`, candidate slabs are auto-selected via a new `SlabRepository.list_available_for_material` (every `available` slab/offcut for the material, smallest-area-first, up to `max_slabs`) — the same "spend the smallest usable piece of inventory first" preference Smart Offcut Management already applies to one job. Persisted to a new `cut_optimization_batch_runs` table (a sibling to, not an extension of, `cut_optimization_runs`; see `DATABASE_DESIGN.md` §16.2). Frontend: `/cut-optimization/batch` (create + per-slab `SlabLayoutSvg` breakdown), `/cut-optimization/batch/history` (list), `/cut-optimization/batch/history/{id}` (reopen).
+- **CNC/machine-ready export** — `domain/dxf_export.py` converts a persisted run's real-millimeter `placements` (plus, for a batch run, `slabs`) into a DXF file via `ezdxf` (R2010, `SLAB`/`CUT`/`LABELS` layers) — the same coordinate data the SVG visualization already renders, just handed to a CAM-ready format. `GET /cut_optimization/runs/{id}/export.dxf` and `GET /cut_optimization/batch-runs/{id}/export.dxf`; a batch run's DXF lays every used slab side by side with a fixed gap, matching placements to their slab by `slab_ref`. "Export DXF" buttons added to every existing single-run page (`/cut-optimization`, `/cut-optimization/history/{id}`) and the new batch pages, via a new `apiDownload`-based `exportRunDxf`/`exportBatchRunDxf` pair in `lib/api/cut-optimization.ts`.
+- **Automated low-stock → purchase suggestion** — `GET /reports/inventory/low-stock` (`LowStockPurchaseSuggestionsUseCase`, `ReportsRepository.low_stock_materials`). Flags an active material when it has `stock_threshold` (default 3) or fewer `available` slabs, or when Smart Offcut Management has recorded `no_fit_threshold` (default 3) or more `no_suitable_offcut` outcomes for it within `no_fit_window_days` (default 30) — read directly off existing `offcut_recommendation.computed` audit-log entries (`RecommendOffcutsUseCase._audit`), no new counter table needed since every recommendation call already wrote that row, it was just never queried before. Deliberately read-only: the new "Low-Stock Purchase Suggestions" card on `/reports/inventory` links each flagged row into Purchasing's own `/purchasing/orders/new?material_id=...&description=...` (a new lightweight `window.location.search` prefill on that page, avoiding a `useSearchParams`/Suspense-boundary requirement for a one-time prefill), keeping the write action inside Purchasing's module boundary rather than Reports reaching into it.
+- **Standardized supplier catalog import** — `POST /catalog/materials/import` (multipart CSV) and `GET /catalog/materials/import/template` (starter CSV), backed by `ImportSupplierCatalogUseCase`. One row per material: Brand and Material are found-by-name (case-insensitive, new `BrandRepository.get_by_name`/`MaterialRepository.get_by_brand_and_name`) or created; `thicknesses_mm`/`sizes` are `;`-separated lists appended to that material's existing option lists (skipping values already present, so re-importing the same file is idempotent). Best-effort per row — a bad row (missing brand/material name) is caught, recorded in the response's `errors: [{row_number, message}]`, and the rest of the file still imports; consistent with this being a bulk import where a partial success telling the user exactly which rows to fix beats an all-or-nothing failure. Frontend: `/catalog/materials/import` (template download, upload, results summary), linked from `/catalog/materials`.
+
+### 12.3 Tests Added
+
+**21 new backend tests: 737 → 758 passing.**
+
+| Area | New tests |
+|---|---|
+| Batch optimization (`tests/cut_optimization/test_batch_optimization_api.py`) | 11 — explicit `slab_ids` nests across both slabs, auto-select prefers the smaller slab first, unplaced pieces reported when they exceed all candidate slabs, `422` with no available slabs, `422` with zero pieces, list/reopen history, unknown-id `404`, company isolation, single-run DXF export (content-type + DXF markers), unknown-run DXF export `404`, batch-run DXF export (slab ref appears in the file) |
+| Supplier catalog import (`tests/catalog/test_supplier_catalog_import.py`) | 6 — template download, create-brand-and-material-with-options, re-import upserts without duplicating, row errors reported without aborting the rest of the file, missing required columns → `400`, viewer role rejected (`403`) |
+| Low-stock suggestions (`tests/reports/test_low_stock_suggestions.py`) | 4 — zero-stock material flagged, well-stocked material excluded at a `0` threshold, a configurable higher threshold flags it anyway, empty company returns no suggestions |
+
+No frontend unit-test framework exists in this codebase (consistent with §5/§9.3/§10.3/§11.3); frontend changes verified via `tsc --noEmit`, `npm run lint`, and a full production build.
+
+### 12.4 Verification
+
+Full backend suite passing (758/758), `lint-imports` clean, migrations round-trip clean (`upgrade head` → `downgrade -1` → `upgrade head` against a scratch SQLite database — the new `cut_optimization_batch_runs` table's own migration carries its own Postgres RLS policy directly, per the Phase 18/19 convention), frontend `tsc --noEmit` clean, `npm run lint` clean (0 errors, 0 warnings), frontend production build clean (78 routes, +4 new: `/catalog/materials/import`, `/cut-optimization/batch`, `/cut-optimization/batch/history`, `/cut-optimization/batch/history/{id}`).
+
+### 12.5 Remaining Issues (re-verified, current as of this addendum)
+
+| # | Issue | Status |
+|---|---|---|
+| — | RLS full efficacy in production (non-owner runtime DB role) | Still open — infra step, tracked since Phase 18 (§10.5) |
+| — | Per-session/device token revocation | Still open — tracked since Phase 18 (§10.5) |
+| — | Batch optimization runs synchronously in the request/response cycle | A large batch (many jobs, many slabs) has no queue to fall back on yet — tracked as part of Phase 24's background job queue, same ceiling PDF/report generation already has |
+| — | Supplier catalog import is CSV-only, no direct manufacturer API integration | Acceptable for now per the roadmap's own scope ("CSV/API"); a real API integration per supplier remains future work if a supplier offers one |
+| — | Real AI provider, payments, mobile client | Not started — Phases 21/22/25 |
+
+Full detail is in `CHANGELOG.md` [2.39.0].

@@ -2,3 +2,4 @@
 
 CUT_OPTIMIZATION_RUN_CREATED = "CutOptimizationRunCreated"
 OFFCUT_RECOMMENDATION_COMPUTED = "OffcutRecommendationComputed"
+CUT_OPTIMIZATION_BATCH_RUN_CREATED = "CutOptimizationBatchRunCreated"

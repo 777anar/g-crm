@@ -97,9 +97,14 @@ export default function MaterialsListPage() {
           <p className="text-sm text-text-secondary">{t("materialsSubtitle")}</p>
         </div>
         {canWrite && (
-          <Link href="/catalog/materials/new">
-            <Button>{t("createMaterial")}</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/catalog/materials/import">
+              <Button variant="secondary">{t("importTitle")}</Button>
+            </Link>
+            <Link href="/catalog/materials/new">
+              <Button>{t("createMaterial")}</Button>
+            </Link>
+          </div>
         )}
       </div>
 

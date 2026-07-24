@@ -1,10 +1,13 @@
+import csv
+import io
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from core.api.errors import NotFoundError
+from core.api.errors import NotFoundError, ValidationAPIError
 from core.api.pagination import decode_cursor, encode_cursor
 from core.db.session import get_db
 from core.rbac.dependencies import CurrentUser, require_permission
@@ -14,6 +17,8 @@ from modules.catalog.application.dtos import (
     AddMaterialSizeInput,
     AddMaterialThicknessInput,
     CreateMaterialInput,
+    ImportSupplierCatalogInput,
+    SupplierCatalogRowInput,
     UpdateMaterialInput,
 )
 from modules.catalog.application.use_cases import (
@@ -24,6 +29,7 @@ from modules.catalog.application.use_cases import (
     CreateMaterialUseCase,
     DeleteMaterialSizeUseCase,
     DeleteMaterialThicknessUseCase,
+    ImportSupplierCatalogUseCase,
     UpdateMaterialUseCase,
 )
 from modules.catalog.infrastructure.repositories.material_asset_repository import (
@@ -40,6 +46,7 @@ from modules.catalog.presentation.schemas.material import (
     MaterialListOut,
     MaterialOut,
     MaterialUpdate,
+    SupplierCatalogImportSummaryOut,
 )
 from modules.catalog.presentation.schemas.material_asset import (
     MaterialDocumentCreate,
@@ -325,3 +332,91 @@ def delete_material_size(
         size_id=size_id,
     )
     db.commit()
+
+
+# ── Standardized supplier catalog import (Phase 20) ───────────────────────────
+
+_IMPORT_TEMPLATE_CSV = (
+    "brand,material_name,material_type,color,finish,country_of_origin,description,thicknesses_mm,sizes\n"
+    'NEOLITH,Calacatta Gold,Sintered Stone,White,Polished,Spain,"Elegant marble-look surface",'
+    '"12;20;30","3200x1600mm;3000x1400mm"\n'
+)
+
+def _split_multi(value: Optional[str]) -> List[str]:
+    if not value:
+        return []
+    return [v.strip() for v in value.split(";") if v.strip()]
+
+
+@router.get("/materials/import/template")
+def download_supplier_catalog_import_template(
+    current_user: CurrentUser = Depends(require_permission("catalog:materials:read")),
+) -> Response:
+    content = ("﻿" + _IMPORT_TEMPLATE_CSV).encode("utf-8")
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="supplier_catalog_import_template.csv"'},
+    )
+
+
+@router.post("/materials/import", response_model=SupplierCatalogImportSummaryOut)
+async def import_supplier_catalog(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("catalog:materials:write")),
+) -> SupplierCatalogImportSummaryOut:
+    """A real CSV import pipeline for supplier catalogs (Phase 20) --
+    Brand/Stone/Thickness/Size options sourced from a supplier's own data
+    instead of typed in by hand (Sprint 2's deliberately-deferred scope,
+    `MASTER_DEVELOPMENT_ROADMAP.md` Phase 20). One row per material;
+    `thicknesses_mm`/`sizes` are semicolon-separated lists appended to
+    that material's existing option lists. Best-effort per row -- see
+    `ImportSupplierCatalogUseCase`'s docstring for why this isn't one
+    all-or-nothing transaction."""
+    raw = await file.read()
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ValidationAPIError(
+            "File is not valid UTF-8 text", details=[{"field": "file", "issue": "invalid encoding"}]
+        ) from exc
+
+    reader = csv.DictReader(io.StringIO(text))
+    missing_columns = [c for c in ("brand", "material_name") if c not in (reader.fieldnames or [])]
+    if missing_columns:
+        raise ValidationAPIError(
+            f"CSV is missing required column(s): {', '.join(missing_columns)}",
+            details=[{"field": "file", "issue": "missing required columns"}],
+        )
+
+    rows = [
+        SupplierCatalogRowInput(
+            brand_name=r.get("brand", ""),
+            material_name=r.get("material_name", ""),
+            material_type=r.get("material_type") or None,
+            color=r.get("color") or None,
+            finish=r.get("finish") or None,
+            country_of_origin=r.get("country_of_origin") or None,
+            description=r.get("description") or None,
+            thicknesses_mm=_split_multi(r.get("thicknesses_mm")),
+            sizes=_split_multi(r.get("sizes")),
+        )
+        for r in reader
+    ]
+
+    use_case = ImportSupplierCatalogUseCase(db)
+    summary = use_case.execute(
+        ImportSupplierCatalogInput(
+            company_id=current_user.active_company_id, actor_user_id=current_user.user_id, rows=rows,
+        )
+    )
+    db.commit()
+    return SupplierCatalogImportSummaryOut(
+        brands_created=summary.brands_created,
+        materials_created=summary.materials_created,
+        materials_updated=summary.materials_updated,
+        thicknesses_added=summary.thicknesses_added,
+        sizes_added=summary.sizes_added,
+        errors=[{"row_number": e.row_number, "message": e.message} for e in summary.errors],
+    )

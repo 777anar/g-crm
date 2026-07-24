@@ -1,16 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { getInventoryAnalytics } from "@/lib/api/reports";
-import type { InventoryAnalytics } from "@/lib/types";
+import { getInventoryAnalytics, getLowStockSuggestions } from "@/lib/api/reports";
+import type { InventoryAnalytics, LowStockSuggestions } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api-client";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatCardSkeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { CategoryBarChart, StatusBarList } from "@/components/ui/charts";
 import { ReportExportButtons } from "@/components/report-export-buttons";
 import { useSlabStatusLabel } from "@/lib/i18n/hooks";
+import { usePermission } from "@/lib/permissions";
 
 // Unlike every other Reports tab, Inventory has no DateRangeFilter: stock
 // status is a live snapshot (a slab doesn't stop being "available" because
@@ -20,13 +24,18 @@ import { useSlabStatusLabel } from "@/lib/i18n/hooks";
 export default function InventoryAnalyticsPage() {
   const t = useTranslations("reports");
   const slabStatusLabel = useSlabStatusLabel();
+  const canCreatePurchaseOrder = usePermission("purchasing:purchase_orders:write");
 
   const [data, setData] = useState<InventoryAnalytics | null>(null);
+  const [lowStock, setLowStock] = useState<LowStockSuggestions | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getInventoryAnalytics()
       .then(setData)
+      .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
+    getLowStockSuggestions()
+      .then(setLowStock)
       .catch((err) => setError(err instanceof ApiRequestError ? err.message : t("loadFailed")));
   }, [t]);
 
@@ -79,6 +88,56 @@ export default function InventoryAnalyticsPage() {
               />
             </Card>
           </div>
+
+          <Card>
+            <CardHeader title={t("lowStockTitle")} />
+            <p className="mb-3 text-sm text-text-secondary">{t("lowStockDesc")}</p>
+            {!lowStock && <TableSkeleton rows={3} columns={4} />}
+            {lowStock && lowStock.materials.length === 0 && (
+              <EmptyState title={t("lowStockEmpty")} description={t("lowStockEmptyDesc")} />
+            )}
+            {lowStock && lowStock.materials.length > 0 && (
+              <table className="w-full text-left text-sm">
+                <thead className="text-text-secondary">
+                  <tr>
+                    <th className="px-2 py-1 font-medium">{t("lowStockMaterial")}</th>
+                    <th className="px-2 py-1 font-medium">{t("lowStockAvailableSlabs")}</th>
+                    <th className="px-2 py-1 font-medium">{t("lowStockAvailableArea")}</th>
+                    <th className="px-2 py-1 font-medium">{t("lowStockNoFitCount")}</th>
+                    <th className="px-2 py-1 font-medium" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {lowStock.materials.map((m) => (
+                    <tr key={m.material_id} className="border-t border-border">
+                      <td className="px-2 py-1 text-text-primary">
+                        {m.brand_name} — {m.material_name}
+                      </td>
+                      <td className="px-2 py-1 text-text-secondary">{m.available_slab_count}</td>
+                      <td className="px-2 py-1 text-text-secondary">{m.available_area_m2} m²</td>
+                      <td className="px-2 py-1">
+                        {m.no_fit_recommendation_count > 0 ? (
+                          <Badge tone="warning">{m.no_fit_recommendation_count}</Badge>
+                        ) : (
+                          <span className="text-text-secondary">{m.no_fit_recommendation_count}</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1 text-right">
+                        {canCreatePurchaseOrder && (
+                          <Link
+                            href={`/purchasing/orders/new?material_id=${m.material_id}&description=${encodeURIComponent(`${m.brand_name} — ${m.material_name}`)}`}
+                            className="text-primary hover:underline"
+                          >
+                            {t("lowStockCreatePo")}
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
         </>
       )}
     </div>

@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from modules.catalog.infrastructure.models.material import StoneMaterial
@@ -26,6 +26,21 @@ class MaterialRepository:
     def get(self, *, company_id: uuid.UUID, material_id: uuid.UUID) -> Optional[StoneMaterial]:
         return self.db.scalar(
             select(StoneMaterial).where(StoneMaterial.id == material_id, StoneMaterial.company_id == company_id)
+        )
+
+    def get_by_brand_and_name(
+        self, *, company_id: uuid.UUID, brand_id: uuid.UUID, name: str
+    ) -> Optional[StoneMaterial]:
+        """Case-insensitive exact match -- the find-or-create/upsert key
+        for Supplier Catalog Import (Phase 20): re-importing the same
+        supplier catalog should update existing materials, not duplicate
+        them."""
+        return self.db.scalar(
+            select(StoneMaterial).where(
+                StoneMaterial.company_id == company_id,
+                StoneMaterial.brand_id == brand_id,
+                func.lower(StoneMaterial.name) == name.strip().lower(),
+            )
         )
 
     def list(

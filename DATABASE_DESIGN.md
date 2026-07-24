@@ -811,9 +811,33 @@ One immutable row per run of the nesting algorithm (`API_SPECIFICATION.md` §23)
 
 **The nesting algorithm itself** (shelf/guillotine packing, largest-piece-first, best-fit-decreasing-width tie-break) is pure domain logic (`modules/cut_optimization/domain/cutting_algorithm.py`) with no database dependency at all — it operates purely on the `pieces` input and returns the `placements`/`unplaced`/area figures that get persisted above.
 
+### 16.2 `cut_optimization_batch_runs` (Multi-Slab / Cross-Job Batch Optimization, Phase 20, Version 2.39.0)
+A sibling to `cut_optimization_runs`, not an extension of it: a batch run's shape is fundamentally plural (many slabs, many pieces, possibly many jobs), so overloading the singular `slab_id`/`slab_length_mm`/`slab_width_mm` columns above would have meant making them nullable in a way that breaks the single-slab History/detail pages' existing assumptions. Same immutable-JSON-snapshot philosophy otherwise — a batch run is a point-in-time result, not a live entity queried piece-by-piece.
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| company_id | UUID | NOT NULL, indexed |
+| material_id | UUID | nullable, REFERENCES catalog_materials(id), indexed |
+| kerf_mm | NUMERIC(6,2) | NOT NULL |
+| slabs | JSON | NOT NULL — one entry per slab actually used: `{slab_id, slab_ref, length_mm, width_mm}`. `slab_id` is null for a hypothetical (caller-labeled) slab, set for a real Catalog slab/offcut, so a batch run can still be traced back to real inventory without forcing every run to be against real stock |
+| pieces | JSON | NOT NULL — the full requested piece pool: `{label, length_mm, width_mm, quantity, allow_rotation}`. Pieces from multiple jobs are simply concatenated into this one list, distinguished by a caller convention of prefixing `label` with a job identifier (e.g. `"WO-1024: Countertop A"`) rather than a new dedicated column — reuses an existing free-text extension point instead of threading a new field through the single-slab engine every other use case already depends on |
+| placements | JSON | NOT NULL — one entry per placed piece instance, each additionally tagged `slab_ref` (which used slab it landed on): `{slab_ref, label, instance_index, x_mm, y_mm, length_mm, width_mm, rotated}` |
+| unplaced | JSON | NOT NULL, DEFAULT `[]` |
+| slabs_used_count | INTEGER | NOT NULL |
+| total_area_m2 / placed_area_m2 / waste_area_m2 | NUMERIC(10,3) | NOT NULL |
+| utilization_pct | NUMERIC(5,2) | NOT NULL |
+| notes | TEXT | nullable |
+| created_by | UUID | nullable, REFERENCES users(id) |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL |
+
+**The batch algorithm** (`modules/cut_optimization/domain/batch_cutting_algorithm.py`) is an outer bin-packing orchestrator reusing the single-slab `pack_pieces` engine unchanged as its inner per-slab packer: given an ordered list of candidate slabs and one combined pool of pieces, it fills slabs in the given order, carrying whatever didn't fit on one slab forward to the next, until every piece is placed or the slab list is exhausted. Slab candidates are auto-selected smallest-area-first when not explicit (`SlabRepository.list_available_for_material`) — the same "spend the smallest usable piece of inventory first" preference Smart Offcut Management (§16.1) already applies to one job, extended here across however many slabs a whole run needs.
+
+**CNC/machine-ready export** (`modules/cut_optimization/domain/dxf_export.py`, `API_SPECIFICATION.md` §23): a pure-function conversion of either table's already-in-real-millimeters `placements` (plus, for a batch run, `slabs`) into a DXF file (`ezdxf`, R2010 format, `SLAB`/`CUT`/`LABELS` layers) — no ORM/FastAPI dependency, reusing the exact coordinate data the SVG visualization already renders, just handed to a CAM-ready output format instead of a browser. A batch run's DXF lays every used slab side by side (200mm gap) with each placement drawn against its own slab's boundary, matched by `slab_ref`.
+
 ## 17. Row-Level Security Strategy
 
-**Implemented as of Phase 18 (Security & Compliance Hardening, Version 2.37.0)**, closing the gap this section previously documented as open. Migration `55d19b5b6862_phase18_postgres_row_level_security.py` enables RLS on all 75 tenant-owned tables that existed at the time (every table with a `company_id` column, core and module alike) and creates a `company_isolation` policy on each; `production_notifications` (§8.7, added Version 2.38.0) makes 76, given its own policy directly inside its own creation migration (`3abcf1e53be8_phase19_production_notifications.py`) rather than waiting for a future RLS pass to notice it's missing one — the same pattern any future tenant-scoped table should follow:
+**Implemented as of Phase 18 (Security & Compliance Hardening, Version 2.37.0)**, closing the gap this section previously documented as open. Migration `55d19b5b6862_phase18_postgres_row_level_security.py` enables RLS on all 75 tenant-owned tables that existed at the time (every table with a `company_id` column, core and module alike) and creates a `company_isolation` policy on each; `production_notifications` (§8.7, added Version 2.38.0) makes 76, and `cut_optimization_batch_runs` (§16.2, added Version 2.39.0) makes 77, each given its own policy directly inside its own creation migration (`3abcf1e53be8_phase19_production_notifications.py`, `e671b0f05559_phase20_cut_optimization_batch_runs.py`) rather than waiting for a future RLS pass to notice it's missing one — the same pattern any future tenant-scoped table should follow:
 
 ```sql
 ALTER TABLE crm_customers ENABLE ROW LEVEL SECURITY;

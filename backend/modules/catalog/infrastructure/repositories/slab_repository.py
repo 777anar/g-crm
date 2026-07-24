@@ -121,6 +121,42 @@ class SlabRepository:
         stmt = stmt.order_by(Slab.area_m2.desc()).offset(offset).limit(limit)
         return list(self.db.scalars(stmt).all())
 
+    def list_available_for_material(
+        self,
+        *,
+        company_id: uuid.UUID,
+        material_id: uuid.UUID,
+        thickness_mm: Optional[str] = None,
+        finish: Optional[str] = None,
+        warehouse_id: Optional[uuid.UUID] = None,
+        limit: int = 50,
+    ) -> List[Slab]:
+        """Every `available` slab for a material -- fresh stock *and*
+        offcuts alike, smallest-area first (Phase 20's batch optimizer:
+        "spend the smallest usable piece of inventory first," the same
+        preference Smart Offcut Management already applies to one job,
+        here applied across however many slabs a whole batch run needs).
+        Unlike `search_offcuts`, not restricted to `is_offcut=True`."""
+        stmt = (
+            select(Slab)
+            .join(StoneMaterial, StoneMaterial.id == Slab.material_id)
+            .where(
+                Slab.company_id == company_id,
+                Slab.material_id == material_id,
+                Slab.status == SLAB_STATUS_AVAILABLE,
+                Slab.length_mm.is_not(None),
+                Slab.width_mm.is_not(None),
+            )
+        )
+        if warehouse_id:
+            stmt = stmt.where(Slab.warehouse_id == warehouse_id)
+        if thickness_mm:
+            stmt = stmt.where(StoneMaterial.thickness_mm == thickness_mm)
+        if finish:
+            stmt = stmt.where(StoneMaterial.finish == finish)
+        stmt = stmt.order_by(Slab.area_m2.asc()).limit(limit)
+        return list(self.db.scalars(stmt).all())
+
     def list_offcut_candidates(
         self,
         *,

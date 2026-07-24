@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file. See [ROADMAP.md](ROADMAP.md) for full delivery narratives, rationale, and what's next; this file is the terse, dated summary.
 
+## [2.39.0] — 2026-07-24 — Phase 20: Advanced Cut Optimization & Supply Chain Intelligence
+
+Closes every item `MASTER_DEVELOPMENT_ROADMAP.md`'s Phase 20 named — takes the single-slab nesting engine from Version 2.35.0 and turns it into the shop-floor and procurement automation layer a world-class fabrication ERP needs.
+
+### Added
+- **Multi-slab / cross-job batch optimization** — `POST /cut_optimization/batch-runs` nests one combined pool of pieces (concatenated from however many jobs/work orders, distinguished by a `label` prefix convention, e.g. `"WO-1024: Countertop A"`) across as many slabs/offcuts as it takes, minimizing total waste across a whole production run instead of one job at a time. A new `pack_pieces_multi_slab` outer bin-packing orchestrator (`domain/batch_cutting_algorithm.py`) reuses the existing single-slab `pack_pieces` engine unchanged as its inner per-slab packer, filling slabs in order (auto-selected smallest-area-first, or explicit `slab_ids`) and carrying whatever didn't fit forward to the next slab. Persisted immutably to a new `cut_optimization_batch_runs` table (a sibling to, not an extension of, `cut_optimization_runs` — a batch run's shape is fundamentally plural). New frontend: `/cut-optimization/batch` (create + per-slab layout results), `/cut-optimization/batch/history` (list), `/cut-optimization/batch/history/{id}` (reopen).
+- **CNC/machine-ready export** — `GET /cut_optimization/runs/{id}/export.dxf` and `GET /cut_optimization/batch-runs/{id}/export.dxf` convert a persisted run's real-millimeter placements into a DXF file (`ezdxf`, R2010, `SLAB`/`CUT`/`LABELS` layers) a CNC/waterjet controller or CAM software can import directly, instead of the layout only ever informing a human operator via the SVG visualization. A batch run's DXF lays every used slab side by side. "Export DXF" buttons added to every existing single-run and new batch-run result/history view.
+- **Automated low-stock → purchase suggestion** — `GET /reports/inventory/low-stock` flags active materials with few/no `available` slabs left (`stock_threshold`, default 3) or that Smart Offcut Management has repeatedly found nothing to fit recently (`no_fit_threshold`/`no_fit_window_days`, default 3/30 — read directly off existing `offcut_recommendation.computed` audit-log entries, no new counter table). Read-only by design: the new "Low-Stock Purchase Suggestions" section on `/reports/inventory` links each flagged material into Purchasing's existing `/purchasing/orders/new` form, pre-filled via query params, keeping the write action inside Purchasing's own module boundary.
+- **Standardized supplier catalog import** — `POST /catalog/materials/import` (multipart CSV) and `GET /catalog/materials/import/template` (starter CSV) give Sprint 2 (Phase 9)'s deliberately-deferred free-text Brand/Stone/Thickness/Size suggestions a real import pipeline: Brands and Materials are found-by-name (case-insensitive) or created, Thicknesses/Sizes are appended, and re-importing the same catalog upserts rather than duplicates. Best-effort per row — one bad row is recorded in the response and skipped, not an all-or-nothing failure. New frontend page `/catalog/materials/import` (template download, upload, results summary), linked from `/catalog/materials`.
+- 21 new backend tests (`tests/cut_optimization/test_batch_optimization_api.py`, `tests/catalog/test_supplier_catalog_import.py`, `tests/reports/test_low_stock_suggestions.py`).
+
+### Verification
+Full backend suite passing (758/758 — 737 prior + 21 new), migrations round-trip clean (`upgrade head` → `downgrade -1` → `upgrade head`, SQLite), `lint-imports` clean, frontend `tsc --noEmit` clean, `npm run lint` clean, frontend production build clean (78 routes, +4 new: `/catalog/materials/import`, `/cut-optimization/batch`, `/cut-optimization/batch/history`, `/cut-optimization/batch/history/{id}`).
+
+---
+
 ## [2.38.0] — 2026-07-23 — Phase 19: Stone Fabrication Workflow, Phase 3 (Operational Completion)
 
 Closes every item `STONE_WORKFLOW_REPORT.md` §12 named as a deliberate, scoped-out gap in Phases 1–2 (Version 2.34.0/2.35.0) — turns the reservation/stage/offcut data model into a fully operable daily tool instead of an API-only capability partially surfaced through one page.

@@ -51,6 +51,21 @@ export default function NewPurchaseOrderPage() {
     listBrands().then((res) => setBrands(res.items)).catch(() => {});
   }, []);
 
+  // Prefill the first line from a Reports > Inventory low-stock suggestion
+  // link (Phase 20: `?material_id=...&description=...`) -- read directly
+  // from the URL rather than useSearchParams so this client page doesn't
+  // need a Suspense boundary just for a one-time prefill.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const materialId = params.get("material_id");
+    const description = params.get("description");
+    if (!materialId && !description) return;
+    setLines((prev) => [
+      { ...prev[0], materialId: materialId ?? prev[0].materialId, description: description ?? prev[0].description },
+      ...prev.slice(1),
+    ]);
+  }, []);
+
   function brandName(id: string) {
     return brands.find((b) => b.id === id)?.name ?? "";
   }
